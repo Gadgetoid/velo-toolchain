@@ -1,0 +1,366 @@
+"""
+Linked MIPS ELF (--emit-relocs) to Windows CE 1.0/2.0 PE32.
+
+- Machine 0x166 (MIPS little endian), subsystem 2 version 4.0, as the CE 1.0 SDK wrote.
+- Image base 0x10000, headers 0x400, file alignment 0x200.
+- Sections 4 KB aligned: the R3910 has 4 KB pages only.
+- Sections: .text, .rdata, .data, .idata, then .edata (DLL), .rsrc (icon), .reloc.
+- Imports by name, hint 0. Slots are __imp_<name> symbols, one descriptor per run of
+  slots from the same DLL (__velo_import$<dll>$<name>, else COREDLL.dll).
+- EXE: IAT at the start of .data. DLL: IAT in .idata, after descriptors and lookup tables.
+- ELF relocations become base relocations: R_MIPS_32 HIGHLOW, R_MIPS_26 JMPADDR,
+  R_MIPS_HI16 HIGHADJ, R_MIPS_LO16 LOW.
+"""
+import argparse
+import struct
+
+IMAGE_BASE = 0x10000
+SECTION_ALIGNMENT = 0x1000
+FILE_ALIGNMENT = 0x200
+HEADERS_SIZE = 0x400
+DEFAULT_DLL = "COREDLL.dll"
+IMPORT_PREFIX = "__imp_"
+IMPORT_MARKER = "__velo_import$"
+
+CODE = 0x60000020
+READ_ONLY = 0x40000040
+READ_WRITE = 0xC0000040
+
+
+def align(value, alignment):
+    return (value + alignment - 1) // alignment * alignment
+
+
+def read_elf(path):
+    data = open(path, "rb").read()
+    section_offset = struct.unpack_from("<I", data, 0x20)[0]
+    entry_size, count, names_index = struct.unpack_from("<HHH", data, 0x2E)
+    headers = [struct.unpack_from("<IIIIIIIIII", data, section_offset + entry_size * index) for index in range(count)]
+    names_offset = headers[names_index][4]
+
+    def name_at(table_offset, offset):
+        end = data.index(b"\0", table_offset + offset)
+        return data[table_offset + offset:end].decode()
+
+    sections = {}
+    symbols = {}
+    for header in headers:
+        name = name_at(names_offset, header[0])
+        sections[name] = header
+    symbol_table = sections[".symtab"]
+    string_offset = headers[symbol_table[6]][4]
+    for position in range(symbol_table[4], symbol_table[4] + symbol_table[5], 16):
+        name_offset, value, _, _, _, _ = struct.unpack_from("<IIIBBH", data, position)
+        if name_offset:
+            symbols[name_at(string_offset, name_offset)] = value
+    entry = struct.unpack_from("<I", data, 0x18)[0]
+    return data, sections, symbols, entry
+
+
+def read_relocations(data, sections):
+    found = []
+    for name, header in sections.items():
+        if header[1] != 9 or name in (".rel.pdr",):
+            continue
+        entries = [struct.unpack_from("<II", data, header[4] + position) for position in range(0, header[5], 8)]
+        index = 0
+        while index < len(entries):
+            offset, info = entries[index]
+            kind = info & 0xFF
+            if kind == 2:
+                found.append((3, offset, None))
+            elif kind == 4:
+                found.append((5, offset, None))
+            elif kind == 5:
+                pair = index + 1
+                while entries[pair][1] & 0xFF != 6:
+                    pair += 1
+                found.append((4, offset, entries[pair][0]))
+            elif kind == 6:
+                found.append((2, offset, None))
+            elif kind:
+                raise ValueError("relocation type %d at %x" % (kind, offset))
+            index += 1
+    return found
+
+
+def encode_relocations(relocations, read_word):
+    pages = {}
+    for kind, va, low_site in relocations:
+        rva = va - IMAGE_BASE
+        pages.setdefault(rva & ~(SECTION_ALIGNMENT - 1), []).append((rva, kind, low_site))
+    output = bytearray()
+    for page in sorted(pages):
+        entries = []
+        for rva, kind, low_site in sorted(pages[page]):
+            entries.append((kind << 12) | (rva - page))
+            if kind == 4:
+                high = read_word(IMAGE_BASE + rva) & 0xFFFF
+                low = read_word(low_site) & 0xFFFF
+                full = ((high << 16) + (low - 0x10000 if low & 0x8000 else low)) & 0xFFFFFFFF
+                entries.append(full & 0xFFFF)
+        if len(entries) % 2:
+            entries.append(0)
+        output += struct.pack("<II", page, 8 + 2 * len(entries)) + struct.pack("<%dH" % len(entries), *entries)
+    return bytes(output)
+
+
+def section_bytes(data, header):
+    kind, address, offset, size = header[1], header[3], header[4], header[5]
+    return address, bytes(size) if kind == 8 else data[offset:offset + size]
+
+
+def export_symbol(export, symbols):
+    name, _, symbol = export.partition("=")
+    symbol = symbol or name
+    if symbol not in symbols:
+        raise ValueError("export %s: no symbol %s" % (name, symbol))
+    return name, symbols[symbol]
+
+
+def import_runs(symbols):
+    markers = {}
+    for name, value in symbols.items():
+        if name.startswith(IMPORT_MARKER):
+            markers[value] = name[len(IMPORT_MARKER):].split("$")[0]
+    slots = sorted((value, name[len(IMPORT_PREFIX):]) for name, value in symbols.items() if name.startswith(IMPORT_PREFIX))
+    if not slots:
+        raise ValueError("no imports")
+    runs = []
+    for index, (value, name) in enumerate(slots):
+        if value != slots[0][0] + 4 * index:
+            raise ValueError("import slots are not contiguous")
+        dll = markers.get(value, DEFAULT_DLL)
+        if runs and runs[-1][0] == dll:
+            runs[-1][1].append((value, name))
+        else:
+            runs.append((dll, [(value, name)]))
+    return runs
+
+
+def read_exports(arguments):
+    exports = []
+    if arguments.exports:
+        exports += arguments.exports.split(",")
+    if arguments.exports_file:
+        exports += [line.strip() for line in open(arguments.exports_file) if line.strip()]
+    return exports
+
+
+def build_exports(exports, symbols, dll_name, export_rva):
+    resolved = dict(export_symbol(export, symbols) for export in exports)
+    names = sorted(resolved)
+    function_rvas = [resolved[name] - IMAGE_BASE for name in names]
+    directory_size = 40
+    functions_rva = export_rva + directory_size
+    names_rva = functions_rva + 4 * len(names)
+    ordinals_rva = names_rva + 4 * len(names)
+    strings_rva = ordinals_rva + 2 * len(names)
+    strings = bytearray()
+    name_rvas = []
+    for name in names:
+        name_rvas.append(strings_rva + len(strings))
+        strings += name.encode() + b"\0"
+    dll_name_rva = strings_rva + len(strings)
+    strings += dll_name.encode() + b"\0"
+    table = struct.pack("<IIHHIIIIIII", 0, 0, 0, 0, dll_name_rva, 1, len(names), len(names), functions_rva, names_rva, ordinals_rva)
+    table += struct.pack("<%dI" % len(names), *function_rvas)
+    table += struct.pack("<%dI" % len(names), *name_rvas)
+    table += struct.pack("<%dH" % len(names), *range(len(names)))
+    return bytes(table + strings)
+
+
+def build_resources(icon_path, section_rva):
+    data = open(icon_path, "rb").read()
+    _, _, count = struct.unpack_from("<HHH", data, 0)
+    icons = []
+    for index in range(count):
+        width, height, colours, _, planes, bits, size, offset = struct.unpack_from("<BBBBHHII", data, 6 + 16 * index)
+        icons.append((width, height, colours, planes, bits, data[offset:offset + size]))
+    group = struct.pack("<HHH", 0, 1, count)
+    for index, (width, height, colours, planes, bits, blob) in enumerate(icons):
+        group += struct.pack("<BBBBHHIH", width, height, colours, 0, planes, bits, len(blob), index + 1)
+
+    def directory(count):
+        return struct.pack("<IIHHHH", 0, 0, 0, 0, 0, count)
+
+    root_size = 16 + 8 * 2
+    icon_types_offset = root_size
+    icon_types_size = 16 + 8 * count
+    group_types_offset = icon_types_offset + icon_types_size
+    group_types_size = 16 + 8
+    language_offset = group_types_offset + group_types_size
+    language_size = 16 + 8
+    data_entries_offset = language_offset + language_size * (count + 1)
+    blobs_offset = data_entries_offset + 16 * (count + 1)
+    blobs = [blob for *_, blob in icons] + [group]
+    blob_offsets = []
+    position = blobs_offset
+    for blob in blobs:
+        blob_offsets.append(position)
+        position = align(position + len(blob), 4)
+
+    output = bytearray()
+    output += directory(2)
+    output += struct.pack("<II", 3, 0x80000000 | icon_types_offset)
+    output += struct.pack("<II", 14, 0x80000000 | group_types_offset)
+    output += directory(count)
+    for index in range(count):
+        output += struct.pack("<II", index + 1, 0x80000000 | (language_offset + language_size * index))
+    output += directory(1)
+    output += struct.pack("<II", 1, 0x80000000 | (language_offset + language_size * count))
+    for index in range(count + 1):
+        output += directory(1)
+        output += struct.pack("<II", 0x409, data_entries_offset + 16 * index)
+    for index, blob in enumerate(blobs):
+        output += struct.pack("<IIII", section_rva + blob_offsets[index], len(blob), 0, 0)
+    for index, blob in enumerate(blobs):
+        output += bytes(blob_offsets[index] - len(output)) + blob
+    return bytes(output)
+
+
+def build(elf_path, output_path, exports=None, dll_name=None, icon_path=None):
+    data, sections, symbols, entry = read_elf(elf_path)
+    text_va, text = section_bytes(data, sections[".text"])
+    if ".rdata" in sections:
+        rdata_va, rdata = section_bytes(data, sections[".rdata"])
+    else:
+        rdata_va, rdata = None, b""
+    data_va, writable = section_bytes(data, sections[".data"])
+    writable = bytearray(writable)
+    if ".got" in sections:
+        got_va, got = section_bytes(data, sections[".got"])
+        writable += bytes(got_va - data_va - len(writable)) + got
+
+    runs = import_runs(symbols)
+    iat_va = runs[0][1][0][0]
+    iat_rva = iat_va - IMAGE_BASE
+    import_count = sum(len(slots) for _, slots in runs)
+
+    hint_names = bytearray()
+    name_offsets = []
+    for _, slots in runs:
+        for _, name in slots:
+            name_offsets.append(len(hint_names))
+            hint_names += struct.pack("<H", 0) + name.encode() + b"\0"
+            if len(hint_names) % 2:
+                hint_names += b"\0"
+    dll_name_offsets = {}
+    for dll, _ in runs:
+        if dll not in dll_name_offsets:
+            dll_name_offsets[dll] = len(hint_names)
+            hint_names += dll.encode() + b"\0"
+    descriptor_size = 20 * (len(runs) + 1)
+    lookup_size = 4 * (import_count + len(runs))
+    if exports:
+        idata_va = sections[".idata"][3]
+        idata_rva = idata_va - IMAGE_BASE
+        lookup_rva = idata_rva + descriptor_size
+        if lookup_rva + lookup_size > iat_rva:
+            raise ValueError("imports need 0x%x bytes before the IAT, link with --defsym=VELO_IMPORT_RESERVE=<more>" % (descriptor_size + lookup_size))
+        names_rva = iat_rva + 4 * (import_count + 1)
+    else:
+        idata_va = align(data_va + len(writable), SECTION_ALIGNMENT)
+        idata_rva = idata_va - IMAGE_BASE
+        lookup_rva = idata_rva + descriptor_size
+        names_rva = lookup_rva + lookup_size
+    name_rvas = [names_rva + offset for offset in name_offsets]
+    idata = bytearray()
+    lookup = bytearray()
+    position = 0
+    for dll, slots in runs:
+        run_name_rvas = name_rvas[position:position + len(slots)]
+        idata += struct.pack("<IIIII", lookup_rva + len(lookup), 0, 0, names_rva + dll_name_offsets[dll], iat_rva + 4 * position)
+        lookup += struct.pack("<%dI" % (len(slots) + 1), *run_name_rvas, 0)
+        position += len(slots)
+    idata += bytes(20)
+    idata += lookup
+    if exports:
+        idata += bytes(iat_rva - idata_rva - len(idata))
+        idata += struct.pack("<%dI" % (import_count + 1), *name_rvas, 0)
+    idata += hint_names
+    if not exports:
+        for index, rva in enumerate(name_rvas):
+            struct.pack_into("<I", writable, iat_va - data_va + 4 * index, rva)
+
+    def read_word(va):
+        for base, contents in ((text_va, text), (rdata_va or 0, rdata), (data_va, writable), (idata_va, idata)):
+            if base <= va < base + len(contents):
+                return struct.unpack_from("<I", contents, va - base)[0]
+        raise ValueError("no word at %x" % va)
+
+    relocations = encode_relocations(read_relocations(data, sections), read_word)
+    code_flags = CODE | 0x80000000 if exports else CODE
+    read_only_flags = READ_WRITE if exports else READ_ONLY
+    layout = [
+        (b".text", text_va, text, code_flags),
+        *([(b".rdata", rdata_va, rdata, read_only_flags)] if rdata else []),
+        (b".data", data_va, bytes(writable), READ_WRITE),
+        (b".idata", idata_va, bytes(idata), READ_WRITE),
+    ]
+    next_va = align(idata_va + len(idata), SECTION_ALIGNMENT)
+    export_table = b""
+    if exports:
+        export_table = build_exports(exports, symbols, dll_name, next_va - IMAGE_BASE)
+        layout.append((b".edata", next_va, export_table, read_only_flags))
+        export_va = next_va
+        next_va = align(next_va + len(export_table), SECTION_ALIGNMENT)
+    resources = b""
+    if icon_path:
+        resources = build_resources(icon_path, next_va - IMAGE_BASE)
+        layout.append((b".rsrc", next_va, resources, READ_ONLY))
+        resource_va = next_va
+        next_va = align(next_va + len(resources), SECTION_ALIGNMENT)
+    reloc_va = next_va
+    layout.append((b".reloc", reloc_va, relocations, 0x42000040))
+    file_position = HEADERS_SIZE
+    section_headers = bytearray()
+    body = bytearray()
+    for name, va, contents, flags in layout:
+        raw_size = align(len(contents), FILE_ALIGNMENT)
+        section_headers += struct.pack("<8sIIIIIIHHI", name, len(contents), va - IMAGE_BASE, raw_size, file_position, 0, 0, 0, 0, flags)
+        body += contents + bytes(raw_size - len(contents))
+        file_position += raw_size
+    image_size = align(reloc_va + len(relocations), SECTION_ALIGNMENT) - IMAGE_BASE
+
+    code_size = align(len(text), FILE_ALIGNMENT)
+    initialized_size = sum(align(len(contents), FILE_ALIGNMENT) for _, _, contents, _ in layout[1:])
+    directories = [(0, 0)] * 16
+    directories[1] = (idata_rva, descriptor_size)
+    if exports:
+        directories[0] = (export_va - IMAGE_BASE, len(export_table))
+    if icon_path:
+        directories[2] = (resource_va - IMAGE_BASE, len(resources))
+    directories[5] = (reloc_va - IMAGE_BASE, len(relocations))
+    directories[12] = (iat_rva, 4 * import_count)
+    optional = struct.pack(
+        "<HBBIIIIIIIIIHHHHHHIIIIHHIIIIII",
+        0x10B, 3, 0, code_size, initialized_size, 0,
+        entry - IMAGE_BASE, text_va - IMAGE_BASE, (rdata_va or data_va) - IMAGE_BASE,
+        IMAGE_BASE, SECTION_ALIGNMENT, FILE_ALIGNMENT,
+        4, 0, 0, 0, 4, 0, 0,
+        image_size, HEADERS_SIZE, 0, 2, 0,
+        0x10000, 0x1000, 0x100000, 0x1000, 0, 16,
+    ) + b"".join(struct.pack("<II", *directory) for directory in directories)
+
+    dos = bytearray(0x80)
+    dos[0:0x20] = bytes.fromhex("4d5a90000300000004000000ffff0000b8000000000000004000000000000000")
+    struct.pack_into("<I", dos, 0x3C, 0x80)
+    file_header = struct.pack("<HHIIIHH", 0x166, len(layout), 0, 0, 0, len(optional), 0x210E if exports else 0x010E)
+    headers = bytes(dos) + b"PE\0\0" + file_header + optional + bytes(section_headers)
+    if len(headers) > HEADERS_SIZE:
+        raise ValueError("headers too large")
+    open(output_path, "wb").write(headers + bytes(HEADERS_SIZE - len(headers)) + bytes(body))
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Convert a linked MIPS ELF into a Windows CE PE")
+    parser.add_argument("elf")
+    parser.add_argument("output")
+    parser.add_argument("--exports", help="comma-separated exports, NAME or NAME=SYMBOL; makes a DLL")
+    parser.add_argument("--exports-file", help="exports, one per line; makes a DLL")
+    parser.add_argument("--icon")
+    arguments = parser.parse_args()
+    exports = read_exports(arguments)
+    dll_name = arguments.output.replace("\\", "/").split("/")[-1]
+    build(arguments.elf, arguments.output, exports or None, dll_name, arguments.icon)

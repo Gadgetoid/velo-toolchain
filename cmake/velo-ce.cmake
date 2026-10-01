@@ -1,0 +1,45 @@
+set(CMAKE_SYSTEM_NAME Generic)
+set(CMAKE_SYSTEM_PROCESSOR mips)
+
+get_filename_component(VELO_TOOLCHAIN_ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+
+set(VELO_CE_VERSION 1 CACHE STRING "Windows CE version to target: 1 or 2")
+set_property(CACHE VELO_CE_VERSION PROPERTY STRINGS 1 2)
+
+if(NOT VELO_LLVM_ROOT)
+    execute_process(COMMAND brew --prefix llvm OUTPUT_VARIABLE VELO_BREW_LLVM OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    if(NOT VELO_BREW_LLVM)
+        set(VELO_BREW_LLVM /opt/homebrew/opt/llvm)
+    endif()
+    set(VELO_LLVM_ROOT "${VELO_BREW_LLVM}" CACHE PATH "LLVM install with the MIPS backend")
+endif()
+
+find_program(VELO_LLD ld.lld HINTS "${VELO_LLVM_ROOT}/bin" /opt/homebrew/opt/lld/bin REQUIRED)
+
+set(CMAKE_C_COMPILER "${VELO_LLVM_ROOT}/bin/clang")
+set(CMAKE_ASM_COMPILER "${VELO_LLVM_ROOT}/bin/clang")
+set(CMAKE_AR "${VELO_LLVM_ROOT}/bin/llvm-ar")
+set(CMAKE_RANLIB "${VELO_LLVM_ROOT}/bin/llvm-ranlib")
+set(CMAKE_LINKER "${VELO_LLD}")
+set(CMAKE_C_COMPILER_TARGET mipsel-unknown-none-elf)
+set(CMAKE_ASM_COMPILER_TARGET mipsel-unknown-none-elf)
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+
+set(VELO_TARGET_FLAGS "-march=mips1 -msoft-float -mno-abicalls -fno-pic -G0 -mno-check-zero-division")
+set(CMAKE_C_FLAGS_INIT "${VELO_TARGET_FLAGS} -fshort-wchar -ffreestanding -ffunction-sections -fdata-sections -D_WIN32_WCE=${VELO_CE_VERSION}00")
+set(CMAKE_ASM_FLAGS_INIT "${VELO_TARGET_FLAGS}")
+set(CMAKE_C_FLAGS_RELEASE_INIT "-Os")
+set(CMAKE_C_FLAGS_MINSIZEREL_INIT "-Os")
+set(CMAKE_EXE_LINKER_FLAGS_INIT "-static --emit-relocs --gc-sections")
+set(CMAKE_C_LINK_EXECUTABLE "<CMAKE_LINKER> <LINK_FLAGS> <CMAKE_C_LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+
+if(NOT DEFINED CMAKE_C_COMPILER_LAUNCHER)
+    set(CMAKE_C_COMPILER_LAUNCHER "${VELO_TOOLCHAIN_ROOT}/tools/velo-cc")
+    set(CMAKE_ASM_COMPILER_LAUNCHER "${VELO_TOOLCHAIN_ROOT}/tools/velo-cc")
+endif()
+
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+
+list(APPEND CMAKE_MODULE_PATH "${VELO_TOOLCHAIN_ROOT}/cmake")
