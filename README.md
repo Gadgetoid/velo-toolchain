@@ -1,14 +1,22 @@
 # velo-toolchain
 
-A CMake toolchain for Windows CE 1.0 and 2.0 MIPS programs and DLLs, aimed at the Philips Velo 1 (Toshiba TX3912, R3910 core). It uses Homebrew clang and lld, then `tools/mkpe.py` turns the linked ELF into a CE PE.
+A CMake toolchain for Windows CE 1.0 and 2.0 MIPS programs and DLLs, aimed at the Philips Velo 1 (Toshiba TX3912, R3910 core). It uses clang and lld, then `tools/mkpe.py` turns the linked ELF into a CE PE.
 
 ## Requirements
+
+macOS:
 
 ```sh
 brew install llvm lld cmake
 ```
 
-Apple's clang has no MIPS backend. Set `VELO_LLVM_ROOT` to use another LLVM install.
+Debian/Ubuntu:
+
+```sh
+sudo apt install clang lld llvm cmake
+```
+
+Apple's clang has no MIPS backend. The toolchain uses Homebrew's LLVM if present, otherwise the `clang` on `PATH`. Set `VELO_LLVM_ROOT` to use another LLVM install.
 
 ## Usage
 
@@ -66,7 +74,13 @@ make examples   # build for CE 1.0 and CE 2.0 into build/ce1 and build/ce2
 make test       # also run each example in velo-emu, screenshots in build/ce*/screenshots
 ```
 
-`make test` needs `../velo-emu` (built), the desktop states in `../velo-apps/tools`, and for CE 2.0 the ROM and system card from `../cerf-bundles/philips_velo_1_ce2`. `VELO_EMU`, `VELO_APPS`, `VELO_CE2_ROM` and `VELO_CE2_SYSTEM_CARD` override these.
+`make test` needs these set:
+
+- `VELO_EMU`: a built velo-emu checkout
+- `VELO_APPS`: a velo-apps checkout, for the desktop states in `tools/`
+- `VELO_CE2_ROM`, `VELO_CE2_SYSTEM_CARD`: the CE 2.0 `nk.bin` and `ce2_sys.img` (CE 2.0 only)
+
+On Linux it also needs `dosfstools` and `mtools`.
 
 ## Sources
 

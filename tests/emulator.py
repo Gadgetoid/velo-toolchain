@@ -9,29 +9,44 @@ import tempfile
 import zlib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-EMULATOR = os.path.expanduser(os.environ.get("VELO_EMU", "~/Development/misc/velo-emu"))
-VELO_APPS = os.path.expanduser(os.environ.get("VELO_APPS", "~/Development/misc/velo-apps"))
-CE2_BUNDLE = os.path.expanduser("~/Development/misc/cerf-bundles/philips_velo_1_ce2/rom")
 TARGETS = {
     "1": {
-        "rom": os.path.join(EMULATOR, "rom", "nk.bin"),
-        "state": os.path.join(VELO_APPS, "tools", "clean-desktop.state"),
+        "rom": lambda: os.path.join(environment("VELO_EMU"), "rom", "nk.bin"),
+        "state": "clean-desktop.state",
         "card_root": "\\PC Card",
         "card_ready": 3,
-        "base_image": None,
+        "base_image": lambda: None,
     },
     "2": {
-        "rom": os.environ.get("VELO_CE2_ROM", os.path.join(CE2_BUNDLE, "nk.bin")),
-        "state": os.path.join(VELO_APPS, "tools", "clean-desktop-ce2.state"),
+        "rom": lambda: environment("VELO_CE2_ROM"),
+        "state": "clean-desktop-ce2.state",
         "card_root": "\\Storage Card",
         "card_ready": 6,
-        "base_image": os.environ.get("VELO_CE2_SYSTEM_CARD", os.path.join(CE2_BUNDLE, "ce2_sys.img")),
+        "base_image": lambda: environment("VELO_CE2_SYSTEM_CARD"),
     },
 }
 CARD_FOLDER = "EXAMPLES"
 SETTLE_SECONDS = 10
 EXTRA_EVENTS = {"window.exe": ["--tap={at}:200:120"]}
 ARGUMENTS = {"greeter.exe": "{folder}\\greet.dll"}
+
+
+def environment(name):
+    value = os.environ.get(name)
+    if not value:
+        sys.exit("%s is not set" % name)
+    return os.path.expanduser(value)
+
+
+def load_target(ce):
+    settings = TARGETS[ce]
+    return {
+        **settings,
+        "emulator": environment("VELO_EMU"),
+        "rom": settings["rom"](),
+        "state": os.path.join(environment("VELO_APPS"), "tools", settings["state"]),
+        "base_image": settings["base_image"](),
+    }
 
 
 def write_png(pgm_path, png_path):
@@ -48,13 +63,12 @@ def write_png(pgm_path, png_path):
     open(png_path, "wb").write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IDAT", zlib.compress(rows)) + chunk(b"IEND", b""))
 
 
-def copy_base_image(image, destination):
+def copy_mounted_image(image, destination):
     attached = subprocess.run(["hdiutil", "attach", "-readonly", "-nobrowse", "-imagekey", "diskimage-class=CRawDiskImage", image],
                               capture_output=True, text=True, check=True).stdout
     mount = attached.strip().splitlines()[-1].split("\t")[-1]
-    items = []
     try:
-        for name in sorted(os.listdir(mount)):
+        for name in os.listdir(mount):
             if name.startswith("."):
                 continue
             source = os.path.join(mount, name)
@@ -63,10 +77,23 @@ def copy_base_image(image, destination):
                 shutil.copytree(source, target)
             else:
                 shutil.copyfile(source, target)
-            items.append(target)
     finally:
         subprocess.run(["hdiutil", "detach", "-quiet", mount])
-    return items
+
+
+def copy_image_with_mtools(image, destination):
+    with open(image, "rb") as file:
+        master_boot_record = file.read(512)
+    partition_offset = struct.unpack_from("<I", master_boot_record, 0x1c6)[0] * 512
+    subprocess.run(["mcopy", "-s", "-i", "%s@@%d" % (image, partition_offset), "::/*", destination], capture_output=True, check=True)
+
+
+def copy_base_image(image, destination):
+    if sys.platform == "darwin":
+        copy_mounted_image(image, destination)
+    else:
+        copy_image_with_mtools(image, destination)
+    return [os.path.join(destination, name) for name in sorted(os.listdir(destination)) if not name.startswith(".")]
 
 
 def make_card(build, target, work):
@@ -85,7 +112,7 @@ def make_card(build, target, work):
         os.makedirs(base)
         items += copy_base_image(target["base_image"], base)
     image = os.path.join(work, "card.img")
-    subprocess.run([os.path.join(EMULATOR, "tools", "mkcard.sh"), image, "16", *items], check=True, capture_output=True)
+    subprocess.run([os.path.join(target["emulator"], "tools", "mkcard.sh"), image, "16", *items], check=True, capture_output=True)
     return image, sorted(programs)
 
 
@@ -103,7 +130,7 @@ def run_program(target, image, program, screenshot):
         card = os.path.join(work, "card.img")
         pgm = os.path.join(work, "screen.pgm")
         shutil.copyfile(image, card)
-        subprocess.run([os.path.join(EMULATOR, "headless"), target["rom"], "--seconds=%d" % (started + SETTLE_SECONDS),
+        subprocess.run([os.path.join(target["emulator"], "headless"), target["rom"], "--seconds=%d" % (started + SETTLE_SECONDS),
                         "--load=%s" % target["state"], "--card=%s" % card, *events, "--pgm=%s" % pgm],
                        capture_output=True, timeout=600, check=True)
         write_png(pgm, screenshot)
@@ -116,7 +143,7 @@ if __name__ == "__main__":
     parser.add_argument("--ce", choices=sorted(TARGETS), default="1")
     parser.add_argument("--output", help="screenshot directory, default <build>/screenshots")
     arguments = parser.parse_args()
-    target = TARGETS[arguments.ce]
+    target = load_target(arguments.ce)
     output = arguments.output or os.path.join(arguments.build, "screenshots")
     os.makedirs(output, exist_ok=True)
     with tempfile.TemporaryDirectory() as work:
