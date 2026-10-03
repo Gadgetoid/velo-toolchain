@@ -8,6 +8,7 @@
             "program": "${command:cmake.launchTargetPath}",
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb",
+            "targetArchitecture": "mips",
             "miDebuggerPath": "gdb",
             "linux": {
                 "miDebuggerPath": "gdb-multiarch"
@@ -36,6 +37,7 @@
             "program": "${command:cmake.launchTargetPath}",
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb",
+            "targetArchitecture": "mips",
             "miDebuggerPath": "gdb",
             "linux": {
                 "miDebuggerPath": "gdb-multiarch"

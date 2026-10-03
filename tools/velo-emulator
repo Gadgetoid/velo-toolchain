@@ -18,6 +18,7 @@ if __name__ == "__main__":
     port = arguments.gdb or 2000 + int(arguments.ce)
     print("velo-emulator: starting CE %s.0 on GDB port %d" % (arguments.ce, port), flush=True)
     probe = socket.socket()
+    probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
         probe.bind(("127.0.0.1", port))
     except OSError:
