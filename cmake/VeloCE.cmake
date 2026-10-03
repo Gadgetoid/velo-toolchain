@@ -77,6 +77,21 @@ function(_velo_resources target out_options)
     set(${out_options} ${options} PARENT_SCOPE)
 endfunction()
 
+function(_velo_gdb_script target output)
+    set(program "$<TARGET_FILE_DIR:${target}>/${output}")
+    file(GENERATE OUTPUT "$<TARGET_FILE:${target}>.gdb" CONTENT
+"set confirm off
+set exec-file-mismatch off
+file \"$<TARGET_FILE:${target}>\"
+set breakpoint pending on
+set solib-search-path $<TARGET_FILE_DIR:${target}>
+set remote exec-file /Windows/${output}
+define velo-load
+  remote put \"${program}\" /Windows/${output}
+end
+")
+endfunction()
+
 function(_velo_require_exports target)
     foreach(export IN LISTS ARGN)
         string(REGEX REPLACE "^[^=]*=" "" symbol "${export}")
@@ -102,6 +117,7 @@ function(velo_add_executable target)
     endif()
     _velo_resources(${target} resource_options ${VELO_RESOURCES})
     _velo_pe(${target} "${VELO_OUTPUT}" ${options} ${resource_options})
+    _velo_gdb_script(${target} "${VELO_OUTPUT}")
 endfunction()
 
 function(velo_add_library target)

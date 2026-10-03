@@ -1,0 +1,61 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Velo CE 1.0",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "miDebuggerPath": "gdb",
+            "linux": {
+                "miDebuggerPath": "gdb-multiarch"
+            },
+            "preLaunchTask": "velo: emulator CE 1.0",
+            "customLaunchSetupCommands": [
+                {
+                    "text": "source ${command:cmake.launchTargetPath}.gdb"
+                },
+                {
+                    "text": "target extended-remote localhost:2001"
+                },
+                {
+                    "text": "-gdb-set target-wide-charset UTF-16LE"
+                },
+                {
+                    "text": "velo-load"
+                }
+            ],
+            "launchCompleteCommand": "exec-run"
+        },
+        {
+            "name": "Velo CE 2.0",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "miDebuggerPath": "gdb",
+            "linux": {
+                "miDebuggerPath": "gdb-multiarch"
+            },
+            "preLaunchTask": "velo: emulator CE 2.0",
+            "customLaunchSetupCommands": [
+                {
+                    "text": "source ${command:cmake.launchTargetPath}.gdb"
+                },
+                {
+                    "text": "target extended-remote localhost:2002"
+                },
+                {
+                    "text": "-gdb-set target-wide-charset UTF-16LE"
+                },
+                {
+                    "text": "velo-load"
+                }
+            ],
+            "launchCompleteCommand": "exec-run"
+        }
+    ]
+}

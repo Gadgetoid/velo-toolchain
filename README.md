@@ -106,6 +106,26 @@ velo-emu's GDB stub also uses debugmgr, for `remote put`, `remote get` and `run`
 
 Run debugmgr from RAM (`\Windows`) rather than a card: CE loads its code from the EXE as it runs, and a card being remounted after `--load` fails that.
 
+### GDB and VS Code
+
+Each executable gets a GDB script beside its `.elf`, `<name>.elf.gdb`. It loads the symbols, sets the program to run as `\Windows\<name>.exe`, and defines `velo-load`, which uploads the `.exe` through debugmgr. `tools/velo-emulator --ce 1|2` starts velo-emu from the debug desktop state with its GDB stub on port 2001 (CE 1.0) or 2002 (CE 2.0), or reports one already running there. Add `--headless` for no window.
+
+```sh
+tools/velo-emulator --ce 1 &
+gdb -x build/myapp.elf.gdb -ex "target extended-remote :2001" -ex "set target-wide-charset UTF-16LE" -ex velo-load -ex "break WinMain" -ex run
+```
+
+Set the character set after connecting, since connecting resets it, so `WCHAR` strings show as text.
+
+For VS Code, copy `vscode/launch.json` and `vscode/tasks.json` into a project's `.vscode`. They need:
+
+- the C/C++ and CMake Tools extensions, with the project configured with this toolchain, `CMAKE_BUILD_TYPE=Debug`, and the `VELO_CE_VERSION` that matches the launch configuration you pick
+- `gdb` with MIPS support (Homebrew's `gdb` on macOS, `gdb-multiarch` on Linux)
+- `VELO_TOOLCHAIN` (this folder), `VELO_EMU`, and for CE 2.0 `VELO_CE2_ROM`, in VS Code's environment
+- `make debug-state` run once here
+
+F5 starts the emulator if it isn't running, uploads the selected target's `.exe` and runs it, stopping at breakpoints. The emulator keeps running between sessions. Only the `.exe` is uploaded: copy any DLLs it loads with `remote put` (or `velo-debug put`).
+
 ## Examples and tests
 
 `examples/` has `hello` (message box), `window` (window, painting, taps, icon), `maths` (soft float and 64-bit integers) and `dll` (a DLL and a program that loads it).

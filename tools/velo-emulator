@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+import argparse
+import os
+import shutil
+import socket
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "tests"))
+import emulator
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Start velo-emu from the debug desktop state, with its GDB stub listening")
+    parser.add_argument("--ce", choices=sorted(emulator.TARGETS), default="1")
+    parser.add_argument("--gdb", type=int, help="GDB port, default 2001 for CE 1.0 and 2002 for CE 2.0")
+    parser.add_argument("--headless", action="store_true", help="no window: run until GDB detaches")
+    arguments = parser.parse_args()
+    port = arguments.gdb or 2000 + int(arguments.ce)
+    print("velo-emulator: starting CE %s.0 on GDB port %d" % (arguments.ce, port), flush=True)
+    probe = socket.socket()
+    try:
+        probe.bind(("127.0.0.1", port))
+    except OSError:
+        print("gdb: listening on 127.0.0.1:%d (already running)" % port, flush=True)
+        sys.exit(0)
+    finally:
+        probe.close()
+    state = os.path.join(ROOT, "build", "debugmgr", "ce" + arguments.ce, "debug-desktop.state")
+    if not os.path.exists(state):
+        sys.exit("velo-emulator: error: no %s; run make debug-state in %s" % (state, ROOT))
+    session = os.path.join(ROOT, "build", "debugmgr", "ce" + arguments.ce, "session.state")
+    shutil.copyfile(state, session)
+    folder = emulator.environment("VELO_EMU")
+    rom = emulator.TARGETS[arguments.ce]["rom"]()
+    if arguments.headless:
+        command = [os.path.join(folder, "headless"), rom, "--load=%s" % session, "--gdb=%d" % port]
+    else:
+        command = [os.path.join(folder, "velo"), "--state=%s" % session, "--gdb=%d" % port, rom]
+    os.execv(command[0], command)
