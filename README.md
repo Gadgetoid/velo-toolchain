@@ -16,6 +16,8 @@ Debian/Ubuntu:
 sudo apt install clang lld llvm cmake
 ```
 
+`RESOURCES` also needs `llvm-rc`, which is in both.
+
 Apple's clang has no MIPS backend. The toolchain uses Homebrew's LLVM if present, otherwise the `clang` on `PATH`. Set `VELO_LLVM_ROOT` to use another LLVM install.
 
 ## Usage
@@ -25,7 +27,7 @@ cmake_minimum_required(VERSION 3.20)
 project(myapp C)
 include(VeloCE)
 
-velo_add_executable(myapp main.c ICON myapp.ico)
+velo_add_executable(myapp main.c ICON myapp.ico RESOURCES myapp.rc resource.h)
 target_link_libraries(myapp PRIVATE velo::commctrl)
 
 velo_add_library(mylib mylib.c EXPORTS Add Greeting=greeting_impl)
@@ -38,8 +40,9 @@ cmake --build build
 
 This gives `build/myapp.exe` and `build/mylib.dll`, with the linked `.elf` beside each.
 
-- `velo_add_executable(target [EXCLUDE_FROM_ALL] [OUTPUT file.exe] [ICON file.ico] sources...)`: entry point `WinMain`.
-- `velo_add_library(target [EXCLUDE_FROM_ALL] [OUTPUT file.dll] EXPORTS name[=symbol]... | EXPORTS_FILE file sources...)`: entry point `DllMain`. `EXPORTS_FILE` has one export per line.
+- `velo_add_executable(target [EXCLUDE_FROM_ALL] [OUTPUT file.exe] [ICON file.ico] [RESOURCES files...] sources...)`: entry point `WinMain`.
+- `velo_add_library(target [EXCLUDE_FROM_ALL] [OUTPUT file.dll] [RESOURCES files...] EXPORTS name[=symbol]... | EXPORTS_FILE file sources...)`: entry point `DllMain`. `EXPORTS_FILE` has one export per line.
+- `RESOURCES`: `.rc` files are compiled with `llvm-rc` and linked into `.rsrc` with the icon. Other files listed (headers, bitmaps) are dependencies. The `.rc` can include `windows.h` and `commctrl.h`. CE has no `DialogBoxParamW`: use `FindResource`, `LoadResource` and `DialogBoxIndirectParamW`.
 - `VELO_CE_VERSION`: `1` (default) or `2`. Sets `_WIN32_WCE` to `100` or `200` and picks the import libraries.
 
 ## Import libraries

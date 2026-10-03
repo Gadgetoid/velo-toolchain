@@ -4,7 +4,7 @@ Linked MIPS ELF (--emit-relocs) to Windows CE 1.0/2.0 PE32.
 - Machine 0x166 (MIPS little endian), subsystem 2 version 4.0, as the CE 1.0 SDK wrote.
 - Image base 0x10000, headers 0x400, file alignment 0x200.
 - Sections 4 KB aligned: the R3910 has 4 KB pages only.
-- Sections: .text, .rdata, .data, .idata, then .edata (DLL), .rsrc (icon), .reloc.
+- Sections: .text, .rdata, .data, .idata, then .edata (DLL), .rsrc (icon, .res files), .reloc.
 - Imports by name, hint 0. Slots are __imp_<name> symbols, one descriptor per run of
   slots from the same DLL (__velo_import$<dll>$<name>, else COREDLL.dll).
 - EXE: IAT at the start of .data. DLL: IAT in .idata, after descriptors and lookup tables.
@@ -25,6 +25,9 @@ IMPORT_MARKER = "__velo_import$"
 CODE = 0x60000020
 READ_ONLY = 0x40000040
 READ_WRITE = 0xC0000040
+RT_ICON = 3
+RT_GROUP_ICON = 14
+DEFAULT_LANGUAGE = 0x409
 
 
 def align(value, alignment):
@@ -170,56 +173,107 @@ def build_exports(exports, symbols, dll_name, export_rva):
     return bytes(table + strings)
 
 
-def build_resources(icon_path, section_rva):
+def icon_resources(icon_path):
     data = open(icon_path, "rb").read()
     _, _, count = struct.unpack_from("<HHH", data, 0)
-    icons = []
+    resources = []
+    group = struct.pack("<HHH", 0, 1, count)
     for index in range(count):
         width, height, colours, _, planes, bits, size, offset = struct.unpack_from("<BBBBHHII", data, 6 + 16 * index)
-        icons.append((width, height, colours, planes, bits, data[offset:offset + size]))
-    group = struct.pack("<HHH", 0, 1, count)
-    for index, (width, height, colours, planes, bits, blob) in enumerate(icons):
-        group += struct.pack("<BBBBHHIH", width, height, colours, 0, planes, bits, len(blob), index + 1)
+        resources.append((RT_ICON, index + 1, DEFAULT_LANGUAGE, data[offset:offset + size]))
+        group += struct.pack("<BBBBHHIH", width, height, colours, 0, planes, bits, size, index + 1)
+    resources.append((RT_GROUP_ICON, 1, DEFAULT_LANGUAGE, group))
+    return resources
 
-    def directory(count):
-        return struct.pack("<IIHHHH", 0, 0, 0, 0, 0, count)
 
-    root_size = 16 + 8 * 2
-    icon_types_offset = root_size
-    icon_types_size = 16 + 8 * count
-    group_types_offset = icon_types_offset + icon_types_size
-    group_types_size = 16 + 8
-    language_offset = group_types_offset + group_types_size
-    language_size = 16 + 8
-    data_entries_offset = language_offset + language_size * (count + 1)
-    blobs_offset = data_entries_offset + 16 * (count + 1)
-    blobs = [blob for *_, blob in icons] + [group]
+def read_resource_name(data, offset):
+    if struct.unpack_from("<H", data, offset)[0] == 0xFFFF:
+        return struct.unpack_from("<H", data, offset + 2)[0], offset + 4
+    end = offset
+    while struct.unpack_from("<H", data, end)[0]:
+        end += 2
+    return data[offset:end].decode("utf-16-le").upper(), end + 2
+
+
+def compiled_resources(res_path):
+    data = open(res_path, "rb").read()
+    resources = []
+    offset = 0
+    while offset < len(data):
+        data_size, header_size = struct.unpack_from("<II", data, offset)
+        kind, position = read_resource_name(data, offset + 8)
+        name, position = read_resource_name(data, position)
+        position = align(position, 4)
+        language = struct.unpack_from("<H", data, position + 6)[0]
+        body = data[offset + header_size:offset + header_size + data_size]
+        if kind or data_size:
+            resources.append((kind, name, language, body))
+        offset = align(offset + header_size + data_size, 4)
+    return resources
+
+
+def build_resources(resources, section_rva):
+    tree = {}
+    for kind, name, language, body in resources:
+        languages = tree.setdefault(kind, {}).setdefault(name, {})
+        if language in languages:
+            raise ValueError("duplicate resource %r %r" % (kind, name))
+        languages[language] = body
+
+    def ordered(keys):
+        return sorted((key for key in keys if isinstance(key, str))) + sorted((key for key in keys if isinstance(key, int)))
+
+    directories = []
+    leaves = []
+    pending = [(tree, 0)]
+    while pending:
+        node, depth = pending.pop(0)
+        entries = []
+        directories.append(entries)
+        for key in ordered(node):
+            if depth == 2:
+                leaves.append(node[key])
+                entries.append((key, "leaf", len(leaves) - 1))
+            else:
+                pending.append((node[key], depth + 1))
+                entries.append((key, "directory", len(directories) + len(pending) - 1))
+    directory_offsets = []
+    position = 0
+    for entries in directories:
+        directory_offsets.append(position)
+        position += 16 + 8 * len(entries)
+    names = ordered({key for entries in directories for key, _, _ in entries if isinstance(key, str)})
+    name_offsets = {}
+    for name in names:
+        name_offsets[name] = position
+        position += 2 + 2 * len(name)
+    position = align(position, 4)
+    data_entries_offset = position
+    position += 16 * len(leaves)
     blob_offsets = []
-    position = blobs_offset
-    for blob in blobs:
+    for body in leaves:
         blob_offsets.append(position)
-        position = align(position + len(blob), 4)
+        position = align(position + len(body), 4)
 
     output = bytearray()
-    output += directory(2)
-    output += struct.pack("<II", 3, 0x80000000 | icon_types_offset)
-    output += struct.pack("<II", 14, 0x80000000 | group_types_offset)
-    output += directory(count)
-    for index in range(count):
-        output += struct.pack("<II", index + 1, 0x80000000 | (language_offset + language_size * index))
-    output += directory(1)
-    output += struct.pack("<II", 1, 0x80000000 | (language_offset + language_size * count))
-    for index in range(count + 1):
-        output += directory(1)
-        output += struct.pack("<II", 0x409, data_entries_offset + 16 * index)
-    for index, blob in enumerate(blobs):
-        output += struct.pack("<IIII", section_rva + blob_offsets[index], len(blob), 0, 0)
-    for index, blob in enumerate(blobs):
-        output += bytes(blob_offsets[index] - len(output)) + blob
+    for entries in directories:
+        named = sum(1 for key, _, _ in entries if isinstance(key, str))
+        output += struct.pack("<IIHHHH", 0, 0, 0, 0, named, len(entries) - named)
+        for key, kind, index in entries:
+            identifier = 0x80000000 | name_offsets[key] if isinstance(key, str) else key
+            target = 0x80000000 | directory_offsets[index] if kind == "directory" else data_entries_offset + 16 * index
+            output += struct.pack("<II", identifier, target)
+    for name in names:
+        output += struct.pack("<H", len(name)) + name.encode("utf-16-le")
+    output += bytes(data_entries_offset - len(output))
+    for index, body in enumerate(leaves):
+        output += struct.pack("<IIII", section_rva + blob_offsets[index], len(body), 0, 0)
+    for index, body in enumerate(leaves):
+        output += bytes(blob_offsets[index] - len(output)) + body
     return bytes(output)
 
 
-def build(elf_path, output_path, exports=None, dll_name=None, icon_path=None):
+def build(elf_path, output_path, exports=None, dll_name=None, resources=None):
     data, sections, symbols, entry = read_elf(elf_path)
     text_va, text = section_bytes(data, sections[".text"])
     if ".rdata" in sections:
@@ -305,12 +359,11 @@ def build(elf_path, output_path, exports=None, dll_name=None, icon_path=None):
         layout.append((b".edata", next_va, export_table, read_only_flags))
         export_va = next_va
         next_va = align(next_va + len(export_table), SECTION_ALIGNMENT)
-    resources = b""
-    if icon_path:
-        resources = build_resources(icon_path, next_va - IMAGE_BASE)
-        layout.append((b".rsrc", next_va, resources, READ_ONLY))
+    if resources:
+        resource_section = build_resources(resources, next_va - IMAGE_BASE)
+        layout.append((b".rsrc", next_va, resource_section, READ_ONLY))
         resource_va = next_va
-        next_va = align(next_va + len(resources), SECTION_ALIGNMENT)
+        next_va = align(next_va + len(resource_section), SECTION_ALIGNMENT)
     reloc_va = next_va
     layout.append((b".reloc", reloc_va, relocations, 0x42000040))
     file_position = HEADERS_SIZE
@@ -329,8 +382,8 @@ def build(elf_path, output_path, exports=None, dll_name=None, icon_path=None):
     directories[1] = (idata_rva, descriptor_size)
     if exports:
         directories[0] = (export_va - IMAGE_BASE, len(export_table))
-    if icon_path:
-        directories[2] = (resource_va - IMAGE_BASE, len(resources))
+    if resources:
+        directories[2] = (resource_va - IMAGE_BASE, len(resource_section))
     directories[5] = (reloc_va - IMAGE_BASE, len(relocations))
     directories[12] = (iat_rva, 4 * import_count)
     optional = struct.pack(
@@ -360,7 +413,11 @@ if __name__ == "__main__":
     parser.add_argument("--exports", help="comma-separated exports, NAME or NAME=SYMBOL; makes a DLL")
     parser.add_argument("--exports-file", help="exports, one per line; makes a DLL")
     parser.add_argument("--icon")
+    parser.add_argument("--resources", action="append", default=[], help="compiled resources (.res)")
     arguments = parser.parse_args()
     exports = read_exports(arguments)
     dll_name = arguments.output.replace("\\", "/").split("/")[-1]
-    build(arguments.elf, arguments.output, exports or None, dll_name, arguments.icon)
+    resources = icon_resources(arguments.icon) if arguments.icon else []
+    for res_path in arguments.resources:
+        resources += compiled_resources(res_path)
+    build(arguments.elf, arguments.output, exports or None, dll_name, resources)
