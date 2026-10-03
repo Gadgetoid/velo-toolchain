@@ -44,6 +44,7 @@ This gives `build/myapp.exe` and `build/mylib.dll`, with the linked `.elf` besid
 - `velo_add_library(target [EXCLUDE_FROM_ALL] [OUTPUT file.dll] [RESOURCES files...] EXPORTS name[=symbol]... | EXPORTS_FILE file sources...)`: entry point `DllMain`. `EXPORTS_FILE` has one export per line.
 - `RESOURCES`: `.rc` files are compiled with `llvm-rc` and linked into `.rsrc` with the icon. Other files listed (headers, bitmaps) are dependencies. The `.rc` can include `windows.h` and `commctrl.h`. CE has no `DialogBoxParamW`: use `FindResource`, `LoadResource` and `DialogBoxIndirectParamW`.
 - `VELO_CE_VERSION`: `1` (default) or `2`. Sets `_WIN32_WCE` to `100` or `200` and picks the import libraries.
+- `CMAKE_BUILD_TYPE` defaults to `MinSizeRel` (`-Os`). `Debug` gives `-O0 -g`.
 
 ## Import libraries
 
@@ -71,7 +72,7 @@ Each import library is a set of weak stubs (`lui`/`lw`/`jr` through `__imp_<name
 
 ## Debugging
 
-`-DCMAKE_BUILD_TYPE=Debug` adds `-g`. The debug info stays in the `.elf`; the `.exe` or `.dll` is the same.
+`-DCMAKE_BUILD_TYPE=Debug` builds with `-O0 -g`. The debug info stays in the `.elf`; the `.exe` or `.dll` is the same.
 
 `OutputDebugStringW` output, and the kernel's register dump when a program crashes, show with velo-emu's `--debug-output`. `tools/velo-symbolize` adds functions and source lines to the addresses in it:
 
