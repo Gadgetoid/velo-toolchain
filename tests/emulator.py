@@ -5,36 +5,45 @@ import shutil
 import struct
 import subprocess
 import sys
+import shlex
 import tempfile
+import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TARGETS = {
     "1": {
         "rom": lambda: os.path.join(environment("VELO_EMU"), "rom", "nk.bin"),
-        "state": "clean-desktop.state",
+        "state": lambda: os.path.join(environment("VELO_APPS"), "tools", "clean-desktop.state"),
         "card_root": "\\PC Card",
         "card_ready": 3,
         "base_image": lambda: None,
     },
     "2": {
         "rom": lambda: environment("VELO_CE2_ROM"),
-        "state": "clean-desktop-ce2.state",
+        "state": lambda: optional_environment("VELO_CE2_STATE") or os.path.join(environment("VELO_APPS"), "tools", "clean-desktop-ce2.state"),
         "card_root": "\\Storage Card",
         "card_ready": 6,
-        "base_image": lambda: environment("VELO_CE2_SYSTEM_CARD"),
+        "base_image": lambda: optional_environment("VELO_CE2_SYSTEM_CARD"),
     },
 }
 CARD_FOLDER = "EXAMPLES"
 SETTLE_SECONDS = 10
 EXTRA_EVENTS = {"window.exe": ["--tap={at}:200:120"]}
 ARGUMENTS = {"greeter.exe": "{folder}\\greet.dll"}
+NETWORK_SETTLE_SECONDS = {}
+RAPI_WAIT_SECONDS = 60
 
 
 def environment(name):
-    value = os.environ.get(name)
+    value = optional_environment(name)
     if not value:
         sys.exit("%s is not set" % name)
-    return os.path.expanduser(value)
+    return value
+
+
+def optional_environment(name):
+    value = os.environ.get(name)
+    return os.path.expanduser(value) if value else None
 
 
 def load_target(ce):
@@ -43,7 +52,7 @@ def load_target(ce):
         **settings,
         "emulator": environment("VELO_EMU"),
         "rom": settings["rom"](),
-        "state": os.path.join(environment("VELO_APPS"), "tools", settings["state"]),
+        "state": settings["state"](),
         "base_image": settings["base_image"](),
     }
 
@@ -101,27 +110,73 @@ def make_card(build, target, work):
     return image, sorted(programs)
 
 
-def run_program(target, image, program, screenshot, cell):
+def headless(target, card, seconds, events, screenshot, cell):
+    return [os.path.join(target["emulator"], "headless"), target["rom"], "--seconds=%d" % seconds, "--load=%s" % target["state"],
+            "--card=%s" % card, *events, "--png=%s" % screenshot, "--png-cell=%d" % cell]
+
+
+def run_typed(target, card, program, arguments, screenshot, cell):
     launch = target["card_ready"]
-    folder = "%s\\%s" % (target["card_root"], CARD_FOLDER)
-    path = '"%s\\%s"' % (folder, program)
-    if program in ARGUMENTS:
-        path += " " + ARGUMENTS[program].format(folder=folder)
+    path = '"%s\\%s\\%s"' % (target["card_root"], CARD_FOLDER, program)
+    if arguments:
+        path += " " + arguments
     typed_at = launch + 2
     started = typed_at + 0.04 * len(path) + 0.4
     events = ["--tap=%d:15:227" % launch, "--type=%d:r" % (launch + 1), "--type=%.2f:%s" % (typed_at, path), "--type=%.2f:\\n" % started]
     events += [event.format(at="%.2f" % (started + 6)) for event in EXTRA_EVENTS.get(program, [])]
+    subprocess.run(headless(target, card, started + SETTLE_SECONDS, events, screenshot, cell), capture_output=True, timeout=600, check=True)
+
+
+def rapi(target, socket, *command):
+    return subprocess.run([os.path.join(target["emulator"], "velo-rapi"), "--socket=%s" % socket, *command], capture_output=True)
+
+
+class Offline(Exception):
+    pass
+
+
+def run_networked(target, card, program, arguments, screenshot, cell, work):
+    socket = os.path.join(work, "rapi.sock")
+    events = ["--net=1", "--realtime", "--rapi=%s" % socket]
+    seconds = RAPI_WAIT_SECONDS + NETWORK_SETTLE_SECONDS[program] + 30
+    emulator = subprocess.Popen(headless(target, card, seconds, events, screenshot, cell), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        deadline = time.monotonic() + RAPI_WAIT_SECONDS
+        while rapi(target, socket, "info").returncode:
+            if time.monotonic() > deadline or emulator.poll() is not None:
+                raise Offline()
+            time.sleep(1)
+        path = "\\".join((target["card_root"], CARD_FOLDER, program))
+        launched = rapi(target, socket, "run", path, *shlex.split(arguments))
+        if launched.returncode:
+            raise RuntimeError("%s: velo-rapi run failed: %s" % (program, launched.stderr.decode().strip()))
+        time.sleep(NETWORK_SETTLE_SECONDS[program])
+        emulator.terminate()
+        emulator.wait(timeout=60)
+    finally:
+        if emulator.poll() is None:
+            emulator.kill()
+
+
+def run_program(target, image, program, screenshot, cell, values=None):
+    folder = "%s\\%s" % (target["card_root"], CARD_FOLDER)
+    arguments = ARGUMENTS.get(program, "").format(folder=folder, **(values or {}))
     with tempfile.TemporaryDirectory() as work:
         card = os.path.join(work, "card.img")
         shutil.copyfile(image, card)
-        subprocess.run([os.path.join(target["emulator"], "headless"), target["rom"], "--seconds=%d" % (started + SETTLE_SECONDS),
-                        "--load=%s" % target["state"], "--card=%s" % card, *events, "--png=%s" % screenshot, "--png-cell=%d" % cell],
-                       capture_output=True, timeout=600, check=True)
+        if program in NETWORK_SETTLE_SECONDS:
+            try:
+                run_networked(target, card, program, arguments, screenshot, cell, work)
+                return screenshot
+            except Offline:
+                print("%s: no RAPI answer, running offline" % program, file=sys.stderr)
+                shutil.copyfile(image, card)
+        run_typed(target, card, program, arguments, screenshot, cell)
     return screenshot
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run each built example in velo-emu and screenshot it")
+def main(description="Run each built example in velo-emu and screenshot it", values=None):
+    parser = argparse.ArgumentParser(description=description)
     parser.add_argument("build", help="CMake build directory")
     parser.add_argument("--ce", choices=sorted(TARGETS), default="1")
     parser.add_argument("--output", help="screenshot directory, default <build>/screenshots")
@@ -135,6 +190,10 @@ if __name__ == "__main__":
         if not programs:
             sys.exit("no programs in %s" % arguments.build)
         with concurrent.futures.ThreadPoolExecutor() as pool:
-            screenshots = pool.map(lambda program: run_program(target, image, program, os.path.join(output, program[:-4] + ".png"), arguments.cell), programs)
+            screenshots = pool.map(lambda program: run_program(target, image, program, os.path.join(output, program[:-4] + ".png"), arguments.cell, values), programs)
             for screenshot in screenshots:
                 print(screenshot)
+
+
+if __name__ == "__main__":
+    main()

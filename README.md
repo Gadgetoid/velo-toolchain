@@ -83,9 +83,13 @@ make screenshots  # update the screenshots below, in docs/screenshots
 
 - `VELO_EMU`: a built velo-emu checkout
 - `VELO_APPS`: a velo-apps checkout, for the desktop states in `tools/`
-- `VELO_CE2_ROM`, `VELO_CE2_SYSTEM_CARD`: the CE 2.0 `nk.bin` and `ce2_sys.img` (CE 2.0 only)
+- `VELO_CE2_ROM`: the CE 2.0 `nk.bin`, or velo-emu's merged image (CE 2.0 only)
+- `VELO_CE2_SYSTEM_CARD`: the CE 2.0 `ce2_sys.img`, if the ROM isn't merged
+- `VELO_CE2_STATE`: a CE 2.0 desktop state, if not velo-apps' `clean-desktop-ce2.state` (which needs the separate ROM and system card)
 
 On Linux they also need `dosfstools` and `mtools`. `make screenshots` also needs `pngquant`.
+
+Other projects can use `tests/emulator.py` for their own programs: import it, set `ARGUMENTS` and `NETWORK_SETTLE_SECONDS`, and call `main()`, as velo-bluesky does. Programs in `NETWORK_SETTLE_SECONDS` get the PPP network and web proxy, are started over RAPI (`velo-rapi run`) once the Velo is online, and are screenshotted after that many seconds of real time. If the Velo doesn't answer over RAPI, as with the separate CE 2.0 ROM and system card, they're started from the Run dialog instead.
 
 | | CE 1.0 | CE 2.0 |
 | --- | --- | --- |
