@@ -16,6 +16,7 @@ COMMAND_MAKE_DIRECTORY = 8
 COMMAND_REMOVE_DIRECTORY = 9
 COMMAND_MOVE = 10
 COMMAND_QUIT = 11
+COMMAND_HANDOVER = 12
 REPLY_FLAG = 0x8000
 REPLY_HEADER_SIZE = 8
 FILE_ATTRIBUTE_DIRECTORY = 0x10
@@ -109,9 +110,12 @@ class Agent:
         open(local, "wb").write(data)
         return len(data)
 
-    def run(self, program, arguments):
-        reply = self.request(COMMAND_RUN, encode_string(ce_path(program)) + encode_string(arguments))
+    def run(self, program, arguments, command=COMMAND_RUN):
+        reply = self.request(command, encode_string(ce_path(program)) + encode_string(arguments))
         return struct.unpack_from("<I", reply)[0]
+
+    def handover(self, program, arguments=""):
+        return self.run(program, arguments, COMMAND_HANDOVER)
 
     def kill(self, process):
         self.request(COMMAND_KILL, struct.pack("<I", process))
@@ -158,6 +162,9 @@ if __name__ == "__main__":
     command.add_argument("source")
     command.add_argument("destination")
     commands.add_parser("quit", help="stop debugmgr")
+    command = commands.add_parser("handover", help="start another debugmgr, then stop this one")
+    command.add_argument("program")
+    command.add_argument("arguments", nargs=argparse.REMAINDER)
     arguments = parser.parse_args()
     if not arguments.socket:
         sys.exit("no socket: pass --socket or set VELO_AGENT")
@@ -186,5 +193,7 @@ if __name__ == "__main__":
             agent.path_command(COMMAND_MOVE, arguments.source, arguments.destination)
         elif arguments.command == "quit":
             agent.request(COMMAND_QUIT)
+        elif arguments.command == "handover":
+            print("0x%08x" % agent.handover(arguments.program, " ".join(arguments.arguments)))
     except (OSError, AgentError) as error:
         sys.exit("velo-debug: %s" % error)

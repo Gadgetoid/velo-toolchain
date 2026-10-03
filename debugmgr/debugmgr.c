@@ -17,6 +17,7 @@
 #define COMMAND_REMOVE_DIRECTORY 9
 #define COMMAND_MOVE 10
 #define COMMAND_QUIT 11
+#define COMMAND_HANDOVER 12
 #define REPLY_FLAG 0x8000
 
 #define STATUS_OK 0
@@ -342,6 +343,7 @@ static BOOL handle_request(int length) {
         status = read_file(&reader, &writer);
         break;
     case COMMAND_RUN:
+    case COMMAND_HANDOVER:
         status = run_program(&reader, &writer);
         break;
     case COMMAND_KILL:
@@ -375,7 +377,7 @@ static BOOL handle_request(int length) {
     reply[6] = (status >> 16) & 0xFF;
     reply[7] = (status >> 24) & 0xFF;
     host_call(HOST_SEND, reply, writer.length, NULL);
-    return command != COMMAND_QUIT;
+    return command != COMMAND_QUIT && !(command == COMMAND_HANDOVER && status == STATUS_OK);
 }
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE previous, LPWSTR command_line, int show) {

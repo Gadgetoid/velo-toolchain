@@ -115,7 +115,7 @@ def headless(target, card, seconds, events, screenshot, cell):
             "--card=%s" % card, *events, "--png=%s" % screenshot, "--png-cell=%d" % cell]
 
 
-def run_typed(target, card, program, arguments, screenshot, cell):
+def launch_events(target, program, arguments):
     launch = target["card_ready"]
     path = '"%s\\%s\\%s"' % (target["card_root"], CARD_FOLDER, program)
     if arguments:
@@ -123,6 +123,11 @@ def run_typed(target, card, program, arguments, screenshot, cell):
     typed_at = launch + 2
     started = typed_at + 0.04 * len(path) + 0.4
     events = ["--tap=%d:15:227" % launch, "--type=%d:r" % (launch + 1), "--type=%.2f:%s" % (typed_at, path), "--type=%.2f:\\n" % started]
+    return events, started
+
+
+def run_typed(target, card, program, arguments, screenshot, cell):
+    events, started = launch_events(target, program, arguments)
     events += [event.format(at="%.2f" % (started + 6)) for event in EXTRA_EVENTS.get(program, [])]
     subprocess.run(headless(target, card, started + SETTLE_SECONDS, events, screenshot, cell), capture_output=True, timeout=600, check=True)
 

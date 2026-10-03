@@ -89,8 +89,8 @@ It reads the `.elf` beside each `.exe` or `.dll` given. A DLL needs the address 
 `debugmgr/` is an agent for velo-emu that copies files and starts and stops programs, much faster than RAPI and without a PPP connection. It talks to the emulator through velo-emu's host mailbox (`break 0x51CE`, see velo-emu's README), so it only runs in the emulator.
 
 ```sh
-make debugmgr     # build/debugmgr/ce1 and ce2
-headless rom/nk.bin --load=state --card=card.img --agent=agent.sock ...
+make debug-state  # build/debugmgr/ce*/debug-desktop.state, with debugmgr running
+headless rom/nk.bin --load=build/debugmgr/ce1/debug-desktop.state --agent=agent.sock ...
 export VELO_AGENT=agent.sock
 tools/velo-debug ping
 tools/velo-debug put build/ce1/maths/maths.exe /Windows/maths.exe
@@ -98,7 +98,9 @@ tools/velo-debug run /Windows/maths.exe     # prints the process ID
 tools/velo-debug kill 0x80013f74
 ```
 
-`velo-debug` also has `get`, `ls`, `rm`, `mkdir`, `rmdir`, `mv` and `quit`. `kill` only ends programs debugmgr started. Unix socket paths are limited to about 100 characters, so keep the socket's path short or relative.
+`make debug-state` needs the same settings as `make test`. It starts debugmgr from a card, copies it to `\Windows`, hands over to that copy and saves the state, so loading it gives a Velo with debugmgr already answering. The card is out after loading, which for CE 2.0 with a separate system card includes the system card.
+
+`velo-debug` also has `get`, `ls`, `rm`, `mkdir`, `rmdir`, `mv`, `quit` and `handover` (start another debugmgr, then stop). `kill` only ends programs debugmgr started. Unix socket paths are limited to about 100 characters, so keep the socket's path short or relative.
 
 Run debugmgr from RAM (`\Windows`) rather than a card: CE loads its code from the EXE as it runs, and a card being remounted after `--load` fails that.
 

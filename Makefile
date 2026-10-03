@@ -1,6 +1,6 @@
 TOOLCHAIN = $(CURDIR)/cmake/velo-ce.cmake
 
-.PHONY: examples test screenshots debugmgr clean
+.PHONY: examples test screenshots debugmgr debug-state clean
 
 examples:
 	cmake -S examples -B build/ce1 -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) -DVELO_CE_VERSION=1
@@ -22,6 +22,10 @@ debugmgr:
 	cmake --build build/debugmgr/ce1
 	cmake -S debugmgr -B build/debugmgr/ce2 -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) -DVELO_CE_VERSION=2
 	cmake --build build/debugmgr/ce2
+
+debug-state: debugmgr
+	python3 tools/mkdebugstate.py build/debugmgr/ce1 build/debugmgr/ce1/debug-desktop.state --ce 1
+	python3 tools/mkdebugstate.py build/debugmgr/ce2 build/debugmgr/ce2/debug-desktop.state --ce 2
 
 clean:
 	rm -rf build
