@@ -84,6 +84,24 @@ tools/velo-symbolize build/myapp.exe -a 110bc
 
 It reads the `.elf` beside each `.exe` or `.dll` given. A DLL needs the address CE loaded it at: `build/mylib.dll@01f00000`. Addresses in other process slots are matched slot-relative. It uses `llvm-symbolizer`, from `VELO_LLVM_ROOT`, `PATH` or Homebrew's LLVM.
 
+### debugmgr
+
+`debugmgr/` is an agent for velo-emu that copies files and starts and stops programs, much faster than RAPI and without a PPP connection. It talks to the emulator through velo-emu's host mailbox (`break 0x51CE`, see velo-emu's README), so it only runs in the emulator.
+
+```sh
+make debugmgr     # build/debugmgr/ce1 and ce2
+headless rom/nk.bin --load=state --card=card.img --agent=agent.sock ...
+export VELO_AGENT=agent.sock
+tools/velo-debug ping
+tools/velo-debug put build/ce1/maths/maths.exe /Windows/maths.exe
+tools/velo-debug run /Windows/maths.exe     # prints the process ID
+tools/velo-debug kill 0x80013f74
+```
+
+`velo-debug` also has `get`, `ls`, `rm`, `mkdir`, `rmdir`, `mv` and `quit`. `kill` only ends programs debugmgr started. Unix socket paths are limited to about 100 characters, so keep the socket's path short or relative.
+
+Run debugmgr from RAM (`\Windows`) rather than a card: CE loads its code from the EXE as it runs, and a card being remounted after `--load` fails that.
+
 ## Examples and tests
 
 `examples/` has `hello` (message box), `window` (window, painting, taps, icon), `maths` (soft float and 64-bit integers) and `dll` (a DLL and a program that loads it).
