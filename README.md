@@ -69,6 +69,20 @@ Each import library is a set of weak stubs (`lui`/`lw`/`jr` through `__imp_<name
 - A DLL's import tables go in a 0x200 byte space before its IAT. `mkpe.py` says if a DLL needs more: `target_link_options(mylib PRIVATE --defsym=VELO_IMPORT_RESERVE=0x400)`.
 - `tools/velo-cc` filters clang's "MIPS-I support is experimental" warning. Set `CMAKE_C_COMPILER_LAUNCHER` to replace it.
 
+## Debugging
+
+`-DCMAKE_BUILD_TYPE=Debug` adds `-g`. The debug info stays in the `.elf`; the `.exe` or `.dll` is the same.
+
+`OutputDebugStringW` output, and the kernel's register dump when a program crashes, show with velo-emu's `--debug-output`. `tools/velo-symbolize` adds functions and source lines to the addresses in it:
+
+```sh
+headless rom/nk.bin ... --debug-output 2>&1 | tools/velo-symbolize build/myapp.exe
+# debug: AKY=00000003 PC=000110bc [deep crash.c:7] RA=000110ac [deep crash.c:7] BVA=00000000
+tools/velo-symbolize build/myapp.exe -a 110bc
+```
+
+It reads the `.elf` beside each `.exe` or `.dll` given. A DLL needs the address CE loaded it at: `build/mylib.dll@01f00000`. Addresses in other process slots are matched slot-relative. It uses `llvm-symbolizer`, from `VELO_LLVM_ROOT`, `PATH` or Homebrew's LLVM.
+
 ## Examples and tests
 
 `examples/` has `hello` (message box), `window` (window, painting, taps, icon), `maths` (soft float and 64-bit integers) and `dll` (a DLL and a program that loads it).

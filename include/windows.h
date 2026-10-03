@@ -488,6 +488,7 @@ void WINAPI ExitThread(DWORD exit_code);
 int WINAPI MessageBoxW(HWND window, LPCWSTR text, LPCWSTR caption, UINT type);
 DWORD WINAPI GetTickCount(void);
 void WINAPI Sleep(DWORD milliseconds);
+void WINAPI OutputDebugStringW(LPCWSTR text);
 void *WINAPI LocalAlloc(UINT flags, UINT bytes);
 void *WINAPI LocalFree(void *memory);
 void *WINAPI VirtualAlloc(void *address, DWORD size, DWORD type, DWORD protection);
