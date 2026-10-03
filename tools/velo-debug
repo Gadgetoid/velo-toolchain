@@ -26,7 +26,7 @@ AGENT_ERRORS = {
     0x20000001: "unknown command",
     0x20000002: "malformed request",
     0x20000003: "no such process (only programs started by debugmgr can be killed)",
-    0x20000004: "too many running programs",
+    0x20000005: "still running 5 seconds after being told to end",
 }
 WINDOWS_ERRORS = {2: "file not found", 3: "path not found", 5: "access denied", 80: "file exists", 112: "disk full", 183: "already exists"}
 

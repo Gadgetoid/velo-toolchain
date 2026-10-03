@@ -25,12 +25,14 @@
 #define STATUS_UNKNOWN_COMMAND 0x20000001
 #define STATUS_MALFORMED 0x20000002
 #define STATUS_NO_SUCH_PROCESS 0x20000003
-#define STATUS_TOO_MANY_PROCESSES 0x20000004
+#define STATUS_STILL_RUNNING 0x20000005
 
 #define HEADER_SIZE 4
 #define REPLY_HEADER_SIZE 8
 #define MAX_PROCESSES 16
 #define IDLE_MILLISECONDS 10
+#define KILL_MILLISECONDS 5000
+#define KILL_RETRY_MILLISECONDS 50
 
 typedef struct {
     const BYTE *data;
@@ -52,6 +54,7 @@ typedef struct {
 } Process;
 
 static Process processes[MAX_PROCESSES];
+static int next_process;
 static BYTE *request;
 static BYTE *reply;
 static int capacity;
@@ -138,6 +141,14 @@ static void write_string(Writer *writer, const WCHAR *text) {
     for (index = 0; index < count; index++) {
         write_u16(writer, text[index]);
     }
+}
+
+static BOOL process_ended(HANDLE handle) {
+#if _WIN32_WCE >= 200
+    return WaitForSingleObject(handle, 0) == WAIT_OBJECT_0;
+#else
+    return FALSE;
+#endif
 }
 
 static DWORD last_error(void) {
@@ -229,13 +240,15 @@ static DWORD run_program(Reader *reader, Writer *writer) {
     for (index = 0; index < MAX_PROCESSES && !slot; index++) {
         if (!processes[index].handle) {
             slot = &processes[index];
-        } else if (WaitForSingleObject(processes[index].handle, 0) == WAIT_OBJECT_0) {
+        } else if (process_ended(processes[index].handle)) {
             CloseHandle(processes[index].handle);
             slot = &processes[index];
         }
     }
     if (!slot) {
-        return STATUS_TOO_MANY_PROCESSES;
+        slot = &processes[next_process];
+        next_process = (next_process + 1) % MAX_PROCESSES;
+        CloseHandle(slot->handle);
     }
     if (!CreateProcessW(path, arguments[0] ? arguments : NULL, NULL, NULL, FALSE, 0, NULL, NULL, NULL, &information)) {
         slot->handle = NULL;
@@ -250,6 +263,7 @@ static DWORD run_program(Reader *reader, Writer *writer) {
 
 static DWORD kill_program(Reader *reader) {
     DWORD id = read_u32(reader);
+    DWORD deadline;
     Process *process;
     if (reader->failed) {
         return STATUS_MALFORMED;
@@ -258,8 +272,12 @@ static DWORD kill_program(Reader *reader) {
     if (!process) {
         return STATUS_NO_SUCH_PROCESS;
     }
-    if (WaitForSingleObject(process->handle, 0) != WAIT_OBJECT_0 && !TerminateProcess(process->handle, 0)) {
-        return last_error();
+    deadline = GetTickCount() + KILL_MILLISECONDS;
+    while (!process_ended(process->handle) && TerminateProcess(process->handle, 0)) {
+        if ((LONG)(GetTickCount() - deadline) >= 0) {
+            return STATUS_STILL_RUNNING;
+        }
+        Sleep(KILL_RETRY_MILLISECONDS);
     }
     CloseHandle(process->handle);
     process->handle = NULL;

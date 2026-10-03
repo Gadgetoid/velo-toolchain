@@ -100,7 +100,9 @@ tools/velo-debug kill 0x80013f74
 
 `make debug-state` needs the same settings as `make test`. It starts debugmgr from a card, copies it to `\Windows`, hands over to that copy and saves the state, so loading it gives a Velo with debugmgr already answering. The card is out after loading, which for CE 2.0 with a separate system card includes the system card.
 
-`velo-debug` also has `get`, `ls`, `rm`, `mkdir`, `rmdir`, `mv`, `quit` and `handover` (start another debugmgr, then stop). `kill` only ends programs debugmgr started. The message format is in [debugmgr/PROTOCOL.md](debugmgr/PROTOCOL.md). Unix socket paths are limited to about 100 characters, so keep the socket's path short or relative.
+`velo-debug` also has `get`, `ls`, `rm`, `mkdir`, `rmdir`, `mv`, `quit` and `handover` (start another debugmgr, then stop). `kill` only ends programs debugmgr started. The message format is in [debugmgr/PROTOCOL.md](debugmgr/PROTOCOL.md).
+
+velo-emu's GDB stub also uses debugmgr, for `remote put`, `remote get` and `run` after `target extended-remote`. GDB treats `\` as an escape in those paths, so use `/` (`remote put build/ce1/maths/maths.exe /Windows/maths.exe`) or double it. Unix socket paths are limited to about 100 characters, so keep the socket's path short or relative.
 
 Run debugmgr from RAM (`\Windows`) rather than a card: CE loads its code from the EXE as it runs, and a card being remounted after `--load` fails that.
 

@@ -22,7 +22,7 @@ A request must fit in the mailbox's maximum message size, which PING reports.
 | 0x20000001 | unknown command |
 | 0x20000002 | malformed request |
 | 0x20000003 | no such process: KILL only knows programs started by RUN |
-| 0x20000004 | too many running programs (16) |
+| 0x20000005 | KILL: still running after 5 seconds (CE 2.0) |
 | other | the Windows error from `GetLastError`, e.g. 2 file not found, 3 path not found, 5 access denied, 80 or 183 exists, 112 disk full |
 
 ## Commands
@@ -46,7 +46,9 @@ WRITE flag 0x1 creates the file, or truncates it if it exists. Without it the fi
 
 READ returns fewer bytes than asked at the end of the file, or when the reply would exceed the maximum message size.
 
-The process ID is CE's `dwProcessId` from `CreateProcessW`.
+The process ID is CE's `dwProcessId` from `CreateProcessW`. debugmgr remembers the last 16 programs it started for KILL, forgetting the oldest after that. On CE 1.0 a process handle reads as signalled while the program is still running, so debugmgr can't tell there whether a program has exited, and KILL of a program that has already exited also returns 0.
+
+On CE 2.0, KILL waits up to 5 seconds for the program to end.
 
 LIST stops early if the reply would exceed the maximum message size.
 
