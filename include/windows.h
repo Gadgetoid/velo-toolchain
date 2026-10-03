@@ -193,6 +193,13 @@ typedef struct {
     DWORD dwOID;
     WCHAR cFileName[MAX_PATH];
 } WIN32_FIND_DATAW;
+
+typedef struct {
+    HANDLE hProcess;
+    HANDLE hThread;
+    DWORD dwProcessId;
+    DWORD dwThreadId;
+} PROCESS_INFORMATION;
 #endif
 
 #define WS_POPUP 0x80000000
@@ -476,6 +483,7 @@ typedef struct {
 #define ERROR_FILE_NOT_FOUND 2
 #define ERROR_PATH_NOT_FOUND 3
 #define ERROR_ACCESS_DENIED 5
+#define ERROR_NO_MORE_FILES 18
 #define ERROR_FILE_EXISTS 80
 #define ERROR_DISK_FULL 112
 #define ERROR_ALREADY_EXISTS 183
@@ -567,6 +575,9 @@ BOOL WINAPI EventModify(HANDLE event, DWORD function);
 #define SetEvent(event) EventModify(event, EVENT_SET)
 #define ResetEvent(event) EventModify(event, EVENT_RESET)
 DWORD WINAPI WaitForSingleObject(HANDLE handle, DWORD milliseconds);
+BOOL WINAPI CreateProcessW(LPCWSTR application, LPWSTR command_line, void *process_security, void *thread_security, BOOL inherit_handles,
+                           DWORD flags, void *environment, LPCWSTR directory, void *startup_info, PROCESS_INFORMATION *information);
+BOOL WINAPI TerminateProcess(HANDLE process, DWORD exit_code);
 void WINAPI InitializeCriticalSection(CRITICAL_SECTION *section);
 void WINAPI DeleteCriticalSection(CRITICAL_SECTION *section);
 void WINAPI EnterCriticalSection(CRITICAL_SECTION *section);
