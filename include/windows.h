@@ -17,7 +17,7 @@ typedef uint16_t WORD;
 typedef uint32_t DWORD;
 typedef uint32_t UINT;
 typedef int32_t LONG;
-typedef uint16_t WCHAR;
+typedef wchar_t WCHAR;
 typedef WCHAR *LPWSTR;
 typedef const WCHAR *LPCWSTR;
 typedef void *HANDLE;
