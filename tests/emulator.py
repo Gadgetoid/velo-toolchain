@@ -6,7 +6,6 @@ import struct
 import subprocess
 import sys
 import tempfile
-import zlib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TARGETS = {
@@ -47,20 +46,6 @@ def load_target(ce):
         "state": os.path.join(environment("VELO_APPS"), "tools", settings["state"]),
         "base_image": settings["base_image"](),
     }
-
-
-def write_png(pgm_path, png_path):
-    data = open(pgm_path, "rb").read()
-    fields = data.split(maxsplit=4)
-    width, height, maximum = int(fields[1]), int(fields[2]), int(fields[3])
-    pixels = fields[4][-width * height:]
-    rows = b"".join(b"\0" + bytes(value * 255 // maximum for value in pixels[row * width:(row + 1) * width]) for row in range(height))
-
-    def chunk(kind, body):
-        return struct.pack(">I", len(body)) + kind + body + struct.pack(">I", zlib.crc32(kind + body))
-
-    header = struct.pack(">IIBBBBB", width, height, 8, 0, 0, 0, 0)
-    open(png_path, "wb").write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IDAT", zlib.compress(rows)) + chunk(b"IEND", b""))
 
 
 def copy_mounted_image(image, destination):
@@ -116,7 +101,7 @@ def make_card(build, target, work):
     return image, sorted(programs)
 
 
-def run_program(target, image, program, screenshot):
+def run_program(target, image, program, screenshot, cell):
     launch = target["card_ready"]
     folder = "%s\\%s" % (target["card_root"], CARD_FOLDER)
     path = '"%s\\%s"' % (folder, program)
@@ -128,12 +113,10 @@ def run_program(target, image, program, screenshot):
     events += [event.format(at="%.2f" % (started + 6)) for event in EXTRA_EVENTS.get(program, [])]
     with tempfile.TemporaryDirectory() as work:
         card = os.path.join(work, "card.img")
-        pgm = os.path.join(work, "screen.pgm")
         shutil.copyfile(image, card)
         subprocess.run([os.path.join(target["emulator"], "headless"), target["rom"], "--seconds=%d" % (started + SETTLE_SECONDS),
-                        "--load=%s" % target["state"], "--card=%s" % card, *events, "--pgm=%s" % pgm],
+                        "--load=%s" % target["state"], "--card=%s" % card, *events, "--png=%s" % screenshot, "--png-cell=%d" % cell],
                        capture_output=True, timeout=600, check=True)
-        write_png(pgm, screenshot)
     return screenshot
 
 
@@ -142,6 +125,7 @@ if __name__ == "__main__":
     parser.add_argument("build", help="CMake build directory")
     parser.add_argument("--ce", choices=sorted(TARGETS), default="1")
     parser.add_argument("--output", help="screenshot directory, default <build>/screenshots")
+    parser.add_argument("--cell", type=int, default=4, help="device pixels per LCD pixel")
     arguments = parser.parse_args()
     target = load_target(arguments.ce)
     output = arguments.output or os.path.join(arguments.build, "screenshots")
@@ -151,6 +135,6 @@ if __name__ == "__main__":
         if not programs:
             sys.exit("no programs in %s" % arguments.build)
         with concurrent.futures.ThreadPoolExecutor() as pool:
-            screenshots = pool.map(lambda program: run_program(target, image, program, os.path.join(output, program[:-4] + ".png")), programs)
+            screenshots = pool.map(lambda program: run_program(target, image, program, os.path.join(output, program[:-4] + ".png"), arguments.cell), programs)
             for screenshot in screenshots:
                 print(screenshot)

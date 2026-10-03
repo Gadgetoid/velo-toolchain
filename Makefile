@@ -1,6 +1,6 @@
 TOOLCHAIN = $(CURDIR)/cmake/velo-ce.cmake
 
-.PHONY: examples test clean
+.PHONY: examples test screenshots clean
 
 examples:
 	cmake -S examples -B build/ce1 -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) -DVELO_CE_VERSION=1
@@ -11,6 +11,11 @@ examples:
 test: examples
 	python3 tests/emulator.py build/ce1 --ce 1
 	python3 tests/emulator.py build/ce2 --ce 2
+
+screenshots: examples
+	python3 tests/emulator.py build/ce1 --ce 1 --cell 2 --output docs/screenshots/ce1
+	python3 tests/emulator.py build/ce2 --ce 2 --cell 2 --output docs/screenshots/ce2
+	pngquant --force --strip --quality=60-80 --ext .png docs/screenshots/ce*/*.png
 
 clean:
 	rm -rf build

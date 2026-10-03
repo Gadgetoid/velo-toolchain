@@ -72,15 +72,23 @@ Each import library is a set of weak stubs (`lui`/`lw`/`jr` through `__imp_<name
 ```sh
 make examples   # build for CE 1.0 and CE 2.0 into build/ce1 and build/ce2
 make test       # also run each example in velo-emu, screenshots in build/ce*/screenshots
+make screenshots  # update the screenshots below, in docs/screenshots
 ```
 
-`make test` needs these set:
+`make test` and `make screenshots` need these set:
 
 - `VELO_EMU`: a built velo-emu checkout
 - `VELO_APPS`: a velo-apps checkout, for the desktop states in `tools/`
 - `VELO_CE2_ROM`, `VELO_CE2_SYSTEM_CARD`: the CE 2.0 `nk.bin` and `ce2_sys.img` (CE 2.0 only)
 
-On Linux it also needs `dosfstools` and `mtools`.
+On Linux they also need `dosfstools` and `mtools`. `make screenshots` also needs `pngquant`.
+
+| | CE 1.0 | CE 2.0 |
+| --- | --- | --- |
+| `hello` | ![hello on CE 1.0](docs/screenshots/ce1/hello.png) | ![hello on CE 2.0](docs/screenshots/ce2/hello.png) |
+| `window` | ![window on CE 1.0](docs/screenshots/ce1/window.png) | ![window on CE 2.0](docs/screenshots/ce2/window.png) |
+| `maths` | ![maths on CE 1.0](docs/screenshots/ce1/maths.png) | ![maths on CE 2.0](docs/screenshots/ce2/maths.png) |
+| `dll` | ![greeter on CE 1.0](docs/screenshots/ce1/greeter.png) | ![greeter on CE 2.0](docs/screenshots/ce2/greeter.png) |
 
 ## Sources
 
