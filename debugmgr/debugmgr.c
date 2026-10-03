@@ -19,6 +19,7 @@
 #define COMMAND_QUIT 11
 #define COMMAND_HANDOVER 12
 #define REPLY_FLAG 0x8000
+#define WRITE_CREATE 0x1
 
 #define STATUS_OK 0
 #define STATUS_UNKNOWN_COMMAND 0x20000001
@@ -147,6 +148,7 @@ static DWORD last_error(void) {
 static DWORD write_file(Reader *reader) {
     WCHAR path[MAX_PATH];
     DWORD offset = read_u32(reader);
+    DWORD flags = read_u32(reader);
     HANDLE file;
     DWORD written = 0;
     DWORD length;
@@ -154,7 +156,7 @@ static DWORD write_file(Reader *reader) {
     if (reader->failed) {
         return STATUS_MALFORMED;
     }
-    file = CreateFileW(path, GENERIC_WRITE, 0, NULL, offset ? OPEN_EXISTING : CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    file = CreateFileW(path, GENERIC_WRITE, 0, NULL, flags & WRITE_CREATE ? CREATE_ALWAYS : OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
         return last_error();
     }

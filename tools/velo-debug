@@ -19,6 +19,8 @@ COMMAND_QUIT = 11
 COMMAND_HANDOVER = 12
 REPLY_FLAG = 0x8000
 REPLY_HEADER_SIZE = 8
+WRITE_CREATE = 0x1
+CLIENT_SEQUENCES = 0x7FFF
 FILE_ATTRIBUTE_DIRECTORY = 0x10
 AGENT_ERRORS = {
     0x20000001: "unknown command",
@@ -68,7 +70,7 @@ class Agent:
         return bytes(data)
 
     def request(self, command, payload=b""):
-        self.sequence = (self.sequence + 1) & 0xFFFF
+        self.sequence = self.sequence % CLIENT_SEQUENCES + 1
         message = struct.pack("<HH", command, self.sequence) + payload
         if len(message) > self.capacity:
             raise AgentError("request of %d bytes is bigger than debugmgr's %d" % (len(message), self.capacity))
@@ -89,10 +91,11 @@ class Agent:
     def put(self, local, remote):
         data = open(local, "rb").read()
         path = encode_string(ce_path(remote))
-        chunk = self.capacity - 8 - len(path)
+        chunk = self.capacity - 12 - len(path)
         offset = 0
         while True:
-            self.request(COMMAND_WRITE, struct.pack("<I", offset) + path + data[offset:offset + chunk])
+            flags = WRITE_CREATE if offset == 0 else 0
+            self.request(COMMAND_WRITE, struct.pack("<II", offset, flags) + path + data[offset:offset + chunk])
             offset += chunk
             if offset >= len(data):
                 return len(data)
