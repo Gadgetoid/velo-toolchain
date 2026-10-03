@@ -56,7 +56,8 @@ Each import library is a set of weak stubs (`lui`/`lw`/`jr` through `__imp_<name
 
 ## Headers and runtime
 
-- `include/windows.h`, `include/winsock.h`: a subset of the Win32 API as the Velo has it. Declare anything missing yourself.
+- `include/windows.h`, `include/winsock.h`, `include/commctrl.h`: a subset of the Win32 API as the Velo has it. Declare anything missing yourself. `COLOR_*` include CE's `SYS_COLOR_INDEX_FLAG`, which `GetSysColor` needs.
+- `include/string.h`: the runtime's `memcpy`, `memmove`, `memset` and `memcmp`.
 - `velo::runtime`, always linked: compiler-rt builtins (soft float, 64-bit division) and `memcpy`, `memmove`, `memset`, `memcmp`. There is no C library.
 
 ## Notes

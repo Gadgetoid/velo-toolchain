@@ -91,5 +91,9 @@ int WINSOCKAPI shutdown(SOCKET socket, int how);
 struct hostent *WINSOCKAPI gethostbyname(const char *name);
 int WINSOCKAPI gethostname(char *name, int length);
 uint32_t WINSOCKAPI inet_addr(const char *text);
+uint16_t WINSOCKAPI htons(uint16_t value);
+uint16_t WINSOCKAPI ntohs(uint16_t value);
+uint32_t WINSOCKAPI htonl(uint32_t value);
+uint32_t WINSOCKAPI ntohl(uint32_t value);
 
 #endif
