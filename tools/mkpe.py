@@ -25,6 +25,7 @@ IMPORT_MARKER = "__velo_import$"
 CODE = 0x60000020
 READ_ONLY = 0x40000040
 READ_WRITE = 0xC0000040
+SHF_ALLOC = 0x2
 RT_ICON = 3
 RT_GROUP_ICON = 14
 DEFAULT_LANGUAGE = 0x409
@@ -63,7 +64,8 @@ def read_elf(path):
 def read_relocations(data, sections):
     found = []
     for name, header in sections.items():
-        if header[1] != 9 or name in (".rel.pdr",):
+        target = sections.get(name[len(".rel"):])
+        if header[1] != 9 or not target or not target[2] & SHF_ALLOC:
             continue
         entries = [struct.unpack_from("<II", data, header[4] + position) for position in range(0, header[5], 8)]
         index = 0
