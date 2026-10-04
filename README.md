@@ -65,6 +65,7 @@ The Win32 headers are CeGCC's w32api (public domain) in `include/w32api`, patche
 
 - `#include <windows.h>` gives the API as the target CE version has it: `_WIN32_WCE` is `100` or `200`, `UNICODE` is defined, and it brings in the C runtime functions coredll exports (`wchar.h`, `stdlib.h`, `string.h`) and the object store database (`windbase.h`, with both the `Ce` and `Peg` names on both versions). `commctrl.h`, `commdlg.h`, `winsock.h`, `notify.h`, `ras.h`, `msacm.h`, `imm.h`, `tlhelp32.h` and the rest include it.
 - Calling a function the target ROM doesn't export is a compile error, e.g. `'GetModuleFileNameW' is unavailable: not in Windows CE 1.0`.
+- `STRICT` is on, so each handle type (`HWND`, `HDC`, `HKEY`...) is distinct and mixing them up is a compile error. The SDK leaves it off, so its handles are all `void *` and SDK code can, say, store an `HTREEITEM` in an `HKEY`. Define `NO_STRICT` (`-DNO_STRICT`, or `#define NO_STRICT` before including `windows.h`) to build such code: the handle types are then the SDK's.
 - CE exports some wide functions without the `W` (`FindResource`, `GetVersionEx`, `GetClassLong`, the `Ras` and `acm` functions): either name works.
 - Every function the ROMs export has a docstring and named parameters, for editor hover and signature help. They're written from the CE 1.0 and 2.0 SDK references, with CE restrictions and the version that has the function.
 - `velo::runtime`, always linked: compiler-rt builtins (soft float, 64-bit division) and `memcpy`, `memmove`, `memset`, `memcmp`. Beyond coredll's wide-string functions there is no C library: use `LocalAlloc`, `wsprintfW` and your own maths.
@@ -79,7 +80,7 @@ Not covered, so declare them yourself if you need them:
 - CE-internal types such as `INT128` and the RAS internals
 - ANSI (`A`) structures, which can differ from the SDK's: CE 1.0 and 2.0 have no ANSI functions
 
-`make check-headers` compares the headers with the SDK headers from `tools/fetch-reference` (`VELO_REFERENCE`). `make headers` regenerates them from a CeGCC checkout's w32api (`VELO_W32API`) and the SDK headers:
+`make check-headers` compares the headers with the SDK headers from `tools/fetch-reference` (`VELO_REFERENCE`), including the handle types with `NO_STRICT`. `make headers` regenerates them from a CeGCC checkout's w32api (`VELO_W32API`) and the SDK headers:
 
 - `tools/vendor-w32api.py` copies and patches w32api; `include/w32api/VENDOR.md` lists the patches.
 - `tools/mkheaders.py` writes the wrappers, `velo/aliases.h` and `velo/unavailable.h` from `exports/`.

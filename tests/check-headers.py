@@ -158,6 +158,14 @@ def type_headers(tree):
     return where
 
 
+def typedef_types(tree):
+    found = {}
+    for node in tree["inner"]:
+        if node.get("kind") == "TypedefDecl" and not node.get("isImplicit"):
+            found[node["name"]] = node["type"].get("desugaredQualType", node["type"]["qualType"])
+    return found
+
+
 def excluded_constant(name, header):
     return header is None or header in EXCLUDED_HEADERS or bool(EXCLUDED_CONSTANTS.match(name))
 
@@ -224,6 +232,16 @@ def check(clang, reference, version, work):
     for name in sorted(unusable):
         report.append("  missing %s" % name)
     problems += len(different) + len(unusable)
+
+    sdk_typedefs = typedef_types(sdk_tree)
+    loose = Side(clang, version * 100, [os.path.join(ROOT, "include"), os.path.join(ROOT, "include", "w32api")], ["-DNO_STRICT"], our_headers)
+    loose_typedefs = typedef_types(loose.tree())
+    handles = sorted(name for name, kind in sdk_typedefs.items() if kind == "void *" and name.startswith("H") and name in loose_typedefs and not EXCLUDED_TYPES.match(name))
+    different = [name for name in handles if loose_typedefs[name] != "void *"]
+    report.append("handles with NO_STRICT: %d compared, %d different" % (len(handles), len(different)))
+    for name in different:
+        report.append("  different %s: SDK void *, ours %s" % (name, loose_typedefs[name]))
+    problems += len(different)
 
     our_names = macro_names(ours) | declared_names(ours.tree())
     unchecked = sorted(name for name in macro_names(sdk) - set(sdk_values) - our_names
