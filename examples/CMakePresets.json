@@ -1,0 +1,35 @@
+{
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "ce1-debug",
+            "displayName": "CE 1.0 Debug",
+            "binaryDir": "${sourceParentDir}/build/debug-ce1",
+            "toolchainFile": "${sourceParentDir}/cmake/velo-ce.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "VELO_CE_VERSION": "1"
+            }
+        },
+        {
+            "name": "ce2-debug",
+            "displayName": "CE 2.0 Debug",
+            "binaryDir": "${sourceParentDir}/build/debug-ce2",
+            "toolchainFile": "${sourceParentDir}/cmake/velo-ce.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "VELO_CE_VERSION": "2"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "ce1-debug",
+            "configurePreset": "ce1-debug"
+        },
+        {
+            "name": "ce2-debug",
+            "configurePreset": "ce2-debug"
+        }
+    ]
+}
