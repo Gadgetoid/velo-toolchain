@@ -43,7 +43,7 @@ def short_import(body):
     name_type = (kind >> 2) & 7
     if name_type == SHORT_NAME_NOPREFIX:
         symbol = symbol.lstrip("?@_")
-    elif name_type == SHORT_NAME_UNDECORATE:
+    elif name_type in (SHORT_NAME_UNDECORATE, SHORT_NAME_ORDINAL):
         symbol = undecorate(symbol, machine)
     return dll, symbol, None if name_type != SHORT_NAME_ORDINAL else hint
 
