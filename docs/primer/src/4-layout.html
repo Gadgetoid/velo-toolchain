@@ -7,7 +7,7 @@
 <li><strong>A status bar underneath</strong>, when there's something to report.</li>
 <li><strong>Size everything in <code>WM_SIZE</code></strong>, from the client rectangle minus the command bar's and status bar's heights. Don't hard-code 480.</li>
 <li><strong>Use system colours</strong> (<code>GetSysColor</code>, <code>GetSysColorBrush</code>) for anything that should look like the rest of CE, and the four safe greys below for your own drawing.</li>
-<li><strong>Make tap targets at least 20 pixels tall.</strong> A stylus is precise, but a thumb on the move isn't.</li>
+<li><strong>Make tap targets at least 20 pixels tall.</strong> A standard dialog button, 14 dialog units, is 22 pixels tall on the Velo. A stylus is precise, but a thumb on the move isn't.</li>
 </ul>
 <p>The examples below are in <code>docs/primer/examples</code>. Each one builds for both CE versions and starts in the state shown.</p>
 </section>
@@ -25,7 +25,7 @@
 <p>Things go on the bar left to right, in the order you add them:</p>
 <ol>
 <li><code>CommandBar_InsertMenubar</code> puts a menu resource on the bar. It counts as button 0.</li>
-<li><code>CommandBar_AddBitmap</code> adds button pictures. <code>HINST_COMMCTRL</code> and <code>IDB_STD_SMALL_COLOR</code> give CE's standard 15: <code>STD_FILENEW</code>, <code>STD_DELETE</code>, <code>STD_FIND</code> and the rest. For your own, pass your instance and a <code>BITMAP</code> resource with 16 x 16 pictures side by side.</li>
+<li><code>CommandBar_AddBitmap</code> adds button pictures. <code>HINST_COMMCTRL</code> and <code>IDB_STD_SMALL_COLOR</code> give CE's standard 15: <code>STD_FILENEW</code>, <code>STD_DELETE</code>, <code>STD_FIND</code> and the rest. For your own, pass your instance and a <code>BITMAP</code> resource with the pictures side by side, and give <code>CommandBar_AddBitmap</code> their size. CE's own are 16 x 15.</li>
 <li><code>CommandBar_AddButtons</code> adds buttons, each a <code>TBBUTTON</code> with a picture index and the command ID it sends in <code>WM_COMMAND</code>. A <code>TBSTYLE_SEP</code> entry is a gap.</li>
 <li><code>CommandBar_InsertComboBox</code> puts a drop-down list before the given button position (4: after the menu, a gap and two buttons).</li>
 <li><code>CommandBar_AddAdornments</code> comes last and adds the close button, and the <kbd>?</kbd> button with <code>CMDBAR_HELP</code>, which sends <code>WM_HELP</code>.</li>
@@ -78,7 +78,7 @@
 <figcaption><code>form</code>: a modal dialog with no main window behind it.</figcaption>
 </figure>
 <pre data-file="docs/primer/examples/form/form.rc"><code>@source docs/primer/examples/form/form.rc</code></pre>
-<p>Positions are in <em>dialog units</em>, which scale with the dialog font: this 230-unit-wide dialog is about 350 pixels wide on the Velo. <code>&amp;</code> in a label underlines the next letter. <code>WS_GROUP</code> starts a group of radio buttons, which ends at the next control with <code>WS_GROUP</code>.</p>
+<p>Positions are in <em>dialog units</em>, which scale with the dialog font: this 230-unit-wide dialog is 351 pixels wide on the Velo, frame included, about one and a half pixels per unit. <code>&amp;</code> in a label underlines the next letter. <code>WS_GROUP</code> starts a group of radio buttons, which ends at the next control with <code>WS_GROUP</code>.</p>
 <aside>
 <strong>Velo Tip</strong>
 <p>On CE a group box paints its whole inside. Controls created after it are underneath and disappear, so list the group box <em>after</em> the controls it surrounds. The same goes for a tab control in recipe 4. Siblings stack in the order they're created, first on top.</p>
@@ -89,7 +89,9 @@
 <p><code>DialogBoxIndirectParamW</code> runs its own message loop and returns the value passed to <code>EndDialog</code>. The last argument arrives in <code>WM_INITDIALOG</code>'s <code>lParam</code>: pass a pointer to the data the dialog edits, and keep it with <code>DWL_USER</code>.</p>
 <pre data-file="docs/primer/examples/form/form.c"><code>@function docs/primer/examples/form/form.c account_procedure</code></pre>
 <p>A dialog procedure returns <code>TRUE</code> when it handled a message and <code>FALSE</code> to let the dialog manager do the default. From <code>WM_INITDIALOG</code>, return <code>FALSE</code> if you set the focus yourself. To refuse OK, show why and return without calling <code>EndDialog</code>.</p>
-<p>For a dialog that stays open beside your main window, such as a find box, use <code>CreateDialogIndirectParamW</code> and pass messages through <code>IsDialogMessageW</code> in your main loop.</p>
+<p>For a dialog that stays open beside your main window, such as a find box, use <code>CreateDialogIndirectParamW</code>, pass messages through <code>IsDialogMessageW</code> in your main loop, and close it with <code>DestroyWindow</code>, not <code>EndDialog</code>.</p>
+<h3>The CE way: OK in the title bar</h3>
+<p>This dialog has desktop-style OK and Cancel buttons. Many CE dialogs instead put OK in the title bar, beside the close button, which saves a row on a 240-pixel screen. Add <code>WS_EX_CAPTIONOKBTN</code> to the dialog's extended style (an <code>EXSTYLE</code> line in the <code>.rc</code> file): the title bar's OK sends <code>IDOK</code> and its close button sends <code>IDCANCEL</code>, so the dialog procedure doesn't change. It works on both versions.</p>
 <aside>
 <strong>Velo Tip</strong>
 <p>CE 1.0 has no <code>SetDlgItemTextW</code>, <code>GetDlgItemTextW</code> or <code>SendDlgItemMessageW</code>. <code>SetWindowTextW(GetDlgItem(dialog, ID), text)</code> does the same on both, which is why the examples do it that way.</p>
@@ -116,7 +118,7 @@
 @between docs/primer/examples/controls/controls.c /case WM_HSCROLL/ /return 0;/</code></pre>
 <p>Create the pages first and the tab control last, so the pages are on top of it. CE gives every window <code>WS_CLIPSIBLINGS</code> and <code>WS_CLIPCHILDREN</code> whether you ask or not, so creation order is what decides who paints over whom.</p>
 <h3>What's there</h3>
-<p>Tested by creating each class on both ROMs after <code>InitCommonControls</code>:</p>
+<p>Tested by creating each class on both ROMs. <code>InitCommonControls</code> registers all of them except the calendar, date picker and rebar. CE 2.0 adds those with <code>InitCommonControlsEx</code> and <code>ICC_DATE_CLASSES</code> or <code>ICC_COOL_CLASSES</code>. CE 1.0 doesn't have them.</p>
 <figure>
 <table>
 <thead><tr><th>Class</th><th>Control</th><th>CE 1.0</th><th>CE 2.0</th></tr></thead>
@@ -129,8 +131,9 @@
 <tr><td><code>msctls_trackbar32</code> (<code>TRACKBAR_CLASS</code>)</td><td>Trackbar (slider)</td><td>Yes</td><td>Yes</td></tr>
 <tr><td><code>msctls_updown32</code> (<code>UPDOWN_CLASS</code>)</td><td>Up-down arrows</td><td>Yes</td><td>Yes</td></tr>
 <tr><td><code>ToolbarWindow32</code>, <code>msctls_statusbar32</code>, <code>SysHeader32</code></td><td>Toolbar, status bar, column header</td><td>Yes</td><td>Yes</td></tr>
-<tr><td><code>SysMonthCal32</code>, <code>SysDateTimePick32</code></td><td>Calendar, date picker</td><td>No</td><td>No</td></tr>
-<tr><td><code>ReBarWindow32</code>, <code>tooltips_class32</code></td><td>Rebar, tooltips</td><td>No</td><td>No</td></tr>
+<tr><td><code>SysMonthCal32</code>, <code>SysDateTimePick32</code></td><td>Calendar, date picker</td><td>No</td><td>Yes, with <code>ICC_DATE_CLASSES</code></td></tr>
+<tr><td><code>ReBarWindow32</code></td><td>Rebar (CE 2.0's command bands use it)</td><td>No</td><td>Yes, with <code>ICC_COOL_CLASSES</code></td></tr>
+<tr><td><code>tooltips_class32</code></td><td>Tooltips</td><td>No</td><td>No</td></tr>
 <tr><td><code>RICHEDIT</code>, <code>RichInk</code></td><td>Rich text</td><td>No</td><td>No</td></tr>
 </tbody>
 </table>

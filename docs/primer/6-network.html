@@ -48,6 +48,7 @@
 <li>It compresses responses with gzip when the request has <code>Accept-Encoding: gzip</code>.</li>
 <li>Through it, <code>127.0.0.1</code> means your Mac, so you can test against a server running there.</li>
 </ul>
+<p>A program can bring the connection up itself with <code>RasDial</code>, exported on both versions, using a dial-up entry the user has set up. Otherwise, ask the user to connect first.</p>
 <p>On a real Velo you'd run a proxy that does the same on the PC it connects to. Make the proxy a setting in your program, as velo-bluesky does, and let it be blank to connect directly to a plain HTTP server.</p>
 <aside>
 <strong>Velo Tip</strong>
@@ -59,7 +60,7 @@
 <h2>Winsock in Brief</h2>
 <p>Link <code>velo::winsock</code> and include <code>winsock.h</code>. It's BSD sockets with Windows names: <code>socket</code>, <code>connect</code>, <code>send</code>, <code>recv</code>, <code>select</code>, <code>closesocket</code> (not <code>close</code>), <code>gethostbyname</code> and <code>inet_addr</code>. A few CE details:</p>
 <ul>
-<li>The Velo's Winsock exports no <code>WSAStartup</code>: just call <code>socket</code>.</li>
+<li>The Velo's Winsock exports no <code>WSAStartup</code>: just call <code>socket</code>. Books written for later CE 2.x devices call it, so leave it out when copying their code.</li>
 <li>Calls block, and <code>connect</code> can block for a long time when the network isn't there. Never call them on the thread that runs your windows.</li>
 <li>Use <code>select</code> with a short timeout before each <code>recv</code>. That gives you a place to check for cancellation and to give up on a silent server.</li>
 <li>Socket handles are <code>SOCKET</code>, and failure is <code>INVALID_SOCKET</code> or <code>SOCKET_ERROR</code>, not -1.</li>
@@ -198,7 +199,9 @@ Connection: close</code></pre>
 <li>Data goes one way per message, in allocated memory the receiver frees.</li>
 <li>Shared state is protected by a <code>CRITICAL_SECTION</code>: <code>InitializeCriticalSection</code> once, then <code>EnterCriticalSection</code> and <code>LeaveCriticalSection</code> around every use.</li>
 <li>A <code>volatile LONG</code> flag, set with <code>InterlockedExchange</code>, is enough to ask a worker to stop. Check it between <code>select</code> calls.</li>
-<li>Don't let the user close the program while a worker is still using its windows: wait for it, or refuse <code>WM_CLOSE</code> as <code>fetch</code> does.</li>
+<li>Let the program close promptly, even mid-download. If a program asked to close doesn't, CE ends it after about 8 seconds. A worker that only posts messages is safe to abandon: posting to a destroyed window just fails, and the worker frees its own data.</li>
+<li>Workers should wait on events or <code>select</code>, never spin in a loop, which keeps the Velo awake and drains the batteries.</li>
+<li>On CE 1.0 and 2.0 every thread gets a fixed stack of about 58 KB, whatever you pass to <code>CreateThread</code>. Keep large buffers and deep recursion, such as a recursive JSON parser, off worker stacks.</li>
 </ul>
 <aside>
 <strong>Velo Tip</strong>
@@ -247,7 +250,7 @@ Connection: close</code></pre>
 
 <section>
 <h2>When the Connection Drops</h2>
-<p>A Velo left alone suspends after a while, and the PPP link goes with it. Expect a long download to fail part way: make every request safe to repeat, keep what's arrived, and offer to try again rather than starting over. A download to a <code>.part</code> file (chapter 8) can carry on with an HTTP <code>Range</code> header, if the server supports it.</p>
+<p>Batteries run out, users close the lid, and modem lines drop, and the PPP link goes with them. Expect a long download to fail part way: make every request safe to repeat, keep what's arrived, and offer to try again rather than starting over. A download to a <code>.part</code> file (chapter 8) can carry on with an HTTP <code>Range</code> header, if the server supports it.</p>
 </section>
 
 <section>

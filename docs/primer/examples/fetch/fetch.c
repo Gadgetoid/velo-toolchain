@@ -249,9 +249,7 @@ static LRESULT CALLBACK frame_procedure(HWND frame, UINT message, WPARAM wparam,
         fetch_done((fetch_t *)lparam);
         return 0;
     case WM_CLOSE:
-        if (!busy) {
-            DestroyWindow(frame);
-        }
+        DestroyWindow(frame);
         return 0;
     case WM_DESTROY:
         CommandBar_Destroy(command_bar);
