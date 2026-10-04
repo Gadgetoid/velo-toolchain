@@ -1,6 +1,7 @@
 TOOLCHAIN = $(CURDIR)/cmake/velo-ce.cmake
+CLANG ?= $(firstword $(wildcard $(shell brew --prefix llvm 2>/dev/null)/bin/clang) clang)
 
-.PHONY: examples test screenshots debugmgr debug-state clean
+.PHONY: examples test screenshots debugmgr debug-state headers check-headers clean
 
 examples:
 	cmake -S examples -B build/ce1 -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) -DVELO_CE_VERSION=1
@@ -26,6 +27,14 @@ debugmgr:
 debug-state: debugmgr
 	python3 tools/mkdebugstate.py build/debugmgr/ce1 build/debugmgr/ce1/debug-desktop.state --ce 1
 	python3 tools/mkdebugstate.py build/debugmgr/ce2 build/debugmgr/ce2/debug-desktop.state --ce 2
+
+headers:
+	python3 tools/vendor-w32api.py $(VELO_W32API)
+	python3 tools/mkheaders.py --clang $(CLANG)
+	python3 tools/mkconstants.py --clang $(CLANG)
+
+check-headers:
+	python3 tests/check-headers.py --clang $(CLANG)
 
 clean:
 	rm -rf build

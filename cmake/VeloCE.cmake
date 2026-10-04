@@ -10,7 +10,7 @@ if(NOT IS_DIRECTORY "${VELO_EXPORTS_DIR}")
 endif()
 
 add_library(velo_headers INTERFACE)
-target_include_directories(velo_headers SYSTEM INTERFACE "${VELO_TOOLCHAIN_ROOT}/include")
+target_include_directories(velo_headers SYSTEM INTERFACE "${VELO_TOOLCHAIN_ROOT}/include" "${VELO_TOOLCHAIN_ROOT}/include/w32api")
 add_library(velo::headers ALIAS velo_headers)
 
 file(GLOB VELO_RUNTIME_SOURCES "${VELO_TOOLCHAIN_ROOT}/runtime/*.c" "${VELO_TOOLCHAIN_ROOT}/runtime/compiler-rt/*.c")
@@ -67,7 +67,7 @@ function(_velo_resources target out_options)
         set(compiled "${CMAKE_CURRENT_BINARY_DIR}/${target}_${name}.res")
         add_custom_command(
             OUTPUT "${compiled}"
-            COMMAND "${VELO_RC}" -D "_WIN32_WCE=${VELO_CE_VERSION}00" -I "${VELO_TOOLCHAIN_ROOT}/include" -I "${directory}" -FO "${compiled}" -- "${script}"
+            COMMAND "${VELO_RC}" -D "_WIN32_WCE=${VELO_CE_VERSION}00" -I "${VELO_TOOLCHAIN_ROOT}/include" -I "${VELO_TOOLCHAIN_ROOT}/include/w32api" -I "${directory}" -FO "${compiled}" -- "${script}"
             DEPENDS "${script}" ${dependencies}
             VERBATIM)
         target_sources(${target} PRIVATE "${compiled}")
