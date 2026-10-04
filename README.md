@@ -217,6 +217,8 @@ For VS Code, copy `vscode/launch.json`, `vscode/tasks.json` and `vscode/settings
 
 F5 starts the emulator if it isn't running, uploads the selected target's `.exe` and runs it, stopping at breakpoints. The emulator keeps running between sessions.
 
+`vscode/rc-language` is a VS Code extension that highlights resource scripts (`.rc`). Its README says how to install it.
+
 ## Reference material
 
 `tools/fetch-reference FOLDER` (or `$VELO_REFERENCE`) downloads the Windows CE 1.0, 1.01 and 2.0 SDK headers, the CE 2.0 toolkit's Win32 samples and the toolkits' documentation (InfoViewer `.ivt` titles, including the CE 1.0 and 2.0 SDK references and the PR3910 processor reference) from archive.org, and extracts the titles to HTML with `tools/extract-ivt`. They're Microsoft's, for reference only.
