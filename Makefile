@@ -3,7 +3,7 @@ CLANG ?= $(firstword $(wildcard $(shell brew --prefix llvm 2>/dev/null)/bin/clan
 SH3_LLVM = $(if $(VELO_SH3_LLVM),-DVELO_LLVM_ROOT=$(VELO_SH3_LLVM))
 SH3_CHECK = $(if $(VELO_SH3_LLVM),--clang $(VELO_SH3_LLVM)/bin/clang,--clang $(CLANG) --target-arch mips)
 
-.PHONY: examples examples-sh3 test screenshots primer primer-screenshots debugmgr debugmgr-sh3 debug-state headers docstrings check-headers check-headers-sh3 check-cxx-headers clean
+.PHONY: examples examples-sh3 test test-sh3 screenshots-sh3 screenshots primer primer-screenshots debugmgr debugmgr-sh3 debug-state headers docstrings check-headers check-headers-sh3 check-cxx-headers clean
 
 examples:
 	cmake -S examples -B build/ce1 -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) -DVELO_CE_VERSION=1
@@ -22,6 +22,15 @@ examples-sh3:
 test: examples
 	python3 tests/emulator.py build/ce1 --ce 1
 	python3 tests/emulator.py build/ce2 --ce 2
+
+test-sh3: examples-sh3
+	python3 tests/emulator.py build/ce1-sh3 --arch sh3
+	python3 tests/emulator.py build/ce101-sh3 --arch sh3
+	python3 tests/emulator.py build/ce2-sh3 --arch sh3
+
+screenshots-sh3: examples-sh3
+	python3 tests/emulator.py build/ce2-sh3 --arch sh3 --cell 2 --output docs/screenshots/sh3
+	pngquant --force --strip --quality=60-80 --ext .png docs/screenshots/sh3/*.png
 
 screenshots: examples
 	python3 tests/emulator.py build/ce1 --ce 1 --cell 2 --output docs/screenshots/ce1

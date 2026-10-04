@@ -25,7 +25,18 @@ TARGETS = {
         "card_ready": 6,
         "base_image": lambda: optional_environment("VELO_CE2_SYSTEM_CARD"),
     },
+    "sh3": {
+        "emulator": lambda: environment("VELO_SH3_EMU"),
+        "rom": lambda: environment("VELO_SH3_ROM"),
+        "state": lambda: optional_environment("VELO_SH3_STATE"),
+        "base_image": lambda: None,
+        "folder": True,
+    },
 }
+SH3_CALIBRATION = ["--tap=4:240:120", "--tap=6:48:24", "--tap=8:48:216", "--tap=10:432:216", "--tap=12:432:24", "--key=15:5A"]
+SH3_CALIBRATION_SECONDS = 22
+SH3_RUN_DIALOG = ["--key=1:11+0D", "--tap=3:71:198"]
+SH3_TYPED_AT = 5
 CARD_FOLDER = "EXAMPLES"
 SETTLE_SECONDS = 10
 EXTRA_EVENTS = {"window.exe": ["--tap={at}:200:120"], "window-cxx.exe": ["--tap={at}:200:120"]}
@@ -46,11 +57,15 @@ def optional_environment(name):
     return os.path.expanduser(value) if value else None
 
 
-def load_target(ce):
-    settings = TARGETS[ce]
+def target_name(ce, arch):
+    return "sh3" if arch == "sh3" else ce
+
+
+def load_target(ce, arch="mips"):
+    settings = TARGETS[target_name(ce, arch)]
     return {
         **settings,
-        "emulator": environment("VELO_EMU"),
+        "emulator": settings["emulator"]() if "emulator" in settings else environment("VELO_EMU"),
         "rom": settings["rom"](),
         "state": settings["state"](),
         "base_image": settings["base_image"](),
@@ -90,8 +105,7 @@ def copy_base_image(image, destination):
     return [os.path.join(destination, name) for name in sorted(os.listdir(destination)) if not name.startswith(".")]
 
 
-def make_card(build, target, work):
-    folder = os.path.join(work, "stage", CARD_FOLDER)
+def copy_programs(build, folder):
     os.makedirs(folder)
     programs = []
     for directory, _, files in os.walk(build):
@@ -100,6 +114,32 @@ def make_card(build, target, work):
                 shutil.copyfile(os.path.join(directory, name), os.path.join(folder, name))
                 if name.endswith(".exe"):
                     programs.append(name)
+    return sorted(programs)
+
+
+def make_folder(build, work):
+    folder = os.path.join(work, "folder")
+    return folder, copy_programs(build, folder)
+
+
+def make_desktop_state(target, work):
+    if target["state"]:
+        return target["state"]
+    state = os.path.join(work, "desktop.state")
+    subprocess.run([os.path.join(target["emulator"], "headless"), target["rom"], "--seconds=%d" % SH3_CALIBRATION_SECONDS, *SH3_CALIBRATION,
+                    "--save=%s" % state], capture_output=True, timeout=600, check=True)
+    return state
+
+
+def make_media(build, target, work):
+    if target.get("folder"):
+        return make_folder(build, work)
+    return make_card(build, target, work)
+
+
+def make_card(build, target, work):
+    folder = os.path.join(work, "stage", CARD_FOLDER)
+    programs = copy_programs(build, folder)
     items = [folder]
     if target["base_image"]:
         base = os.path.join(work, "base")
@@ -107,15 +147,23 @@ def make_card(build, target, work):
         items += copy_base_image(target["base_image"], base)
     image = os.path.join(work, "card.img")
     subprocess.run([os.path.join(target["emulator"], "tools", "mkcard.sh"), image, "16", *items], check=True, capture_output=True)
-    return image, sorted(programs)
+    return image, programs
+
+
+def media_option(target, media):
+    return "--folder=%s" % media if target.get("folder") else "--card=%s" % media
 
 
 def headless(target, card, seconds, events, screenshot, cell):
     return [os.path.join(target["emulator"], "headless"), target["rom"], "--seconds=%d" % seconds, "--load=%s" % target["state"],
-            "--card=%s" % card, *events, "--png=%s" % screenshot, "--png-cell=%d" % cell, "--png-backlight=off"]
+            media_option(target, card), *events, "--png=%s" % screenshot, "--png-cell=%d" % cell, "--png-backlight=off"]
 
 
 def launch_events(target, program, arguments):
+    if target.get("folder"):
+        command = program[:-4] + (" " + arguments if arguments else "")
+        started = SH3_TYPED_AT + 0.04 * len(command) + 0.4
+        return SH3_RUN_DIALOG + ["--type=%d:%s" % (SH3_TYPED_AT, command), "--type=%.2f:\\n" % started], started
     launch = target["card_ready"]
     path = '"%s\\%s\\%s"' % (target["card_root"], CARD_FOLDER, program)
     if arguments:
@@ -164,6 +212,11 @@ def run_networked(target, card, program, arguments, screenshot, cell, work):
 
 
 def run_program(target, image, program, screenshot, cell, values=None):
+    if target.get("folder"):
+        template = ARGUMENTS.get(program, "")
+        arguments = "" if "{folder}" in template else template.format(**(values or {}))
+        run_typed(target, image, program, arguments, screenshot, cell)
+        return screenshot
     folder = "%s\\%s" % (target["card_root"], CARD_FOLDER)
     arguments = ARGUMENTS.get(program, "").format(folder=folder, **(values or {}))
     with tempfile.TemporaryDirectory() as work:
@@ -183,15 +236,18 @@ def run_program(target, image, program, screenshot, cell, values=None):
 def main(description="Run each built example in velo-emu and screenshot it", values=None):
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("build", help="CMake build directory")
-    parser.add_argument("--ce", choices=sorted(TARGETS), default="1")
+    parser.add_argument("--ce", choices=["1", "2"], default="1")
+    parser.add_argument("--arch", choices=["mips", "sh3"], default="mips", help="sh3: run in the SH3 emulator (VELO_SH3_EMU, VELO_SH3_ROM)")
     parser.add_argument("--output", help="screenshot directory, default <build>/screenshots")
     parser.add_argument("--cell", type=int, default=4, help="device pixels per LCD pixel")
     arguments = parser.parse_args()
-    target = load_target(arguments.ce)
+    target = load_target(arguments.ce, arguments.arch)
     output = arguments.output or os.path.join(arguments.build, "screenshots")
     os.makedirs(output, exist_ok=True)
     with tempfile.TemporaryDirectory() as work:
-        image, programs = make_card(arguments.build, target, work)
+        if target.get("folder"):
+            target["state"] = make_desktop_state(target, work)
+        image, programs = make_media(arguments.build, target, work)
         if not programs:
             sys.exit("no programs in %s" % arguments.build)
         with concurrent.futures.ThreadPoolExecutor() as pool:
