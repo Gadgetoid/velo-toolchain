@@ -256,7 +256,7 @@ cmake -S . -B build-sh3 -DCMAKE_TOOLCHAIN_FILE=/path/to/velo-toolchain/cmake/vel
 
 What changes:
 
-- clang targets `sh3el-unknown-none-elf`, and `SHx`, `SH3` and `_SH3_` are defined, as the SDK's SH3 projects do, for C and `.rc` files. The headers define them too if the compiler is SuperH, and `MIPS` and `_MIPS_` otherwise.
+- clang targets `sh3el-unknown-none-wince`, and `SHx`, `SH3` and `_SH3_` are defined, as the SDK's SH3 projects do, for C and `.rc` files. The headers define them too if the compiler is SuperH, and `MIPS` and `_MIPS_` otherwise.
 - `CONTEXT` is CE's SH3 layout: `TEA`, `Expevt` and `Trapa` after `Psr`, then the debug registers in a union with CE 1.0's `hProc`, `akyCur` and `oldR15`, or CE 2.0's `oldR15` and `pFpuData`.
 - Import stubs load `__imp_<name>` from a literal after the stub and `jmp @r0`, as Microsoft's SH3 import libraries do.
 - `mkpe.py` writes machine 0x1A2 when the ELF is SuperH, and `R_SH_DIR32` relocations become HIGHLOW base relocations. PC-relative ones need none.

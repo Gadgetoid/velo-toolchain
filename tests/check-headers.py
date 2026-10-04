@@ -13,7 +13,7 @@ COMMON_FLAGS = ["-fshort-wchar", "-ffreestanding", "-w", "-ferror-limit=0"]
 ARCHITECTURES = {
     "mips": {"target": ["--target=mipsel-unknown-none-elf", "-march=mips1", "-msoft-float", "-Wno-experimental-option"],
              "sdk_defines": ["-DMIPS", "-D_MIPS_=1", "-D_M_MRX000=4000"], "defines": [], "exports": "ce%d"},
-    "sh3": {"target": ["--target=sh3el-unknown-none-elf"],
+    "sh3": {"target": ["--target=sh3el-unknown-none-wince"],
             "sdk_defines": ["-DSHx", "-DSH3", "-D_SH3_", "-D_M_SH=3"], "defines": ["-DSHx", "-DSH3", "-D_SH3_"], "exports": "ce%d-sh3"},
 }
 KNOWN_DIFFERENCES = re.compile(r"^(size|offset)_(struct_)?_?(WIN32_FIND_DATAA|tagREBARBANDINFOA|REBARBANDINFOA)(_|$)")
