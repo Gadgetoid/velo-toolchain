@@ -248,7 +248,7 @@ To debug on a self-built CE 2.x image, set `VELO_CE2_ROM` to it and `VELO_CE2_ST
 
 ## SH3
 
-`-DVELO_ARCH=sh3` builds for SH3 Windows CE devices. It needs an LLVM with a SuperH backend, which LLVM releases don't have yet: set `VELO_LLVM_ROOT` to one, built from llvm/llvm-project#181287 with Windows CE's SH3 calling convention.
+`-DVELO_ARCH=sh3` builds for SH3 Windows CE devices. It needs an LLVM with a SuperH backend and Windows CE's SH-3 calling convention (the `sh3el-unknown-none-wince` triple), which LLVM releases don't have: set `VELO_LLVM_ROOT` to one, built from llvm/llvm-project#181287 with CE support added.
 
 ```sh
 cmake -S . -B build-sh3 -DCMAKE_TOOLCHAIN_FILE=/path/to/velo-toolchain/cmake/velo-ce.cmake -DVELO_CE_VERSION=1 -DVELO_ARCH=sh3 -DVELO_LLVM_ROOT=/path/to/llvm
@@ -274,9 +274,15 @@ The C runtime DLL's libraries (`msvcrt.lib`, `msvcrtd.lib`) are left out: that D
 - There are lists for the SDK's other DLLs: on CE 1.0 addrstor, htmlview, msgstore, pcmcia and pmemtool, and on CE 2.0 also atlce, hwxusa, inkx, ndis, toolhelp and wininet. The Velo's ROM-only DLLs aren't there.
 - CE 1.01's SH3 coredll adds 276 functions to CE 1.0's and drops 5. `VELO_CE_VERSION=1` uses CE 1.0's.
 
-`make examples-sh3` builds the examples into `build/ce1-sh3` and `build/ce2-sh3`, with `VELO_SH3_LLVM` as the LLVM. `make check-headers-sh3` compares the headers with the SDK headers using its SH3 defines. Without `VELO_SH3_LLVM` it compiles for MIPS instead (`--target-arch mips`), which checks the SH3 declarations but not the SuperH ABI's layouts.
+`make examples-sh3` builds the examples into `build/ce1-sh3` and `build/ce2-sh3`, with `VELO_SH3_LLVM` as the LLVM. `make check-headers-sh3` compares the headers with the SDK headers using its SH3 defines. Without `VELO_SH3_LLVM` it compiles for MIPS instead (`--target-arch mips`), which checks the SH3 declarations but not the SuperH ABI's layouts. `long long` and `double` are 8-byte aligned in structures, as the SH compiler's default `/Zp8` gives.
 
-Not on SH3 yet: debugmgr, `velo-debug`, the GDB scripts and VS Code setup, `velo-symbolize`, and `make test` all rely on velo-emu, which emulates MIPS. SH3 builds still get GDB scripts, but nothing can use them yet. Programs have no `.pdata`, so CE can't unwind them for structured exception handling, as on MIPS.
+`make debugmgr-sh3` builds debugmgr for SH3. It calls the host through `trapa #0xCE`, which the SH3 emulator (a velo-emu fork for Microsoft's Odo SH3 reference board, running a Platform Builder 2.11 CE image) answers like velo-emu's mailbox, so `velo-debug` works with it. The examples run there, from a folder served with its `--folder` or copied over with `velo-debug`; the CE 1.0 and CE 2.0 builds look the same:
+
+| `hello` | `window` | `maths` | `dll` |
+| --- | --- | --- | --- |
+| ![hello on SH3 CE 2.11](docs/screenshots/sh3/hello.png) | ![window on SH3 CE 2.11](docs/screenshots/sh3/window.png) | ![maths on SH3 CE 2.11](docs/screenshots/sh3/maths.png) | ![greeter on SH3 CE 2.11](docs/screenshots/sh3/greeter.png) |
+
+Not on SH3 yet: `make debug-state`, `tools/velo-emulator`, the GDB scripts and VS Code setup, and `make test` are written for velo-emu and the Velo. `velo-symbolize` needs an `llvm-symbolizer` that knows SuperH, from `VELO_LLVM_ROOT`. Programs have no `.pdata`, so CE can't unwind them for structured exception handling, as on MIPS.
 
 ## Reference material
 
