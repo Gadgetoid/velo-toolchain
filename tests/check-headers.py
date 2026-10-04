@@ -8,7 +8,7 @@ import sys
 import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-HEADERS = ["windows.h", "commctrl.h", "commdlg.h", "winsock.h", "notify.h", "tlhelp32.h", "mmreg.h", "msacm.h", "imm.h", "ras.h", "af_irda.h", "windowsx.h"]
+HEADERS = ["windows.h", "commctrl.h", "commdlg.h", "winsock.h", "notify.h", "tlhelp32.h", "mmreg.h", "msacm.h", "imm.h", "ras.h", "af_irda.h", "windowsx.h", "winnetwk.h", "mmsystem.h", "lmcons.h"]
 TARGET = ["--target=mipsel-unknown-none-elf", "-march=mips1", "-msoft-float", "-fshort-wchar", "-ffreestanding", "-Wno-experimental-option",
           "-w", "-ferror-limit=0"]
 KNOWN_DIFFERENCES = re.compile(r"^(size|offset)_(struct_)?_?(WIN32_FIND_DATAA|tagREBARBANDINFOA|REBARBANDINFOA)(_|$)")

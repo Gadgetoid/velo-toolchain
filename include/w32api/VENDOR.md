@@ -43,6 +43,7 @@ CE 1.0 and 2.0 have no ANSI functions, and their declarations are marked unavail
 - `mmsystem.h`: MAXERRORLENGTH is 128 on CE
 - `mmsystem.h`: PATCHARRAY and KEYARRAY aren't declared on CE
 - `wingdi.h`: GetTextExtentPointW and GetTextExtentPoint32W are macros on CE 1.0 too
+- `winnetwk.h`: RESOURCEUSAGE_ALL has no RESOURCEUSAGE_ATTACHED on CE
 - `winnt.h`: REG_LEGAL_OPTION is 7 on CE
 - `wingdi.h`: DEVMODEW has no dmDisplayOrientation on CE 1.0 and 2.0
 - `commctrl.h`: TB_SETTOOLTIPS is WM_USER+81 on CE

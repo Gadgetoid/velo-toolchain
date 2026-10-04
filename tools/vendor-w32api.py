@@ -131,6 +131,9 @@ def patch(vendor):
                 "#ifndef _WIN32_WCE\ntypedef WORD PATCHARRAY[MIDIPATCHSIZE];\ntypedef WORD *LPPATCHARRAY;\ntypedef WORD KEYARRAY[MIDIPATCHSIZE];\ntypedef WORD *LPKEYARRAY;\n#endif")
     vendor.edit("wingdi.h", "GetTextExtentPointW and GetTextExtentPoint32W are macros on CE 1.0 too",
                 "#elif (_WIN32_WCE >= 0x200)\n#define GetTextExtentPointW(hdc,cstr,len,size)", "#else\n#define GetTextExtentPointW(hdc,cstr,len,size)")
+    vendor.ce("winnetwk.h", "RESOURCEUSAGE_ALL has no RESOURCEUSAGE_ATTACHED on CE",
+              "#define RESOURCEUSAGE_ALL           (RESOURCEUSAGE_CONNECTABLE | RESOURCEUSAGE_CONTAINER | RESOURCEUSAGE_ATTACHED)",
+              "#define RESOURCEUSAGE_ALL           (RESOURCEUSAGE_CONNECTABLE | RESOURCEUSAGE_CONTAINER)")
     vendor.ce("winnt.h", "REG_LEGAL_OPTION is 7 on CE", "#define REG_LEGAL_OPTION\t15", "#define REG_LEGAL_OPTION\t7")
     vendor.edit("wingdi.h", "DEVMODEW has no dmDisplayOrientation on CE 1.0 and 2.0", "  DWORD  dmDisplayFrequency; \n  DWORD  dmDisplayOrientation;\n} DEVMODEW",
                 "  DWORD  dmDisplayFrequency; \n#ifndef _WIN32_WCE\n  DWORD  dmDisplayOrientation;\n#endif\n} DEVMODEW")
