@@ -278,7 +278,7 @@
     <span class="function">FreeLibrary</span>(library);
     <span class="keyword">return</span> <span class="number">0</span>;
 }</code></pre>
-<p>Note <code>GetProcAddressW</code>: on CE the function name is a wide string. A DLL's own functions are exported by name with <code>EXPORTS</code> in <code>velo_add_library</code>. <code>LoadLibraryW</code> with a bare name looks on the PC Card, in <code>\Windows</code> and in the root, but never in the program's own folder, on either version. Put DLLs in <code>\Windows</code> or load them by full path.</p>
+<p>Note <code>GetProcAddressW</code>: on CE the function name is a wide string. A DLL's functions are exported by name with <code>EXPORTS</code> in <code>velo_add_library</code>. <code>LoadLibraryW</code> with a bare name looks on the PC Card, in <code>\Windows</code> and in the root, but never in the program's folder, on either version. Put DLLs in <code>\Windows</code> or load them by full path.</p>
 <p>CE also matches loaded DLLs by name alone. Microsoft's documentation warns that once <code>\Windows\sample.dll</code> is loaded, asking for <code>\My Folder\sample.dll</code> gives you the copy already loaded. Give your DLLs names nobody else will use.</p>
 </section>
 </main>

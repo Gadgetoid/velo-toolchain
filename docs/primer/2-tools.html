@@ -42,7 +42,7 @@
 <h2>Install</h2>
 <p>velo-toolchain is a CMake toolchain that compiles C with clang and links with lld. A Python script, <code>tools/mkpe.py</code>, then turns the linked ELF file into a Windows CE executable. Apple's clang can't target MIPS, so you need Homebrew's LLVM:</p>
 <pre><code><span class="function">brew</span> install llvm lld cmake</code></pre>
-<p>On Debian or Ubuntu, <code>sudo apt install clang lld llvm cmake</code> does the same. Then point an environment variable at your checkout, so your own projects can find it:</p>
+<p>On Debian or Ubuntu, <code>sudo apt install clang lld llvm cmake</code> does the same. Then point an environment variable at your checkout, so your projects can find it:</p>
 <pre><code><span class="function">export</span> VELO_TOOLCHAIN=~/Development/velo-toolchain</code></pre>
 <p>Build velo-emu by following its <code>README.md</code>, and put the ROMs where it says. Set <code>VELO_EMU</code> to that checkout too. For CE 2.0, <code>VELO_CE2_ROM</code> is the CE 2.0 <code>nk.bin</code> (or velo-emu's merged image) and <code>VELO_CE2_SYSTEM_CARD</code> its system card image, if the ROM isn't merged.</p>
 </section>
@@ -67,7 +67,7 @@
 <span class="function">cmake</span> <span class="keyword">--build</span> build/ce1
 <span class="function">cmake</span> <span class="keyword">-S</span> . <span class="keyword">-B</span> build/ce2 <span class="keyword">-DCMAKE_TOOLCHAIN_FILE=</span><span class="constant">$VELO_TOOLCHAIN</span>/cmake/velo-ce.cmake <span class="keyword">-DVELO_CE_VERSION=</span>2
 <span class="function">cmake</span> <span class="keyword">--build</span> build/ce2</code></pre>
-<p>You get <code>build/ce1/hello.exe</code> and <code>build/ce2/hello.exe</code>, each about 3.5 KB, with a <code>hello.elf</code> beside it that holds the symbols for debugging. A <code>Makefile</code> with a target that runs those four lines saves typing: the toolchain's own <code>Makefile</code> does exactly that for its examples.</p>
+<p>You get <code>build/ce1/hello.exe</code> and <code>build/ce2/hello.exe</code>, each about 3.5 KB, with a <code>hello.elf</code> beside it that holds the symbols for debugging. A <code>Makefile</code> with a target that runs those four lines saves typing: the toolchain's <code>Makefile</code> does exactly that for its examples.</p>
 <h3>What <code>WINAPI WinMain</code> means</h3>
 <p><code>WinMain</code> is where a Windows program starts. CE passes it the program's <em>instance</em> handle (needed to load resources and create windows), an unused handle, the command line without the program's name, and how to show the first window. Chapter 3 explains the rest.</p>
 <h3>Adding to a project</h3>
@@ -131,7 +131,7 @@
 <section>
 <h2>Debug Output and Crashes</h2>
 <p><code>OutputDebugStringW(L"got here\r\n")</code> is your <code>printf</code>. Its output appears in GDB, in the windowed emulator under Machine &gt; Show Debug Output, and on <code>headless</code>'s standard error with <code>--debug-output</code>.</p>
-<p>When a program crashes, CE prints the registers, with addresses that mean nothing on their own. <code>tools/velo-symbolize</code> turns them into functions and line numbers:</p>
+<p>When a program crashes, CE prints the registers, with addresses that mean nothing by themselves. <code>tools/velo-symbolize</code> turns them into functions and line numbers:</p>
 <pre><code><span class="constant">$VELO_EMU</span>/headless <span class="constant">$VELO_EMU</span>/rom/nk.bin ... <span class="keyword">--debug-output</span> 2&gt;&amp;1 | <span class="function">tools/velo-symbolize</span> build/ce1/app.exe
 <span class="function">debug</span>: AKY=00000003 PC=000110bc [deep crash.c:7] RA=000110ac [deep crash.c:7] BVA=00000000</code></pre>
 <p><code>PC</code> is where it crashed. <code>BVA</code>, the bad address, is <code>00000000</code> here: a null pointer. Under GDB, a crash stops the program at the faulting line, with the stack intact.</p>
@@ -143,7 +143,7 @@
 
 <section>
 <h2>Automated Screenshots</h2>
-<p><code>tests/emulator.py</code> builds a card from a build folder, starts each program in velo-emu from Start &gt; Run, and saves a screenshot. Your own project can use it as this primer does, from a few lines of Python:</p>
+<p><code>tests/emulator.py</code> builds a card from a build folder, starts each program in velo-emu from Start &gt; Run, and saves a screenshot. Your project can use it as this primer does, from a few lines of Python:</p>
 <pre data-file="docs/primer/examples/screenshots.py"><code><span class="keyword">import</span> os
 <span class="keyword">import</span> sys
 

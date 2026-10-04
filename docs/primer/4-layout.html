@@ -40,13 +40,13 @@
 <main>
 <section>
 <h2>Designing for 480 x 240</h2>
-<p>The Velo's screen is wide and short, and the taskbar takes a strip off the bottom. Every layout in this chapter follows the same rules, which are also how Microsoft's own CE programs look:</p>
+<p>The Velo's screen is wide and short, and the taskbar takes a strip off the bottom. Every layout in this chapter follows the same rules, which are also how Microsoft's CE programs look:</p>
 <ul>
 <li><strong>One full-screen main window, no title bar.</strong> Create it with <code>WS_VISIBLE | WS_CLIPCHILDREN</code> and <code>CW_USEDEFAULT</code> for the size, and CE fills the space above the taskbar. The taskbar button shows its title.</li>
 <li><strong>A command bar on top.</strong> It holds the menus, toolbar buttons, perhaps a drop-down list, and the close and help buttons. It replaces both the menu bar and the title bar.</li>
 <li><strong>A status bar underneath</strong>, when there's something to report.</li>
 <li><strong>Size everything in <code>WM_SIZE</code></strong>, from the client rectangle minus the command bar's and status bar's heights. Don't hard-code 480.</li>
-<li><strong>Use system colours</strong> (<code>GetSysColor</code>, <code>GetSysColorBrush</code>) for anything that should look like the rest of CE, and the four safe greys below for your own drawing.</li>
+<li><strong>Use system colours</strong> (<code>GetSysColor</code>, <code>GetSysColorBrush</code>) for anything that should look like the rest of CE, and the four safe greys below for everything else you draw.</li>
 <li><strong>Make tap targets at least 20 pixels tall.</strong> A standard dialog button, 14 dialog units, is 22 pixels tall on the Velo. A stylus is precise, but a thumb on the move isn't.</li>
 </ul>
 <p>The examples below are in <code>docs/primer/examples</code>. Each one builds for both CE versions and starts in the state shown.</p>
@@ -86,7 +86,7 @@
 <p>Things go on the bar left to right, in the order you add them:</p>
 <ol>
 <li><code>CommandBar_InsertMenubar</code> puts a menu resource on the bar. It counts as button 0.</li>
-<li><code>CommandBar_AddBitmap</code> adds button pictures. <code>HINST_COMMCTRL</code> and <code>IDB_STD_SMALL_COLOR</code> give CE's standard 15: <code>STD_FILENEW</code>, <code>STD_DELETE</code>, <code>STD_FIND</code> and the rest. For your own, pass your instance and a <code>BITMAP</code> resource with the pictures side by side, and give <code>CommandBar_AddBitmap</code> their size. CE's own are 16 x 15.</li>
+<li><code>CommandBar_AddBitmap</code> adds button pictures. <code>HINST_COMMCTRL</code> and <code>IDB_STD_SMALL_COLOR</code> give CE's standard 15: <code>STD_FILENEW</code>, <code>STD_DELETE</code>, <code>STD_FIND</code> and the rest. For other pictures, pass your instance and a <code>BITMAP</code> resource with the pictures side by side, and give <code>CommandBar_AddBitmap</code> their size. CE's standard pictures are 16 x 15.</li>
 <li><code>CommandBar_AddButtons</code> adds buttons, each a <code>TBBUTTON</code> with a picture index and the command ID it sends in <code>WM_COMMAND</code>. A <code>TBSTYLE_SEP</code> entry is a gap.</li>
 <li><code>CommandBar_InsertComboBox</code> puts a drop-down list before the given button position (4: after the menu, a gap and two buttons).</li>
 <li><code>CommandBar_AddAdornments</code> comes last and adds the close button, and the <kbd>?</kbd> button with <code>CMDBAR_HELP</code>, which sends <code>WM_HELP</code>.</li>
@@ -272,7 +272,7 @@
     }
     <span class="keyword">return</span> <span class="function">DialogBoxIndirectParamW</span>(instance, <span class="function">LockResource</span>(loaded), owner, procedure, (<span class="type">LPARAM</span>)parameter);
 }</code></pre>
-<p><code>DialogBoxIndirectParamW</code> runs its own message loop and returns the value passed to <code>EndDialog</code>. The last argument arrives in <code>WM_INITDIALOG</code>'s <code>lParam</code>: pass a pointer to the data the dialog edits, and keep it with <code>DWL_USER</code>.</p>
+<p><code>DialogBoxIndirectParamW</code> runs a message loop and returns the value passed to <code>EndDialog</code>. The last argument arrives in <code>WM_INITDIALOG</code>'s <code>lParam</code>: pass a pointer to the data the dialog edits, and keep it with <code>DWL_USER</code>.</p>
 <pre data-file="docs/primer/examples/form/form.c"><code><span class="keyword">static</span> <span class="type">BOOL</span> <span class="constant">CALLBACK</span> <span class="function">account_procedure</span>(<span class="type">HWND</span> dialog, <span class="type">UINT</span> message, <span class="type">WPARAM</span> wparam, <span class="type">LPARAM</span> lparam) {
     <span class="type">account_t</span> *account = (<span class="type">account_t</span> *)<span class="function">GetWindowLongW</span>(dialog, <span class="constant">DWL_USER</span>);
     <span class="keyword">switch</span> (message) {
@@ -309,7 +309,7 @@
 
 <section>
 <h2>Recipe 4: Tabs and Common Controls</h2>
-<p>A tab control is only the row of tabs. The pages are your own child windows, shown and hidden when the selection changes. This page also has a tree view, a trackbar driving a progress bar, a number box with up and down arrows, a check box and radio buttons.</p>
+<p>A tab control is only the row of tabs. The pages are your child windows, shown and hidden when the selection changes. This page also has a tree view, a trackbar driving a progress bar, a number box with up and down arrows, a check box and radio buttons.</p>
 <figure>
 <figure><img src="screenshots/ce1/controls.png" alt="Controls example on CE 1.0: Settings and About tabs; a tree of Velo and Network settings on the left; a volume trackbar, a level progress bar, a repeats box with arrows, a Key clicks check box, Loud and Soft radio buttons and an Apply button" width="976" height="496"><figcaption>CE 1.0</figcaption></figure>
 <figure><img src="screenshots/ce2/controls.png" alt="Controls example on CE 2.0" width="976" height="496"><figcaption>CE 2.0</figcaption></figure>

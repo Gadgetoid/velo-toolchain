@@ -1,6 +1,6 @@
 <section>
 <h2>Getting Online</h2>
-<p>A Velo reaches the network with PPP over its serial port, through a cable to a PC or a modem. Once it's connected, Winsock works as on any other system. velo-emu provides that link with its own small network: start it with <code>--net=SECONDS</code> on <code>headless</code>, or from the PC Link menu in the window.</p>
+<p>A Velo reaches the network with PPP over its serial port, through a cable to a PC or a modem. Once it's connected, Winsock works as on any other system. velo-emu provides that link with a small built-in network: start it with <code>--net=SECONDS</code> on <code>headless</code>, or from the PC Link menu in the window.</p>
 <p>The catch is security. The Velo can't speak modern TLS, so it can't make an <code>https://</code> connection to anything on today's internet. It needs a <em>proxy</em>: a program on a PC that takes plain HTTP requests from the Velo and makes the HTTPS requests for it. velo-emu has one built in, at <code>10.0.2.4</code> port <code>8080</code>:</p>
 <ul>
 <li>It fetches an <code>http://</code> address over HTTPS first, then plain HTTP, so you can ask for <code>http://bsky.social/...</code> and get the real thing.</li>
@@ -12,7 +12,7 @@
 <p>On a real Velo you'd run a proxy that does the same on the PC it connects to. Make the proxy a setting in your program, as velo-bluesky does, and let it be blank to connect directly to a plain HTTP server.</p>
 <aside>
 <strong>Velo Tip</strong>
-<p>Everything between the Velo and the proxy is unencrypted, including passwords and tokens. That's acceptable on a serial cable to your own PC, not across a network you don't control. Microsoft's CE documentation describes a secure sockets option, but it predates any TLS version today's servers accept.</p>
+<p>Everything between the Velo and the proxy is unencrypted, including passwords and tokens. That's acceptable on a serial cable to your PC, not across a network you don't control. Microsoft's CE documentation describes a secure sockets option, but it predates any TLS version today's servers accept.</p>
 </aside>
 </section>
 
@@ -58,7 +58,7 @@ Connection: close
 <li>Data goes one way per message, in allocated memory the receiver frees.</li>
 <li>Shared state is protected by a <code>CRITICAL_SECTION</code>: <code>InitializeCriticalSection</code> once, then <code>EnterCriticalSection</code> and <code>LeaveCriticalSection</code> around every use.</li>
 <li>A <code>volatile LONG</code> flag, set with <code>InterlockedExchange</code>, is enough to ask a worker to stop. Check it between <code>select</code> calls.</li>
-<li>Let the program close promptly, even mid-download. If a program asked to close doesn't, CE ends it after about 8 seconds. A worker that only posts messages is safe to abandon: posting to a destroyed window just fails, and the worker frees its own data.</li>
+<li>Let the program close promptly, even mid-download. If a program asked to close doesn't, CE ends it after about 8 seconds. A worker that only posts messages is safe to abandon: posting to a destroyed window just fails, and the worker frees the data itself.</li>
 <li>Workers should wait on events or <code>select</code>, never spin in a loop, which keeps the Velo awake and drains the batteries.</li>
 <li>On CE 1.0 and 2.0 every thread gets a fixed stack of about 58 KB, whatever you pass to <code>CreateThread</code>. Keep large buffers and deep recursion, such as a recursive JSON parser, off worker stacks.</li>
 </ul>

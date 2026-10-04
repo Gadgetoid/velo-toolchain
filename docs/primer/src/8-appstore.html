@@ -52,7 +52,7 @@ clock	Pocket Clock	2.1	18432	ClockFrame	http://example.com/velo/ce1/clock.exe	A 
 <h2>Installing</h2>
 <p>An install is three steps. Each is something the user could undo by hand in the file manager, which is how it should be.</p>
 <ol>
-<li><strong>Files.</strong> Programs go in their own folder in <code>\Program Files</code>. DLLs that other programs load go in <code>\Windows</code>, because <code>LoadLibraryW</code> never looks in a program's own folder. Check a DLL's name doesn't clash with one already there: CE matches loaded DLLs by name alone.</li>
+<li><strong>Files.</strong> Each program goes in a folder in <code>\Program Files</code>. DLLs that other programs load go in <code>\Windows</code>, because <code>LoadLibraryW</code> never looks in a program's folder. Check a DLL's name doesn't clash with one already there: CE matches loaded DLLs by name alone.</li>
 <li><strong>A shortcut</strong> in <code>\Windows\Programs</code>, so it's on Start &gt; Programs. <code>\Windows\Desktop</code> puts one on the desktop as well.</li>
 <li><strong>A record</strong> in the registry of what was installed, for updating and removing.</li>
 </ol>
@@ -87,7 +87,7 @@ static void record_install(LPCWSTR id, LPCWSTR version, LPCWSTR folder, LPCWSTR 
 <p><code>SHCreateShortcut</code> works on both ROMs, and returns nonzero when it succeeds. A CE shortcut is just a small text file, the target's length, <code>#</code>, then the target in quotes: <code>SHCreateShortcut(L"\\Windows\\Desktop\\Calc.lnk", L"\\Windows\\calc.exe")</code> writes <code>19#"\Windows\calc.exe"</code>. You can write one with <code>WriteFile</code> if you prefer.</p>
 <aside>
 <strong>Velo Tip</strong>
-<p>Some old programs refuse to start unless <code>HKEY_LOCAL_MACHINE\Software\Apps\&lt;name&gt;</code> exists, because the desktop installer always created it. If you package one of those, create the key too. Keep your own records under your own key.</p>
+<p>Some old programs refuse to start unless <code>HKEY_LOCAL_MACHINE\Software\Apps\&lt;name&gt;</code> exists, because the desktop installer always created it. If you package one of those, create the key too. Keep the store's records under the store's key.</p>
 </aside>
 <h3>Starting it</h3>
 <p>Offer to run the program once it's installed, with <code>CreateProcessW</code> and its full path (chapter 5). Programs started this way have no current directory either, so they can't assume their files are next to them on CE 1.0.</p>
@@ -102,5 +102,5 @@ static void record_install(LPCWSTR id, LPCWSTR version, LPCWSTR folder, LPCWSTR 
 
 <section>
 <h2>Trust</h2>
-<p>Downloads are as trustworthy as the proxy and the server. The Velo can't check a TLS certificate, so the proxy does that, and the link from the Velo to the proxy is in the clear. A checksum in the catalogue catches damage, not tampering: someone who can change the file can change the catalogue. For a hobby store run from your own PC, that's fine. Say so in the store's About box, and don't present it as more.</p>
+<p>Downloads are as trustworthy as the proxy and the server. The Velo can't check a TLS certificate, so the proxy does that, and the link from the Velo to the proxy is in the clear. A checksum in the catalogue catches damage, not tampering: someone who can change the file can change the catalogue. For a hobby store run from your PC, that's fine. Say so in the store's About box, and don't present it as more.</p>
 </section>

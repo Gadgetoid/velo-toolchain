@@ -149,7 +149,7 @@
 </figure>
 <aside>
 <strong>Velo Tip</strong>
-<p>Always cast coordinates from <code>lParam</code> through <code>short</code>. With the stylus captured (below) they can be negative, and <code>LOWORD</code> on its own turns -1 into 65535.</p>
+<p>Always cast coordinates from <code>lParam</code> through <code>short</code>. With the stylus captured (below) they can be negative, and <code>LOWORD</code> alone turns -1 into 65535.</p>
 </aside>
 </section>
 
@@ -196,7 +196,7 @@
 
 <section>
 <h2>One Copy at a Time</h2>
-<p>CE programs don't usually run twice. Starting one that's already running should bring it forward. Look for your own window class before creating anything:</p>
+<p>CE programs don't usually run twice. Starting one that's already running should bring it forward. Look for your window class before creating anything:</p>
 <pre data-file="docs/primer/examples/frame/frame.c"><code><span class="type">HWND</span> existing = <span class="function">FindWindowW</span>(<span class="constant">FRAME_CLASS</span>, <span class="constant">NULL</span>);
 <span class="keyword">if</span> (existing) {
     <span class="function">SetForegroundWindow</span>(existing);

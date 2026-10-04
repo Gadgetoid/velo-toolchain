@@ -55,7 +55,7 @@ Content-Length: 67
 
 <section>
 <h2>Building It in Layers</h2>
-<p>velo-bluesky is about 6,800 lines of C. Each layer only knows about the one below it, and each was tested on its own:</p>
+<p>velo-bluesky is about 6,800 lines of C. Each layer only knows about the one below it, and each was tested separately:</p>
 <figure>
 <table>
 <thead><tr><th>Layer</th><th>Files</th><th>Chapter</th></tr></thead>
@@ -81,7 +81,7 @@ Content-Length: 67
 <h3>Size</h3>
 <p>A page of 10 timeline posts is about 60 KB of JSON. At 19200 baud, about 2 KB a second, that's half a minute. Asking for gzip brings it to about 9 KB, around 6 seconds, which makes a <code>gzip</code> decoder (<code>inflate.c</code>, under 400 lines) the most valuable code in the project. Ask for small pages, show posts as they're parsed rather than at the end, and cap what you download: velo-bluesky stops a thread at 15 replies or 64 KB.</p>
 <h3>Parsing</h3>
-<p>Parse JSON into a tree in an arena, take the few fields you show into your own structs, and free the tree. Don't keep the JSON. A small recursive-descent parser is enough, but limit its depth and check every length: the input comes from the network.</p>
+<p>Parse JSON into a tree in an arena, take the few fields you show into your structs, and free the tree. Don't keep the JSON. A small recursive-descent parser is enough, but limit its depth and check every length: the input comes from the network.</p>
 <h3>Pictures</h3>
 <p>velo-emu's proxy already turns pictures into small four-grey GIFs. Decode them into a <code>CreateDIBSection</code> bitmap at the screen's bit depth, a few rows at a time as data arrives, and draw them with <code>BitBlt</code>. Load pictures only for the post being read, and drop them when the user moves on.</p>
 <h3>Text</h3>

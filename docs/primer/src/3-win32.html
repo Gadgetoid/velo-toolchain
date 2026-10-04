@@ -48,7 +48,7 @@
 </figure>
 <aside>
 <strong>Velo Tip</strong>
-<p>Always cast coordinates from <code>lParam</code> through <code>short</code>. With the stylus captured (below) they can be negative, and <code>LOWORD</code> on its own turns -1 into 65535.</p>
+<p>Always cast coordinates from <code>lParam</code> through <code>short</code>. With the stylus captured (below) they can be negative, and <code>LOWORD</code> alone turns -1 into 65535.</p>
 </aside>
 </section>
 
@@ -88,7 +88,7 @@
 
 <section>
 <h2>One Copy at a Time</h2>
-<p>CE programs don't usually run twice. Starting one that's already running should bring it forward. Look for your own window class before creating anything:</p>
+<p>CE programs don't usually run twice. Starting one that's already running should bring it forward. Look for your window class before creating anything:</p>
 <pre data-file="docs/primer/examples/frame/frame.c"><code>@between docs/primer/examples/frame/frame.c /FindWindowW/ /^    }$/</code></pre>
 <p>Give your class a name nobody else will use: it's how CE tells your program's windows apart from everyone else's.</p>
 </section>

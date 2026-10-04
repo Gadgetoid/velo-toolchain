@@ -27,7 +27,7 @@
 <tr><td>Controls inside a group box or tab control are invisible</td><td>Siblings stack in creation order, first on top, and these paint their insides</td><td>Create the group box or tab control after its contents</td></tr>
 <tr><td>"'<em>Function</em>' is unavailable: not in Windows CE 1.0"</td><td>That ROM doesn't export it</td><td>Use an alternative, or put it behind <code>#if _WIN32_WCE >= 200</code></td></tr>
 <tr><td>Program crashes reading a struct from a buffer</td><td>Unaligned access on MIPS</td><td>Copy with <code>memcpy</code> or read bytes</td></tr>
-<tr><td>Program can't find its own files</td><td>No current directory, and no <code>GetModuleFileNameW</code> on CE 1.0</td><td>Full paths, a known install folder, or the folder on the command line</td></tr>
+<tr><td>Program can't find its files</td><td>No current directory, and no <code>GetModuleFileNameW</code> on CE 1.0</td><td>Full paths, a known install folder, or the folder on the command line</td></tr>
 <tr><td><code>LoadLibraryW(L"mine.dll")</code> fails</td><td>Neither version searches the program's folder</td><td>Put DLLs in <code>\Windows</code> or use a full path</td></tr>
 <tr><td>The interface freezes during a download</td><td>Blocking socket calls on the interface thread</td><td>A worker thread, results by <code>PostMessageW</code></td></tr>
 <tr><td>Tap coordinates are huge numbers</td><td><code>LOWORD</code> of a negative coordinate</td><td>Cast through <code>short</code></td></tr>
@@ -91,7 +91,7 @@
 <h2>Further Reading</h2>
 <ul>
 <li>Douglas Boling, <cite>Programming Microsoft Windows CE</cite> (Microsoft Press, 1998). The book on CE programming, written for CE 2.0.</li>
-<li><cite>Microsoft Windows CE Programmer's Guide</cite> (Microsoft Press, 1998). Microsoft's own reference, with a note on each function about how CE differs from desktop Windows.</li>
+<li><cite>Microsoft Windows CE Programmer's Guide</cite> (Microsoft Press, 1998). Microsoft's reference, with a note on each function about how CE differs from desktop Windows.</li>
 <li>Charles Petzold, <cite>Programming Windows</cite>, fifth edition (Microsoft Press, 1998). Win32 in depth: messages, GDI, controls and dialogs.</li>
 <li>The toolchain's <code>README.md</code>, and <code>debugmgr/PROTOCOL.md</code> for the debug manager.</li>
 <li>velo-emu's <code>README.md</code>: the emulator, its proxy, headless options, GDB and the host mailbox.</li>

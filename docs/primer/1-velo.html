@@ -69,7 +69,7 @@
 <tr><th>Functions exported by <code>coredll.dll</code></th><td>512</td><td>934</td></tr>
 <tr><th>Other DLLs you can link</th><td><code>commctrl</code>, <code>winsock</code></td><td>Those, plus <code>commdlg</code>, <code>ole32</code>, <code>oleaut32</code>, <code>ceshell</code></td></tr>
 <tr><th>Character set conversion</th><td>None</td><td><code>MultiByteToWideChar</code>, <code>WideCharToMultiByte</code>, but not for UTF-8: convert that yourself on both</td></tr>
-<tr><th>Find your own program's path</th><td>Not possible</td><td><code>GetModuleFileNameW</code></td></tr>
+<tr><th>Find the program's path</th><td>Not possible</td><td><code>GetModuleFileNameW</code></td></tr>
 <tr><th>Dialog helpers</th><td><code>GetDlgItem</code>, <code>SetDlgItemInt</code>, <code>GetDlgItemInt</code> only</td><td>Also <code>SetDlgItemTextW</code>, <code>GetDlgItemTextW</code>, <code>SendDlgItemMessageW</code></td></tr>
 <tr><th>Pens</th><td><code>CreatePenIndirect</code> only</td><td>Also <code>CreatePen</code></td></tr>
 </tbody>
@@ -90,7 +90,7 @@
 <h3>Unicode only</h3>
 <p>Every function that takes text takes 16-bit <code>WCHAR</code> strings, and has a <code>W</code> on the end: <code>MessageBoxW</code>, <code>CreateWindowExW</code>. Write string literals as <code>L"text"</code>. There are no <code>A</code> versions to fall back on. Network protocols and files are usually bytes (ASCII or UTF-8), so you'll convert at the edges: chapter 5 shows how.</p>
 <h3>No C library</h3>
-<p>There's no <code>printf</code>, <code>malloc</code>, <code>strlen</code> or <code>fopen</code>. velo-toolchain gives you <code>memcpy</code>, <code>memmove</code>, <code>memset</code> and <code>memcmp</code>, plus the compiler's helpers for floating point and 64-bit maths. Windows CE gives you the rest in its own form:</p>
+<p>There's no <code>printf</code>, <code>malloc</code>, <code>strlen</code> or <code>fopen</code>. velo-toolchain gives you <code>memcpy</code>, <code>memmove</code>, <code>memset</code> and <code>memcmp</code>, plus the compiler's helpers for floating point and 64-bit maths. Windows CE gives you the rest in another form:</p>
 <ul>
 <li><code>wsprintfW</code> for formatting text (integers and strings, no floating point).</li>
 <li><code>LocalAlloc</code> and <code>LocalFree</code> for memory.</li>
@@ -98,7 +98,7 @@
 <li>Wide string functions from <code>coredll.dll</code>, such as <code>wcslen</code>, <code>wcscmp</code> and <code>wcsstr</code>, which <code>windows.h</code> brings in.</li>
 </ul>
 <h3>No console, no current directory, no drive letters</h3>
-<p>Programs start at <code>WinMain</code> and talk to the user through windows. There's nowhere for <code>stdout</code> to go: use <code>OutputDebugStringW</code> and the debugger. Every path is absolute from the root, <code>\</code>, with backslashes. There's no <code>C:</code>, and no current directory, so <code>data.txt</code> on its own doesn't mean "next to my program".</p>
+<p>Programs start at <code>WinMain</code> and talk to the user through windows. There's nowhere for <code>stdout</code> to go: use <code>OutputDebugStringW</code> and the debugger. Every path is absolute from the root, <code>\</code>, with backslashes. There's no <code>C:</code>, and no current directory, so <code>data.txt</code> alone doesn't mean "next to my program".</p>
 <h3>One screen, one window</h3>
 <p>A CE program normally has one top-level window that fills the screen above the taskbar, with no title bar. Menus and buttons go on a <em>command bar</em> at the top, which also holds the close button. Starting a program that's already running brings the existing window forward instead of opening a second one.</p>
 <h3>Small everything</h3>
