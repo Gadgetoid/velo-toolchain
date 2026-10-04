@@ -64,7 +64,7 @@
             "launchCompleteCommand": "exec-run"
         },
         {
-            "name": "Odo SH3 CE 2.11",
+            "name": "Odo SH3 CE 2.12",
             "type": "cppdbg",
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",

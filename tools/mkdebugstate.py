@@ -17,7 +17,8 @@ velo_debug = SourceFileLoader("velo_debug", os.path.join(ROOT, "tools", "velo-de
 AGENT = "debugmgr.exe"
 INSTALLED = "/Windows/debugmgr.exe"
 SH3_AGENT = "velo-debugmgr.exe"
-SH3_INSTALLED = "/Windows/velo-debugmgr.exe"
+SH3_STAGED = "velo-debugmgr-build.exe"
+SH3_INSTALLED = "/Windows/velo-debugmgr-build.exe"
 SOCKET = "agent.sock"
 CONNECT_SECONDS = 120
 
@@ -43,7 +44,7 @@ if __name__ == "__main__":
     parser.add_argument("--arch", choices=["mips", "sh3"], default="mips", help="sh3: the SH3 emulator (VELO_SH3_EMU, VELO_SH3_ROM)")
     arguments = parser.parse_args()
     target = emulator.load_target(arguments.ce, arguments.arch)
-    agent_name, installed = (SH3_AGENT, SH3_INSTALLED) if arguments.arch == "sh3" else (AGENT, INSTALLED)
+    agent_name, launched, installed = (SH3_AGENT, SH3_STAGED, SH3_INSTALLED) if arguments.arch == "sh3" else (AGENT, AGENT, INSTALLED)
     output = os.path.abspath(arguments.output)
     build = os.path.abspath(arguments.build)
     agent_path = os.path.join(build, agent_name)
@@ -56,7 +57,9 @@ if __name__ == "__main__":
             image = os.path.join(os.path.dirname(output), "debug-card.img")
             shutil.move(media, image)
             media = image
-        events, _ = emulator.launch_events(target, agent_name, "")
+        if launched != agent_name:
+            os.rename(os.path.join(media, agent_name), os.path.join(media, launched))
+        events, _ = emulator.launch_events(target, launched, "")
         command = [os.path.join(target["emulator"], "headless"), target["rom"], "--load=%s" % target["state"], emulator.media_option(target, media),
                    *events, "--agent=%s" % SOCKET, "--seconds=100000", "--save=%s" % output]
         emulator_process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

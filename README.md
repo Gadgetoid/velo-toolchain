@@ -280,13 +280,13 @@ The C runtime DLL's libraries (`msvcrt.lib`, `msvcrtd.lib`) are left out: that D
 
 ### SH3 emulator
 
-The SH3 emulator is a velo-emu fork for Microsoft's Odo SH3 reference board, running a CE 2.11 image built with Platform Builder 2.11. Its `--folder` serves a host folder to CE's parallel-port file system, so programs there start from Task Manager's Run dialog without copying them over. The CE 1.0, 1.01 and 2.0 builds all run on it, and look the same:
+The SH3 emulator is a velo-emu fork for Microsoft's Odo SH3 reference board, running a CE 2.12 (beta) image with the Explorer shell, built with Platform Builder 2.12. Its `--folder` serves a host folder to CE's parallel-port file system, so programs there start from Start > Run by name without copying them over. The CE 1.0, 1.01 and 2.0 builds all run on it, and look the same:
 
 | `hello` | `window` | `maths` | `dll` |
 | --- | --- | --- | --- |
-| ![hello on SH3 CE 2.11](docs/screenshots/sh3/hello.png) | ![window on SH3 CE 2.11](docs/screenshots/sh3/window.png) | ![maths on SH3 CE 2.11](docs/screenshots/sh3/maths.png) | ![greeter on SH3 CE 2.11](docs/screenshots/sh3/greeter.png) |
+| ![hello on SH3 CE 2.12](docs/screenshots/sh3/hello.png) | ![window on SH3 CE 2.12](docs/screenshots/sh3/window.png) | ![maths on SH3 CE 2.12](docs/screenshots/sh3/maths.png) | ![greeter on SH3 CE 2.12](docs/screenshots/sh3/greeter.png) |
 
-These need `VELO_SH3_EMU` (a built SH3 emulator checkout, with `headless`, and `sh3emu` for the window) and `VELO_SH3_ROM` (the CE 2.11 `nk.bin`):
+These need `VELO_SH3_EMU` (a built SH3 emulator checkout, with `headless`, and `sh3emu` for the window) and `VELO_SH3_ROM` (its CE 2.12 image, `odo-sh3-ce212.bin`):
 
 ```sh
 make test-sh3          # run the examples, screenshots in build/ce*-sh3/screenshots
@@ -296,9 +296,11 @@ tools/velo-emulator --arch sh3 &
 gdb -x build/maths.elf.gdb -ex "target extended-remote :2003" -ex "set target-wide-charset UTF-16LE" -ex velo-load -ex "break WinMain" -ex run
 ```
 
-Each run calibrates the touch panel from a cold boot first, unless `VELO_SH3_STATE` names a saved desktop state. `velo-emulator --arch sh3` starts the emulator from the debug state with its GDB stub on port 2003 and the agent socket at `build/debugmgr/ce2-sh3/agent.sock`, for `velo-debug` (`VELO_AGENT`). SH3 GDB scripts set GDB's architecture to `sh3`. VS Code's `Odo SH3 CE 2.11` configuration uses the `velo: emulator SH3` task; its `targetArchitecture` is `mips` because cpptools has no SH value, and GDB itself is set to `sh3`.
+Each run boots the image to its desktop first (30 emulated seconds), unless `VELO_SH3_STATE` names a saved desktop state. `velo-emulator --arch sh3` starts the emulator from the debug state with its GDB stub on port 2003 and the agent socket at `build/debugmgr/ce2-sh3/agent.sock`, for `velo-debug` (`VELO_AGENT`). SH3 GDB scripts set GDB's architecture to `sh3`. VS Code's `Odo SH3 CE 2.12` configuration uses the `velo: emulator SH3` task; its `targetArchitecture` is `mips` because cpptools has no SH value, and GDB itself is set to `sh3`.
 
-On SH3, debugmgr is `velo-debugmgr.exe`: the emulator's image has its own `debugmgr.exe` in ROM, which CE would start instead of one with the same name in a `--folder`.
+On SH3, debugmgr is `velo-debugmgr.exe`, and the emulator's image has a build of it in ROM, which CE starts in place of a `--folder` file with the same name. `make debug-state-sh3` runs the current build as `velo-debugmgr-build.exe` instead.
+
+With `--net`, the image dials PPP over COM1 to the emulator's network, and Winsock programs work. As on the Velo, there's no `WSAStartup` or `WSACleanup` for CE 1.0 and 2.0 (their SDKs make them macros that do nothing): just call `socket`. Later Winsocks, such as this image's, export them.
 
 With `CMAKE_BUILD_TYPE=Debug`, GDB has source lines, arguments, locals and backtraces on SH3, and VS Code stops at source breakpoints. GDB's SH3 calling convention isn't CE's, so `finish` shows the wrong value for functions returning 64-bit values or structures, which CE returns through a hidden pointer. `velo-symbolize` works on SH3 builds.
 

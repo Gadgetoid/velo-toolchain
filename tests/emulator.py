@@ -33,10 +33,9 @@ TARGETS = {
         "folder": True,
     },
 }
-SH3_CALIBRATION = ["--tap=4:240:120", "--tap=6:48:24", "--tap=8:48:216", "--tap=10:432:216", "--tap=12:432:24", "--key=15:5A"]
-SH3_CALIBRATION_SECONDS = 22
-SH3_RUN_DIALOG = ["--key=1:11+0D", "--tap=3:71:198"]
-SH3_TYPED_AT = 5
+SH3_DESKTOP_SECONDS = 30
+SH3_RUN_DIALOG = ["--key=1:14+76", "--type=2:r"]
+SH3_TYPED_AT = 3
 CARD_FOLDER = "EXAMPLES"
 SETTLE_SECONDS = 10
 EXTRA_EVENTS = {"window.exe": ["--tap={at}:200:120"], "window-cxx.exe": ["--tap={at}:200:120"]}
@@ -126,8 +125,8 @@ def make_desktop_state(target, work):
     if target["state"]:
         return target["state"]
     state = os.path.join(work, "desktop.state")
-    subprocess.run([os.path.join(target["emulator"], "headless"), target["rom"], "--seconds=%d" % SH3_CALIBRATION_SECONDS, *SH3_CALIBRATION,
-                    "--save=%s" % state], capture_output=True, timeout=600, check=True)
+    subprocess.run([os.path.join(target["emulator"], "headless"), target["rom"], "--seconds=%d" % SH3_DESKTOP_SECONDS, "--save=%s" % state],
+                   capture_output=True, timeout=600, check=True)
     return state
 
 

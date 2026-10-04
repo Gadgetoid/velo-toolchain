@@ -22,14 +22,14 @@ def file_digest(path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Start velo-emu, or the SH3 emulator, from the debug desktop state, with its GDB stub listening")
     parser.add_argument("--ce", choices=["1", "2"], default="1")
-    parser.add_argument("--arch", choices=["mips", "sh3"], default="mips", help="sh3: the SH3 emulator (VELO_SH3_EMU, VELO_SH3_ROM), CE 2.11")
+    parser.add_argument("--arch", choices=["mips", "sh3"], default="mips", help="sh3: the SH3 emulator (VELO_SH3_EMU, VELO_SH3_ROM), CE 2.12")
     parser.add_argument("--gdb", type=int, help="GDB port, default 2001 for CE 1.0, 2002 for CE 2.0 and 2003 for SH3")
     parser.add_argument("--headless", action="store_true", help="no window: run until GDB detaches")
     arguments = parser.parse_args()
     sh3 = arguments.arch == "sh3"
     port = arguments.gdb or (SH3_PORT if sh3 else 2000 + int(arguments.ce))
     if sh3:
-        print("velo-emulator: starting SH3 CE 2.11 on GDB port %d" % port, flush=True)
+        print("velo-emulator: starting SH3 CE 2.12 on GDB port %d" % port, flush=True)
     else:
         print("velo-emulator: starting CE %s.0 on GDB port %d" % (arguments.ce, port), flush=True)
     probe = socket.socket()
