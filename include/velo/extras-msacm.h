@@ -3,6 +3,10 @@
 
 #ifndef RC_INVOKED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Returns the version of the Audio Compression Manager.
  *
@@ -97,6 +101,10 @@ MMRESULT WINAPI acmFormatDetails(HACMDRIVER had, LPACMFORMATDETAILSW pafd, DWORD
  * @note Windows CE 2.0 only.
  */
 MMRESULT WINAPI acmFormatTagDetails(HACMDRIVER had, LPACMFORMATTAGDETAILSW paftd, DWORD fdwDetails);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

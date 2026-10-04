@@ -20,6 +20,9 @@ jobs:
           python3 tools/mkdocs.py
           git diff --exit-code -- include
 
+      - name: Check the headers work from C++
+        run: make check-cxx-headers CLANG=clang
+
       - name: Build the examples and debugmgr, with no warnings
         run: |
           make examples debugmgr 2>&1 | tee build.log

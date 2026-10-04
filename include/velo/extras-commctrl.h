@@ -3,6 +3,10 @@
 
 #ifndef RC_INVOKED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Checks whether a message is meant for a command bar and, if so, processes
  * it.
@@ -133,6 +137,10 @@ typedef struct tagNMDATETIMEFORMATQUERYA {
     SIZE szMax;
 } NMDATETIMEFORMATQUERYA, *LPNMDATETIMEFORMATQUERYA;
 
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif

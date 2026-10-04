@@ -3,6 +3,10 @@
 
 #ifndef RC_INVOKED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef VELO_VARSTRING
 #define VELO_VARSTRING
 typedef struct varstring_tag {
@@ -56,6 +60,10 @@ DWORD WINAPI RasSetEntryDevConfig(LPCWSTR szPhonebook, LPCWSTR szEntry, DWORD dw
  * @return 0 on success, or a RAS error code.
  */
 DWORD WINAPI RasHangup(HRASCONN Session);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

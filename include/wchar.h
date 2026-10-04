@@ -3,6 +3,10 @@
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef VELO_WINT_T
 #define VELO_WINT_T
 typedef unsigned short wint_t;
@@ -261,5 +265,9 @@ wchar_t towupper(wchar_t character);
 #define iswprint(character) iswctype(character, _BLANK | _PUNCT | _ALPHA | _DIGIT)
 #define iswgraph(character) iswctype(character, _PUNCT | _ALPHA | _DIGIT)
 #define iswcntrl(character) iswctype(character, _CONTROL)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

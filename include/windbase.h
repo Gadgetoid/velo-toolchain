@@ -188,6 +188,10 @@ typedef CEOIDINFO PEGOIDINFO;
 
 #ifndef RC_INVOKED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if VELO_CE >= 2
 
 /**
@@ -563,6 +567,10 @@ BOOL PegOidGetInfo(PEGOID oid, PEGOIDINFO *oidInfo);
 #define CeWriteRecordProps PegWriteRecordProps
 #define CeOidGetInfo PegOidGetInfo
 
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif

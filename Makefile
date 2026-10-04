@@ -1,7 +1,7 @@
 TOOLCHAIN = $(CURDIR)/cmake/velo-ce.cmake
 CLANG ?= $(firstword $(wildcard $(shell brew --prefix llvm 2>/dev/null)/bin/clang) clang)
 
-.PHONY: examples test screenshots primer primer-screenshots debugmgr debug-state headers docstrings check-headers clean
+.PHONY: examples test screenshots primer primer-screenshots debugmgr debug-state headers docstrings check-headers check-cxx-headers clean
 
 examples:
 	cmake -S examples -B build/ce1 -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) -DVELO_CE_VERSION=1
@@ -51,6 +51,9 @@ docstrings:
 
 check-headers:
 	python3 tests/check-headers.py --clang $(CLANG)
+
+check-cxx-headers:
+	python3 tests/check-cxx-headers.py --clang $(CLANG)
 
 clean:
 	rm -rf build

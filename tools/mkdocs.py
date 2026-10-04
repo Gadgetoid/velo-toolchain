@@ -46,6 +46,8 @@ def same_function(name):
 
 
 def availability(name):
+    if name in mkheaders.ENTRY_POINTS:
+        return None
     versions = [version for version in (1, 2) if same_function(name) & EXPORTS[version]]
     if versions == [1]:
         return "Windows CE 1.0 only."

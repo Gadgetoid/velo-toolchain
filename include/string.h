@@ -3,6 +3,10 @@
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Copies bytes between blocks of memory that don't overlap.
  *
@@ -51,5 +55,9 @@ int memcmp(const void *first, const void *second, size_t count);
  * @return Pointer to the first match, or NULL if there is none.
  */
 void *memchr(const void *memory, int value, size_t count);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

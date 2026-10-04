@@ -3,6 +3,10 @@
 
 #ifndef RC_INVOKED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Sets or queries a socket's mode, including the secure socket (SSL)
  * settings.
@@ -30,6 +34,10 @@
  */
 int WINAPI WSAIoctl(SOCKET s, DWORD dwIoControlCode, LPVOID lpvInBuffer, DWORD cbInBuffer, LPVOID lpvOutBuffer, DWORD cbOutBuffer,
                     LPDWORD lpcbBytesReturned, LPVOID lpOverlapped, LPVOID lpCompletionRoutine);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

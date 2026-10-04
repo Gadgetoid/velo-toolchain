@@ -103,7 +103,7 @@ if __name__ == "__main__":
     write_wrappers()
     find_header = declaring_headers()
     lines = ["#if !defined(VELO_CE)", "#error \"include windows.h first\"", "#endif", ""]
-    alias_lines = list(lines)
+    alias_lines = lines + ["#ifdef __cplusplus", "extern \"C\" {", "#endif", ""]
     report = []
     for version, name in VERSIONS.items():
         declared = declarations(arguments.clang, version)
@@ -139,6 +139,7 @@ if __name__ == "__main__":
         report.extend("  %s" % function for function in undeclared)
     with open(os.path.join(ROOT, "include", "velo", "unavailable.h"), "w") as output:
         output.write("\n".join(lines))
+    alias_lines += ["#ifdef __cplusplus", "}", "#endif", ""]
     with open(os.path.join(ROOT, "include", "velo", "aliases.h"), "w") as output:
         output.write("\n".join(alias_lines))
     if arguments.report:

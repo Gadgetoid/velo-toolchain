@@ -3,6 +3,10 @@
 
 #ifndef RC_INVOKED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef CE_USER_NOTIFICATION PEG_USER_NOTIFICATION;
 typedef PCE_USER_NOTIFICATION PPEG_USER_NOTIFICATION;
 
@@ -102,6 +106,10 @@ HANDLE PegSetUserNotification(HANDLE hNotification, WCHAR *pwszAppName, SYSTEMTI
 #define CeRunAppAtEvent PegRunAppAtEvent
 #define CeRunAppAtTime PegRunAppAtTime
 #define CeSetUserNotification PegSetUserNotification
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif

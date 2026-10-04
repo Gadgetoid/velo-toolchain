@@ -22,6 +22,19 @@ Works only on the RAM-based object store file system.
 @param lpszSourceFile The file to copy from and delete. Can't be NULL.
 @return TRUE on success, FALSE on failure (see GetLastError).
 
+## DllMain(hinstDLL, fdwReason, lpvReserved)
+A DLL's entry point, which you write. Windows CE calls it when a process
+loads or frees the DLL, and when the process starts or ends a thread.
+
+Declared here so a C++ DLL's DllMain has C linkage.
+
+@param hinstDLL The DLL's instance handle.
+@param fdwReason DLL_PROCESS_ATTACH, DLL_PROCESS_DETACH,
+       DLL_THREAD_ATTACH or DLL_THREAD_DETACH.
+@param lpvReserved Reserved.
+@return For DLL_PROCESS_ATTACH, TRUE to load or FALSE to fail the load.
+        Ignored for the other reasons.
+
 ## EnableHardwareKeyboard(fEnable)
 Enables or disables the hardware keyboard.
 

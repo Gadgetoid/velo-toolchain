@@ -2,6 +2,10 @@
 #error "include windows.h first"
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if VELO_CE == 1
 #ifdef _RAS_H
 #undef RasDeleteEntry
@@ -150,4 +154,8 @@ extern __typeof__(GetVersionExW) GetVersionEx;
 #undef GetVersionExW
 #define GetVersionExW GetVersionEx
 #endif
+#endif
+
+#ifdef __cplusplus
+}
 #endif

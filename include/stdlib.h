@@ -3,6 +3,10 @@
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Converts a wide-character decimal string to a long.
  *
@@ -49,5 +53,9 @@ size_t mbstowcs(wchar_t *destination, const char *source, size_t count);
  *         character can't be converted.
  */
 size_t wcstombs(char *destination, const wchar_t *source, size_t count);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

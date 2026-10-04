@@ -10,6 +10,10 @@
 
 #ifndef RC_INVOKED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Checks a string against the system password.
  *
@@ -17,6 +21,20 @@
  * @return TRUE if it matches, FALSE otherwise.
  */
 BOOL WINAPI CheckPassword(LPWSTR lpszPassword);
+/**
+ * A DLL's entry point, which you write. Windows CE calls it when a process
+ * loads or frees the DLL, and when the process starts or ends a thread.
+ *
+ * Declared here so a C++ DLL's DllMain has C linkage.
+ *
+ * @param hinstDLL The DLL's instance handle.
+ * @param fdwReason DLL_PROCESS_ATTACH, DLL_PROCESS_DETACH,
+ *        DLL_THREAD_ATTACH or DLL_THREAD_DETACH.
+ * @param lpvReserved Reserved.
+ * @return For DLL_PROCESS_ATTACH, TRUE to load or FALSE to fail the load.
+ *         Ignored for the other reasons.
+ */
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved);
 /**
  * Retrieves clipboard data as a copy owned by the calling process.
  *
@@ -297,6 +315,10 @@ void WINAPI SignalStarted(DWORD dw);
  */
 BOOL WINAPI TransparentImage(HDC hdcDest, int nXDest, int nYDest, int nWidthDest, int nHeightDest, HANDLE hImgSrc, int nXSrc, int nYSrc,
                              int nWidthSrc, int nHeightSrc, COLORREF crTransparentColor);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 
