@@ -278,13 +278,29 @@ The C runtime DLL's libraries (`msvcrt.lib`, `msvcrtd.lib`) are left out: that D
 
 `make examples-sh3` builds the examples into `build/ce1-sh3`, `build/ce101-sh3` and `build/ce2-sh3`, with `VELO_SH3_LLVM` as the LLVM. `make check-headers-sh3` compares the headers with the SDK headers using its SH3 defines. Without `VELO_SH3_LLVM` it compiles for MIPS instead (`--target-arch mips`), which checks the SH3 declarations but not the SuperH ABI's layouts. `long long` and `double` are 8-byte aligned in structures, as the SH compiler's default `/Zp8` gives.
 
-`make debugmgr-sh3` builds debugmgr for SH3. It calls the host through `trapa #0xCE`, which the SH3 emulator (a velo-emu fork for Microsoft's Odo SH3 reference board, running a Platform Builder 2.11 CE image) answers like velo-emu's mailbox, so `velo-debug` works with it. The examples run there, from a folder served with its `--folder` or copied over with `velo-debug`; the CE 1.0 and CE 2.0 builds look the same:
+### SH3 emulator
+
+The SH3 emulator is a velo-emu fork for Microsoft's Odo SH3 reference board, running a CE 2.11 image built with Platform Builder 2.11. Its `--folder` serves a host folder to CE's parallel-port file system, so programs there start from Task Manager's Run dialog without copying them over. The CE 1.0, 1.01 and 2.0 builds all run on it, and look the same:
 
 | `hello` | `window` | `maths` | `dll` |
 | --- | --- | --- | --- |
 | ![hello on SH3 CE 2.11](docs/screenshots/sh3/hello.png) | ![window on SH3 CE 2.11](docs/screenshots/sh3/window.png) | ![maths on SH3 CE 2.11](docs/screenshots/sh3/maths.png) | ![greeter on SH3 CE 2.11](docs/screenshots/sh3/greeter.png) |
 
-Not on SH3 yet: `make debug-state`, `tools/velo-emulator`, the GDB scripts and VS Code setup, and `make test` are written for velo-emu and the Velo. `velo-symbolize` works on SH3 builds.
+These need `VELO_SH3_EMU` (a built SH3 emulator checkout, with `headless`, and `velo` for the window) and `VELO_SH3_ROM` (the CE 2.11 `nk.bin`):
+
+```sh
+make test-sh3          # run the examples, screenshots in build/ce*-sh3/screenshots
+make screenshots-sh3   # update the screenshots above
+make debug-state-sh3   # build/debugmgr/ce2-sh3/debug-desktop.state, with debugmgr running
+tools/velo-emulator --arch sh3 &
+gdb -x build/maths.elf.gdb -ex "target extended-remote :2003" -ex "set target-wide-charset UTF-16LE" -ex velo-load -ex "break WinMain" -ex run
+```
+
+Each run calibrates the touch panel from a cold boot first, unless `VELO_SH3_STATE` names a saved desktop state. `velo-emulator --arch sh3` starts the emulator from the debug state with its GDB stub on port 2003 and the agent socket at `build/debugmgr/ce2-sh3/agent.sock`, for `velo-debug` (`VELO_AGENT`). SH3 GDB scripts set GDB's architecture to `sh3`. VS Code's `Odo SH3 CE 2.11` configuration uses the `velo: emulator SH3` task; its `targetArchitecture` is `mips` because cpptools has no SH value, and GDB itself is set to `sh3`.
+
+On SH3, debugmgr is `velo-debugmgr.exe`: the emulator's image has its own `debugmgr.exe` in ROM, which CE would start instead of one with the same name in a `--folder`.
+
+The SH3 compiler doesn't emit DWARF yet, so GDB has symbols but no source lines or locals: breakpoints on functions, `stepi`, `x/i`, registers, `kill` and `velo-load` work. `velo-symbolize` works on SH3 builds, by symbol.
 
 ## Reference material
 
