@@ -64,5 +64,5 @@ if __name__ == "__main__":
     if arguments.headless:
         command = [os.path.join(folder, "headless"), rom, "--load=%s" % session, "--gdb=%d" % port, *extra]
     else:
-        command = [os.path.join(folder, "velo"), "--state=%s" % session, "--gdb=%d" % port, *extra, rom]
+        command = [os.path.join(folder, "sh3emu" if sh3 else "velo"), "--state=%s" % session, "--gdb=%d" % port, *extra, rom]
     os.execv(command[0], command)

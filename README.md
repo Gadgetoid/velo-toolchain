@@ -286,7 +286,7 @@ The SH3 emulator is a velo-emu fork for Microsoft's Odo SH3 reference board, run
 | --- | --- | --- | --- |
 | ![hello on SH3 CE 2.11](docs/screenshots/sh3/hello.png) | ![window on SH3 CE 2.11](docs/screenshots/sh3/window.png) | ![maths on SH3 CE 2.11](docs/screenshots/sh3/maths.png) | ![greeter on SH3 CE 2.11](docs/screenshots/sh3/greeter.png) |
 
-These need `VELO_SH3_EMU` (a built SH3 emulator checkout, with `headless`, and `velo` for the window) and `VELO_SH3_ROM` (the CE 2.11 `nk.bin`):
+These need `VELO_SH3_EMU` (a built SH3 emulator checkout, with `headless`, and `sh3emu` for the window) and `VELO_SH3_ROM` (the CE 2.11 `nk.bin`):
 
 ```sh
 make test-sh3          # run the examples, screenshots in build/ce*-sh3/screenshots
