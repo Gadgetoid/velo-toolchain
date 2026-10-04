@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Win32 in a Hurry - The Velo CE Primer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+<p>The Velo CE Primer</p>
+<h1><small>Chapter 3</small>Win32 in a Hurry</h1>
+<nav aria-label="Chapters">
+<ol>
+<li><a href="index.html">Cover</a></li>
+<li><a href="1-velo.html">1. Meet the Velo</a></li>
+<li><a href="2-tools.html">2. Tools</a></li>
+<li><a href="3-win32.html" aria-current="page">3. Win32</a></li>
+<li><a href="4-layout.html">4. Layout</a></li>
+<li><a href="5-system.html">5. System</a></li>
+<li><a href="6-network.html">6. Network</a></li>
+<li><a href="7-bluesky.html">7. Bluesky</a></li>
+<li><a href="8-appstore.html">8. App Store</a></li>
+<li><a href="9-reference.html">9. Reference</a></li>
+</ol>
+</nav>
+</header>
+<main>
+<section>
+<h2>Windows and Messages</h2>
+<p>Everything on screen is a <em>window</em>: your program's main window, but also each button, text box and list inside it. A window is identified by a handle, an <code>HWND</code>, and belongs to a <em>window class</em> that names the function handling its <em>messages</em>.</p>
+<p>A message is a number plus two parameters, <code>wParam</code> and <code>lParam</code>. CE sends your window one when something happens: it's been created, it needs painting, the stylus touched it, a key was pressed, a button inside it was tapped. Your program is a loop that takes messages off a queue and hands each one to the right window's function, the <em>window procedure</em>. You never poll for input. You react.</p>
+<p>The rest of Win32 follows the same pattern: handles for things (<code>HDC</code> for a drawing surface, <code>HFONT</code>, <code>HMENU</code>, <code>HANDLE</code> for files and threads), functions that take them, and messages to tell windows to do things.</p>
+</section>
+
+<section>
+<h2>The Smallest Real Window</h2>
+<p>The toolchain's <code>window</code> example draws a line of text and a circle where you last tapped, and quits on <kbd>Esc</kbd>:</p>
+<pre data-file="examples/window/window.c"><code><span class="preprocessor">#include</span> &lt;windows.h&gt;
+
+<span class="preprocessor">#define</span> <span class="constant">MARK_SIZE</span> <span class="number">6</span>
+
+<span class="keyword">static</span> <span class="type">int</span> tap_count;
+<span class="keyword">static</span> <span class="type">POINT</span> last_tap = {-<span class="number">1</span>, -<span class="number">1</span>};
+
+<span class="keyword">static</span> <span class="type">void</span> <span class="function">paint</span>(<span class="type">HWND</span> window) {
+    <span class="type">PAINTSTRUCT</span> paint;
+    <span class="type">RECT</span> client;
+    <span class="type">WCHAR</span> text[<span class="number">64</span>];
+    <span class="type">HDC</span> dc = <span class="function">BeginPaint</span>(window, &amp;paint);
+    <span class="function">GetClientRect</span>(window, &amp;client);
+    <span class="function">wsprintfW</span>(text, <span class="string">L"Taps: %d\nTap anywhere, Esc to quit"</span>, tap_count);
+    <span class="function">DrawTextW</span>(dc, text, -<span class="number">1</span>, &amp;client, <span class="constant">DT_CENTER</span> | <span class="constant">DT_WORDBREAK</span>);
+    <span class="keyword">if</span> (last_tap.x &gt;= <span class="number">0</span>) {
+        <span class="function">Ellipse</span>(dc, last_tap.x - <span class="constant">MARK_SIZE</span>, last_tap.y - <span class="constant">MARK_SIZE</span>, last_tap.x + <span class="constant">MARK_SIZE</span>, last_tap.y + <span class="constant">MARK_SIZE</span>);
+    }
+    <span class="function">EndPaint</span>(window, &amp;paint);
+}
+
+<span class="keyword">static</span> <span class="type">LRESULT</span> <span class="constant">CALLBACK</span> <span class="function">window_procedure</span>(<span class="type">HWND</span> window, <span class="type">UINT</span> message, <span class="type">WPARAM</span> wparam, <span class="type">LPARAM</span> lparam) {
+    <span class="keyword">switch</span> (message) {
+    <span class="keyword">case</span> <span class="constant">WM_PAINT</span>:
+        <span class="function">paint</span>(window);
+        <span class="keyword">return</span> <span class="number">0</span>;
+    <span class="keyword">case</span> <span class="constant">WM_LBUTTONDOWN</span>:
+        tap_count++;
+        last_tap.x = (<span class="type">short</span>)<span class="constant">LOWORD</span>(lparam);
+        last_tap.y = (<span class="type">short</span>)<span class="constant">HIWORD</span>(lparam);
+        <span class="function">InvalidateRect</span>(window, <span class="number">0</span>, <span class="constant">TRUE</span>);
+        <span class="keyword">return</span> <span class="number">0</span>;
+    <span class="keyword">case</span> <span class="constant">WM_KEYDOWN</span>:
+        <span class="keyword">if</span> (wparam == <span class="constant">VK_ESCAPE</span>) {
+            <span class="function">DestroyWindow</span>(window);
+        }
+        <span class="keyword">return</span> <span class="number">0</span>;
+    <span class="keyword">case</span> <span class="constant">WM_DESTROY</span>:
+        <span class="function">PostQuitMessage</span>(<span class="number">0</span>);
+        <span class="keyword">return</span> <span class="number">0</span>;
+    }
+    <span class="keyword">return</span> <span class="function">DefWindowProcW</span>(window, message, wparam, lparam);
+}
+
+<span class="type">int</span> <span class="constant">WINAPI</span> <span class="function">WinMain</span>(<span class="type">HINSTANCE</span> instance, <span class="type">HINSTANCE</span> previous, <span class="type">LPWSTR</span> command_line, <span class="type">int</span> show) {
+    <span class="type">WNDCLASSW</span> window_class = {<span class="number">0</span>};
+    <span class="type">MSG</span> message;
+    <span class="type">HWND</span> window;
+    window_class.lpfnWndProc = window_procedure;
+    window_class.hInstance = instance;
+    window_class.hbrBackground = <span class="function">GetStockObject</span>(<span class="constant">WHITE_BRUSH</span>);
+    window_class.lpszClassName = <span class="string">L"VeloExampleWindow"</span>;
+    <span class="function">RegisterClassW</span>(&amp;window_class);
+    window = <span class="function">CreateWindowExW</span>(<span class="number">0</span>, window_class.lpszClassName, <span class="string">L"Window"</span>, <span class="constant">WS_VISIBLE</span> | <span class="constant">WS_CAPTION</span> | <span class="constant">WS_SYSMENU</span>,
+                             <span class="number">0</span>, <span class="number">0</span>, <span class="function">GetSystemMetrics</span>(<span class="constant">SM_CXSCREEN</span>), <span class="function">GetSystemMetrics</span>(<span class="constant">SM_CYSCREEN</span>), <span class="number">0</span>, <span class="number">0</span>, instance, <span class="number">0</span>);
+    <span class="function">SetFocus</span>(window);
+    <span class="keyword">while</span> (<span class="function">GetMessageW</span>(&amp;message, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>)) {
+        <span class="function">TranslateMessage</span>(&amp;message);
+        <span class="function">DispatchMessageW</span>(&amp;message);
+    }
+    <span class="keyword">return</span> message.wParam;
+}</code></pre>
+<figure>
+<figure><img src="screenshots/ce1/window.png" alt="The window example on CE 1.0: a captioned window counting one tap, with a circle where it was" width="976" height="496"><figcaption>CE 1.0</figcaption></figure>
+<figure><img src="screenshots/ce2/window.png" alt="The window example on CE 2.0" width="976" height="496"><figcaption>CE 2.0</figcaption></figure>
+<figcaption>After one tap. This example uses a desktop-style caption to keep it short: chapter 4 shows the CE way, with a command bar.</figcaption>
+</figure>
+<h3>1. Register a class</h3>
+<p><code>WNDCLASSW</code> names the class and gives its window procedure, the program's instance and a background brush. Every window of the class shares these. <code>RegisterClassW</code> makes it known to CE. Zero the struct first: there's no field you can leave as garbage.</p>
+<h3>2. Create the window</h3>
+<p><code>CreateWindowExW</code> takes extended styles, the class name, the title, styles, position and size, the parent window, a menu or child ID, the instance and a pointer you can pass to <code>WM_CREATE</code>. It sends <code>WM_CREATE</code> (and <code>WM_SIZE</code>) to the window procedure before it returns. <code>WS_VISIBLE</code> shows it straight away.</p>
+<h3>3. Run the message loop</h3>
+<p><code>GetMessageW</code> waits for the next message for any of this thread's windows. <code>TranslateMessage</code> turns key presses into character messages (<code>WM_CHAR</code>), and <code>DispatchMessageW</code> calls the window procedure. When <code>GetMessageW</code> returns 0 it has received <code>WM_QUIT</code>, and the program ends.</p>
+<h3>4. Handle messages</h3>
+<p>The window procedure is a <code>switch</code> on the message. Handle the ones you care about and return 0. Pass everything else to <code>DefWindowProcW</code>, which does the standard thing: drawing borders, closing on the close button, and so on.</p>
+<h3>5. Shut down</h3>
+<p>Closing goes <code>WM_CLOSE</code> (someone asked: you can refuse), then <code>DestroyWindow</code>, then <code>WM_DESTROY</code> (the window is going: free things), where <code>PostQuitMessage</code> puts <code>WM_QUIT</code> on the queue to end the loop.</p>
+</section>
+
+<section>
+<h2>Messages You'll Handle</h2>
+<figure>
+<table>
+<thead><tr><th>Message</th><th>When</th><th>Parameters</th></tr></thead>
+<tbody>
+<tr><td><code>WM_CREATE</code></td><td>Once, during <code>CreateWindowExW</code>. Create child windows here.</td><td><code>lParam</code> points to a <code>CREATESTRUCT</code>.</td></tr>
+<tr><td><code>WM_SIZE</code></td><td>The window was created or resized. Lay out children here.</td><td><code>LOWORD(lParam)</code> is the width, <code>HIWORD(lParam)</code> the height.</td></tr>
+<tr><td><code>WM_PAINT</code></td><td>Part of the window needs drawing.</td><td>Call <code>BeginPaint</code> and <code>EndPaint</code>.</td></tr>
+<tr><td><code>WM_COMMAND</code></td><td>A menu item, accelerator or button was used, or a control reports a change.</td><td><code>LOWORD(wParam)</code> is the ID, <code>HIWORD(wParam)</code> the notification code, <code>lParam</code> the control's <code>HWND</code> (0 for menus).</td></tr>
+<tr><td><code>WM_NOTIFY</code></td><td>A common control (list view, tabs, tree) reports something.</td><td><code>lParam</code> points to an <code>NMHDR</code>, or a bigger struct that starts with one.</td></tr>
+<tr><td><code>WM_LBUTTONDOWN</code>, <code>WM_MOUSEMOVE</code>, <code>WM_LBUTTONUP</code></td><td>The stylus touched, dragged or lifted.</td><td><code>(short)LOWORD(lParam)</code> and <code>(short)HIWORD(lParam)</code> are x and y in the window.</td></tr>
+<tr><td><code>WM_KEYDOWN</code></td><td>A key was pressed.</td><td><code>wParam</code> is a virtual key, such as <code>VK_ESCAPE</code>.</td></tr>
+<tr><td><code>WM_CHAR</code></td><td>A key produced a character.</td><td><code>wParam</code> is the <code>WCHAR</code>.</td></tr>
+<tr><td><code>WM_TIMER</code></td><td>A timer from <code>SetTimer</code> fired.</td><td><code>wParam</code> is the timer's ID.</td></tr>
+<tr><td><code>WM_ACTIVATE</code></td><td>The window became active or inactive.</td><td><code>LOWORD(wParam)</code> is nonzero when activated.</td></tr>
+<tr><td><code>WM_CLOSE</code>, <code>WM_DESTROY</code></td><td>Closing, as above.</td><td></td></tr>
+</tbody>
+</table>
+</figure>
+<aside>
+<strong>Velo Tip</strong>
+<p>Always cast coordinates from <code>lParam</code> through <code>short</code>. With the stylus captured (below) they can be negative, and <code>LOWORD</code> on its own turns -1 into 65535.</p>
+</aside>
+</section>
+
+<section>
+<h2>Painting</h2>
+<p>You don't draw when your data changes. You mark the window as needing a redraw with <code>InvalidateRect(window, NULL, TRUE)</code>, and CE sends <code>WM_PAINT</code> when the queue is otherwise empty. All your drawing happens there, between <code>BeginPaint</code> and <code>EndPaint</code>, from your program's current state. This way several changes cost one redraw, and the window can be redrawn at any time, such as when a dialog in front of it closes.</p>
+<p><code>BeginPaint</code> returns an <code>HDC</code>, a <em>device context</em>: the surface plus the current font, pen (lines), brush (fills) and text colours. <code>SelectObject</code> swaps one in and returns the old one, which you put back when you're done. Chapter 4's drawing recipe covers fonts, greys and flicker-free drawing.</p>
+<p>The <code>TRUE</code> in <code>InvalidateRect</code> erases the background first with the class's brush. If you paint every pixel yourself, return 1 from <code>WM_ERASEBKGND</code> to skip that and avoid a flash.</p>
+</section>
+
+<section>
+<h2>Child Windows and Controls</h2>
+<p>Buttons, text boxes, lists and the rest are windows of classes CE registers for you: <code>BUTTON</code>, <code>EDIT</code>, <code>STATIC</code>, <code>LISTBOX</code>, <code>COMBOBOX</code>, <code>SCROLLBAR</code>, and the common controls in chapter 4. Create one with <code>WS_CHILD</code>, your window as its parent, and a number in place of the menu: its ID.</p>
+<pre><code><span class="type">HWND</span> button = <span class="function">CreateWindowExW</span>(<span class="number">0</span>, <span class="string">L"BUTTON"</span>, <span class="string">L"Install"</span>, <span class="constant">WS_CHILD</span> | <span class="constant">WS_VISIBLE</span> | <span class="constant">BS_PUSHBUTTON</span>,
+                              <span class="number">10</span>, <span class="number">10</span>, <span class="number">64</span>, <span class="number">20</span>, window, (<span class="type">HMENU</span>)<span class="constant">IDC_INSTALL</span>, instance, <span class="constant">NULL</span>);</code></pre>
+<p>Tapping it sends the parent <code>WM_COMMAND</code> with <code>LOWORD(wParam) == IDC_INSTALL</code> and <code>HIWORD(wParam) == BN_CLICKED</code>. You talk to controls with messages too: <code>SendMessageW(list, LB_ADDSTRING, 0, (LPARAM)L"Item")</code> adds a line to a list box, and <code>SetWindowTextW</code> sets a control's text. <code>GetDlgItem(parent, ID)</code> finds a child by its ID, so you don't need to keep every handle.</p>
+<h3>Send and post</h3>
+<p><code>SendMessageW</code> calls the window procedure now and returns its result. <code>PostMessageW</code> puts the message on the queue and returns at once. Messages from <code>WM_APP</code> (0x8000) upward are yours to define, which is how a worker thread tells the interface something has finished: chapter 6.</p>
+<h3>Keeping state</h3>
+<p>A program with one main window can keep its state in <code>static</code> variables, as all the examples do. A window class with many instances keeps a pointer per window with <code>SetWindowLongW(window, GWL_USERDATA, (LONG)state)</code> and reads it back in the window procedure with <code>GetWindowLongW</code>. Dialogs do the same with <code>DWL_USER</code>.</p>
+</section>
+
+<section>
+<h2>The Stylus and the Keyboard</h2>
+<p>A tap arrives as <code>WM_LBUTTONDOWN</code> then <code>WM_LBUTTONUP</code>. To follow a drag, call <code>SetCapture(window)</code> on the way down, so moves and the lift come to you even outside the window, and <code>ReleaseCapture()</code> on the way up. velo-bluesky's split between its two panes works like this. A double tap needs the <code>CS_DBLCLKS</code> class style (0x0008) to arrive as <code>WM_LBUTTONDBLCLK</code>. There's no right button. On a Handheld PC, <kbd>Alt</kbd>+tap takes its place: it arrives as an ordinary <code>WM_LBUTTONDOWN</code>, so check <code>GetKeyState(VK_MENU)</code> there and show a pop-up menu with <code>TrackPopupMenuEx</code>. Put the same commands on the menu too.</p>
+<p>Keys go to the window with the <em>focus</em>, which you set with <code>SetFocus</code>. Use <code>WM_KEYDOWN</code> for keys that aren't characters (arrows, <kbd>Esc</kbd>, <kbd>F5</kbd>) and <code>WM_CHAR</code> for typing. Two helpers in the message loop do a lot for you:</p>
+<ul>
+<li><code>TranslateAcceleratorW</code> turns shortcut keys listed in an <code>ACCELERATORS</code> resource into <code>WM_COMMAND</code>, as if the menu item had been chosen.</li>
+<li><code>IsDialogMessageW</code> moves the focus between controls with <kbd>Tab</kbd> and the arrow keys, and presses the default button on <kbd>Enter</kbd>, in any window with controls, not just dialogs.</li>
+</ul>
+<pre data-file="docs/primer/examples/frame/frame.c"><code><span class="type">HACCEL</span> accelerators = <span class="function">LoadAcceleratorsW</span>(instance, <span class="constant">MAKEINTRESOURCEW</span>(<span class="constant">IDA_MAIN</span>));
+<span class="keyword">while</span> (<span class="function">GetMessageW</span>(&amp;message, <span class="constant">NULL</span>, <span class="number">0</span>, <span class="number">0</span>)) {
+    <span class="keyword">if</span> (<span class="function">TranslateAcceleratorW</span>(frame, accelerators, &amp;message)) {
+        <span class="keyword">continue</span>;
+    }
+    <span class="function">TranslateMessage</span>(&amp;message);
+    <span class="function">DispatchMessageW</span>(&amp;message);
+}</code></pre>
+</section>
+
+<section>
+<h2>One Copy at a Time</h2>
+<p>CE programs don't usually run twice. Starting one that's already running should bring it forward. Look for your own window class before creating anything:</p>
+<pre data-file="docs/primer/examples/frame/frame.c"><code><span class="type">HWND</span> existing = <span class="function">FindWindowW</span>(<span class="constant">FRAME_CLASS</span>, <span class="constant">NULL</span>);
+<span class="keyword">if</span> (existing) {
+    <span class="function">SetForegroundWindow</span>(existing);
+    <span class="keyword">return</span> <span class="number">0</span>;
+}</code></pre>
+<p>Give your class a name nobody else will use: it's how CE tells your program's windows apart from everyone else's.</p>
+</section>
+</main>
+<footer>
+<ul>
+<li><a href="2-tools.html" rel="prev">&lt; 2. Tools</a></li>
+<li><a href="4-layout.html" rel="next">4. Layout &gt;</a></li>
+</ul>
+<p>The Velo CE Primer, for velo-toolchain. Screenshots are from velo-emu.</p>
+</footer>
+</body>
+</html>

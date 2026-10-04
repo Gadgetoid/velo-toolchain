@@ -1,0 +1,20 @@
+#ifndef FRAME_RESOURCE_H
+#define FRAME_RESOURCE_H
+
+#define IDM_MAIN 100
+#define IDA_MAIN 101
+
+#define IDC_COMMAND_BAR 200
+#define IDC_FOLDER 201
+#define IDC_NOTES 202
+#define IDC_READER 203
+#define IDC_STATUS 204
+
+#define ID_FILE_NEW 300
+#define ID_FILE_DELETE 301
+#define ID_FILE_EXIT 302
+#define ID_VIEW_NEXT 310
+#define ID_VIEW_PREVIOUS 311
+#define ID_HELP_ABOUT 320
+
+#endif

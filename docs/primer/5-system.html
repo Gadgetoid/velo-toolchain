@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Strings, Memory, Files and the Registry - The Velo CE Primer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+<p>The Velo CE Primer</p>
+<h1><small>Chapter 5</small>Strings, Memory, Files and the Registry</h1>
+<nav aria-label="Chapters">
+<ol>
+<li><a href="index.html">Cover</a></li>
+<li><a href="1-velo.html">1. Meet the Velo</a></li>
+<li><a href="2-tools.html">2. Tools</a></li>
+<li><a href="3-win32.html">3. Win32</a></li>
+<li><a href="4-layout.html">4. Layout</a></li>
+<li><a href="5-system.html" aria-current="page">5. System</a></li>
+<li><a href="6-network.html">6. Network</a></li>
+<li><a href="7-bluesky.html">7. Bluesky</a></li>
+<li><a href="8-appstore.html">8. App Store</a></li>
+<li><a href="9-reference.html">9. Reference</a></li>
+</ol>
+</nav>
+</header>
+<main>
+<section>
+<h2>Strings</h2>
+<p>Text inside your program is <code>WCHAR</code>: 16-bit UTF-16 code units, with <code>L"literals"</code>. velo-toolchain builds with <code>-fshort-wchar</code>, so <code>wchar_t</code> is the same type and GDB prints <code>WCHAR</code> strings as text.</p>
+<h3>Formatting</h3>
+<p><code>wsprintfW(output, format, ...)</code> is your formatter. It knows <code>%d</code>, <code>%u</code>, <code>%x</code>, <code>%c</code>, <code>%s</code> (a <code>WCHAR</code> string) and <code>%hs</code> (an 8-bit <code>char</code> string, widened as it's copied), with <code>l</code> for <code>long</code>, widths and zero padding like <code>%08x</code>. It doesn't know floating point, and it doesn't know how big <code>output</code> is, so make the buffer big enough. To show a <code>double</code>, scale it to an integer and format the parts, as <code>examples/maths</code> does.</p>
+<h3>String functions</h3>
+<p>CE's <code>coredll.dll</code> exports the C library's wide string functions on both versions, and <code>windows.h</code> declares them: <code>wcslen</code>, <code>wcscpy</code>, <code>wcsncpy</code>, <code>wcscat</code>, <code>wcscmp</code>, <code>wcsncmp</code>, <code>_wcsicmp</code>, <code>_wcsnicmp</code>, <code>wcschr</code>, <code>wcsrchr</code>, <code>wcsstr</code>, <code>wcstok</code>, <code>_wcsdup</code>, <code>_wcsupr</code>, <code>_wcslwr</code> and <code>_wtol</code> for turning text into a number, among others. <code>towlower</code> and <code>towupper</code> are CE 2.0 only.</p>
+<p>There's nothing for 8-bit <code>char</code> strings except <code>memchr</code>: no <code>strlen</code>, <code>strcmp</code> or <code>atoi</code>. Write the few you need. They're short, and a dozen of them cover a whole network client: velo-bluesky's <code>src/text.c</code> has its set.</p>
+<h3>UTF-8</h3>
+<p>The web, JSON and most files are UTF-8. CE 1.0 has no conversion functions at all, and CE 2.0's <code>MultiByteToWideChar</code> is only on CE 2.0. These two work everywhere, and let you decide what happens to bad input:</p>
+<pre><code><span class="keyword">static</span> <span class="type">int</span> <span class="function">utf16_to_utf8</span>(<span class="keyword">const</span> <span class="type">WCHAR</span> *text, <span class="type">char</span> *output, <span class="type">int</span> size) {
+    <span class="keyword">static</span> <span class="keyword">const</span> <span class="type">unsigned</span> <span class="type">char</span> leads[] = {<span class="number">0</span>, <span class="number">0</span>, <span class="number">0xC0</span>, <span class="number">0xE0</span>, <span class="number">0xF0</span>};
+    <span class="type">int</span> written = <span class="number">0</span>;
+    <span class="keyword">for</span> (; *text; text++) {
+        <span class="type">DWORD</span> code = *text;
+        <span class="keyword">if</span> (code &gt;= <span class="number">0xD800</span> &amp;&amp; code &lt; <span class="number">0xDC00</span> &amp;&amp; text[<span class="number">1</span>] &gt;= <span class="number">0xDC00</span> &amp;&amp; text[<span class="number">1</span>] &lt; <span class="number">0xE000</span>) {
+            code = <span class="number">0x10000</span> + ((code - <span class="number">0xD800</span>) &lt;&lt; <span class="number">10</span>) + (text[<span class="number">1</span>] - <span class="number">0xDC00</span>);
+            text++;
+        }
+        <span class="type">int</span> length = code &lt; <span class="number">0x80</span> ? <span class="number">1</span> : code &lt; <span class="number">0x800</span> ? <span class="number">2</span> : code &lt; <span class="number">0x10000</span> ? <span class="number">3</span> : <span class="number">4</span>;
+        <span class="keyword">if</span> (written + length &gt;= size) {
+            <span class="keyword">break</span>;
+        }
+        <span class="keyword">for</span> (<span class="type">int</span> index = length - <span class="number">1</span>; index &gt; <span class="number">0</span>; index--) {
+            output[written + index] = (<span class="type">char</span>)(<span class="number">0x80</span> | (code &amp; <span class="number">0x3F</span>));
+            code &gt;&gt;= <span class="number">6</span>;
+        }
+        output[written] = (<span class="type">char</span>)(leads[length] | code);
+        written += length;
+    }
+    output[written] = <span class="number">0</span>;
+    <span class="keyword">return</span> written;
+}</code></pre>
+<p>The other direction is in the <code>fetch</code> example, which also turns <code>\n</code> into <code>\r\n</code>, as edit controls need:</p>
+<pre data-file="docs/primer/examples/fetch/fetch.c"><code><span class="keyword">static</span> <span class="type">int</span> <span class="function">utf8_to_edit_text</span>(<span class="keyword">const</span> <span class="type">char</span> *text, <span class="type">int</span> length, <span class="type">WCHAR</span> *output, <span class="type">int</span> size) {
+    <span class="type">int</span> written = <span class="number">0</span>;
+    <span class="keyword">for</span> (<span class="type">int</span> index = <span class="number">0</span>; index &lt; length &amp;&amp; written &lt; size - <span class="number">2</span>;) {
+        <span class="type">unsigned</span> <span class="type">char</span> byte = (<span class="type">unsigned</span> <span class="type">char</span>)text[index];
+        <span class="type">DWORD</span> code = <span class="string">'?'</span>;
+        <span class="type">int</span> extra = byte &gt;= <span class="number">0xF0</span> ? <span class="number">3</span> : byte &gt;= <span class="number">0xE0</span> ? <span class="number">2</span> : byte &gt;= <span class="number">0xC0</span> ? <span class="number">1</span> : <span class="number">0</span>;
+        <span class="keyword">if</span> (byte &lt; <span class="number">0x80</span>) {
+            code = byte;
+        } <span class="keyword">else</span> <span class="keyword">if</span> (extra &amp;&amp; index + extra &lt; length) {
+            code = byte &amp; (<span class="number">0x3F</span> &gt;&gt; extra);
+            <span class="keyword">for</span> (<span class="type">int</span> follow = <span class="number">1</span>; follow &lt;= extra; follow++) {
+                code = (code &lt;&lt; <span class="number">6</span>) | (text[index + follow] &amp; <span class="number">0x3F</span>);
+            }
+        }
+        index += extra + <span class="number">1</span>;
+        <span class="keyword">if</span> (code == <span class="string">'\n'</span> &amp;&amp; (written == <span class="number">0</span> || output[written - <span class="number">1</span>] != <span class="string">'\r'</span>)) {
+            output[written++] = <span class="string">'\r'</span>;
+        }
+        output[written++] = code &gt; <span class="number">0xFFFF</span> ? <span class="string">'?'</span> : (<span class="type">WCHAR</span>)code;
+    }
+    output[written] = <span class="number">0</span>;
+    <span class="keyword">return</span> written;
+}</code></pre>
+<aside>
+<strong>Velo Tip</strong>
+<p>The Velo's fonts have no emoji. velo-bluesky turns common emoji into text emoticons and drops the rest, which reads better than a row of boxes.</p>
+</aside>
+</section>
+
+<section>
+<h2>Memory</h2>
+<p><code>LocalAlloc</code> is your <code>malloc</code>. <code>LPTR</code> gives fixed, zeroed memory, which is what you want almost every time:</p>
+<pre><code><span class="type">post_t</span> *post = <span class="function">LocalAlloc</span>(<span class="constant">LPTR</span>, <span class="keyword">sizeof</span>(<span class="type">post_t</span>));
+<span class="keyword">if</span> (!post) {
+    <span class="keyword">return</span> <span class="constant">FALSE</span>;
+}
+<span class="function">LocalFree</span>(post);</code></pre>
+<p><code>LocalReAlloc(memory, size, LMEM_MOVEABLE)</code> grows a block, possibly moving it, and <code>LocalSize</code> says how big one is. <code>VirtualAlloc</code> reserves big regions directly, for buffers in the hundreds of kilobytes. <code>GlobalMemoryStatus</code> reports what's free.</p>
+<p>Check every allocation. On a desktop, running out is a theoretical problem. On a Velo it happens: a user with a full object store may have well under a megabyte for programs. When memory runs low CE sends <code>WM_HIBERNATE</code> (0x03FF) to running programs, asking them to free what they can, such as caches and pictures.</p>
+<h3>Patterns that help</h3>
+<ul>
+<li><strong>Arenas.</strong> Parse a network response into a block that you free in one go. velo-bluesky gives every job and every page of posts an arena (<code>src/memory.c</code>, 65 lines), which makes freeing a whole timeline one call.</li>
+<li><strong>Stream.</strong> Process data as it arrives rather than holding all of it. velo-bluesky decompresses, parses and decodes pictures in chunks.</li>
+<li><strong>Keep large buffers off the stack.</strong> Use the heap or a <code>static</code> for anything over a few kilobytes.</li>
+</ul>
+</section>
+
+<section>
+<h2>Files and Folders</h2>
+<p>Files work as on desktop Windows, through handles:</p>
+<pre><code><span class="keyword">static</span> <span class="type">BOOL</span> <span class="function">save_text</span>(<span class="type">LPCWSTR</span> path, <span class="keyword">const</span> <span class="type">char</span> *data, <span class="type">DWORD</span> length) {
+    <span class="type">DWORD</span> written;
+    <span class="type">HANDLE</span> file = <span class="function">CreateFileW</span>(path, <span class="constant">GENERIC_WRITE</span>, <span class="number">0</span>, <span class="constant">NULL</span>, <span class="constant">CREATE_ALWAYS</span>, <span class="constant">FILE_ATTRIBUTE_NORMAL</span>, <span class="constant">NULL</span>);
+    <span class="keyword">if</span> (file == <span class="constant">INVALID_HANDLE_VALUE</span>) {
+        <span class="keyword">return</span> <span class="constant">FALSE</span>;
+    }
+    <span class="type">BOOL</span> saved = <span class="function">WriteFile</span>(file, data, length, &amp;written, <span class="constant">NULL</span>) &amp;&amp; written == length;
+    <span class="function">CloseHandle</span>(file);
+    <span class="keyword">return</span> saved;
+}</code></pre>
+<p>Read with <code>OPEN_EXISTING</code>, <code>GetFileSize</code> and <code>ReadFile</code>. <code>FindFirstFileW</code>, <code>FindNextFileW</code> and <code>FindClose</code> list a folder. <code>CreateDirectoryW</code>, <code>DeleteFileW</code>, <code>MoveFileW</code>, <code>CopyFileW</code> and <code>GetFileAttributesW</code> do the rest. <code>GetLastError</code> says why something failed.</p>
+<h3>Where things go</h3>
+<p>These folders exist on both ROMs:</p>
+<figure>
+<table>
+<thead><tr><th>Folder</th><th>For</th></tr></thead>
+<tbody>
+<tr><td><code>\My Documents</code></td><td>The user's documents.</td></tr>
+<tr><td><code>\Program Files</code></td><td>Installed programs, one folder each.</td></tr>
+<tr><td><code>\Windows</code></td><td>System files (mostly in ROM), shared DLLs, help files, fonts in <code>\Windows\Fonts</code>.</td></tr>
+<tr><td><code>\Windows\Programs</code></td><td>Start &gt; Programs shortcuts.</td></tr>
+<tr><td><code>\Windows\Desktop</code></td><td>Desktop shortcuts.</td></tr>
+<tr><td><code>\Windows\StartUp</code></td><td>Shortcuts here run at startup.</td></tr>
+<tr><td><code>\PC Card</code> (CE 1.0), <code>\Storage Card</code> (CE 2.0)</td><td>The PC Card, when one is in.</td></tr>
+</tbody>
+</table>
+<figcaption>CE 2.0 also has <code>\Temp</code>. CE 1.0 doesn't.</figcaption>
+</figure>
+<p>Card folders have <code>FILE_ATTRIBUTE_TEMPORARY</code> (0x100) set as well as <code>FILE_ATTRIBUTE_DIRECTORY</code>. Look for that rather than a name, because the name depends on the version and the card:</p>
+<pre><code><span class="keyword">static</span> <span class="type">BOOL</span> <span class="function">find_card</span>(<span class="type">WCHAR</span> *folder, <span class="type">int</span> size) {
+    <span class="type">WIN32_FIND_DATAW</span> found;
+    <span class="type">BOOL</span> found_card = <span class="constant">FALSE</span>;
+    <span class="type">HANDLE</span> search = <span class="function">FindFirstFileW</span>(<span class="string">L"\\*"</span>, &amp;found);
+    <span class="keyword">if</span> (search == <span class="constant">INVALID_HANDLE_VALUE</span>) {
+        <span class="keyword">return</span> <span class="constant">FALSE</span>;
+    }
+    <span class="keyword">do</span> {
+        <span class="type">DWORD</span> wanted = <span class="constant">FILE_ATTRIBUTE_DIRECTORY</span> | <span class="constant">FILE_ATTRIBUTE_TEMPORARY</span>;
+        <span class="keyword">if</span> ((found.dwFileAttributes &amp; wanted) == wanted &amp;&amp; (<span class="type">int</span>)<span class="function">wcslen</span>(found.cFileName) + <span class="number">2</span> &lt; size) {
+            folder[<span class="number">0</span>] = <span class="string">'\\'</span>;
+            <span class="keyword">for</span> (<span class="type">int</span> index = <span class="number">0</span>; index &lt;= (<span class="type">int</span>)<span class="function">wcslen</span>(found.cFileName); index++) {
+                folder[index + <span class="number">1</span>] = found.cFileName[index];
+            }
+            found_card = <span class="constant">TRUE</span>;
+        }
+    } <span class="keyword">while</span> (!found_card &amp;&amp; <span class="function">FindNextFileW</span>(search, &amp;found));
+    <span class="function">FindClose</span>(search);
+    <span class="keyword">return</span> found_card;
+}</code></pre>
+<h3>Where am I?</h3>
+<p>There's no current directory, so a program can't open "the file next to me" by name. On CE 2.0, <code>GetModuleFileNameW(NULL, path, MAX_PATH)</code> gives the program's full path: cut it at the last backslash. CE 1.0 doesn't have it. Either install to a known folder, or have whatever starts the program pass the folder on the command line, as the screenshot runner does for <code>greeter.exe</code>.</p>
+<aside>
+<strong>Velo Tip</strong>
+<p>The object store lives in battery-backed RAM. It survives a soft reset, but not a flat backup battery or a hard reset. Anything precious belongs on a card too.</p>
+</aside>
+</section>
+
+<section>
+<h2>The Registry</h2>
+<p>Settings go in the registry, not in files. The convention is a key per program under <code>HKEY_CURRENT_USER\Software</code>. The <code>form</code> example reads and writes its settings like this:</p>
+<pre data-file="docs/primer/examples/form/form.c"><code><span class="keyword">static</span> <span class="type">void</span> <span class="function">read_number</span>(<span class="type">HKEY</span> key, <span class="type">LPCWSTR</span> name, <span class="type">DWORD</span> *value) {
+    <span class="type">DWORD</span> type;
+    <span class="type">DWORD</span> size = <span class="keyword">sizeof</span> *value;
+    <span class="type">DWORD</span> stored;
+    <span class="keyword">if</span> (<span class="function">RegQueryValueExW</span>(key, name, <span class="constant">NULL</span>, &amp;type, (<span class="type">BYTE</span> *)&amp;stored, &amp;size) == <span class="constant">ERROR_SUCCESS</span> &amp;&amp; type == <span class="constant">REG_DWORD</span>) {
+        *value = stored;
+    }
+}
+
+<span class="keyword">static</span> <span class="type">void</span> <span class="function">load_account</span>(<span class="type">account_t</span> *account) {
+    <span class="type">HKEY</span> key;
+    <span class="type">DWORD</span> type;
+    <span class="type">DWORD</span> size = <span class="keyword">sizeof</span> account-&gt;handle;
+    <span class="keyword">if</span> (<span class="function">RegOpenKeyExW</span>(<span class="constant">HKEY_CURRENT_USER</span>, <span class="constant">SETTINGS_KEY</span>, <span class="number">0</span>, <span class="constant">KEY_READ</span>, &amp;key) != <span class="constant">ERROR_SUCCESS</span>) {
+        <span class="keyword">return</span>;
+    }
+    <span class="keyword">if</span> (<span class="function">RegQueryValueExW</span>(key, <span class="string">L"Handle"</span>, <span class="constant">NULL</span>, &amp;type, (<span class="type">BYTE</span> *)account-&gt;handle, &amp;size) != <span class="constant">ERROR_SUCCESS</span> || type != <span class="constant">REG_SZ</span>) {
+        account-&gt;handle[<span class="number">0</span>] = <span class="number">0</span>;
+    }
+    account-&gt;handle[<span class="constant">HANDLE_MAX</span> - <span class="number">1</span>] = <span class="number">0</span>;
+    <span class="function">read_number</span>(key, <span class="string">L"Server"</span>, &amp;account-&gt;server);
+    <span class="function">read_number</span>(key, <span class="string">L"Refresh"</span>, &amp;account-&gt;refresh);
+    <span class="function">read_number</span>(key, <span class="string">L"Pictures"</span>, &amp;account-&gt;pictures);
+    <span class="function">RegCloseKey</span>(key);
+}
+
+<span class="keyword">static</span> <span class="type">void</span> <span class="function">save_account</span>(<span class="keyword">const</span> <span class="type">account_t</span> *account) {
+    <span class="type">HKEY</span> key;
+    <span class="type">DWORD</span> disposition;
+    <span class="keyword">if</span> (<span class="function">RegCreateKeyExW</span>(<span class="constant">HKEY_CURRENT_USER</span>, <span class="constant">SETTINGS_KEY</span>, <span class="number">0</span>, <span class="constant">NULL</span>, <span class="number">0</span>, <span class="constant">KEY_ALL_ACCESS</span>, <span class="constant">NULL</span>, &amp;key, &amp;disposition) != <span class="constant">ERROR_SUCCESS</span>) {
+        <span class="keyword">return</span>;
+    }
+    <span class="function">RegSetValueExW</span>(key, <span class="string">L"Handle"</span>, <span class="number">0</span>, <span class="constant">REG_SZ</span>, (<span class="keyword">const</span> <span class="type">BYTE</span> *)account-&gt;handle, (<span class="function">wcslen</span>(account-&gt;handle) + <span class="number">1</span>) * <span class="keyword">sizeof</span>(<span class="type">WCHAR</span>));
+    <span class="function">RegSetValueExW</span>(key, <span class="string">L"Server"</span>, <span class="number">0</span>, <span class="constant">REG_DWORD</span>, (<span class="keyword">const</span> <span class="type">BYTE</span> *)&amp;account-&gt;server, <span class="keyword">sizeof</span>(<span class="type">DWORD</span>));
+    <span class="function">RegSetValueExW</span>(key, <span class="string">L"Refresh"</span>, <span class="number">0</span>, <span class="constant">REG_DWORD</span>, (<span class="keyword">const</span> <span class="type">BYTE</span> *)&amp;account-&gt;refresh, <span class="keyword">sizeof</span>(<span class="type">DWORD</span>));
+    <span class="function">RegSetValueExW</span>(key, <span class="string">L"Pictures"</span>, <span class="number">0</span>, <span class="constant">REG_DWORD</span>, (<span class="keyword">const</span> <span class="type">BYTE</span> *)&amp;account-&gt;pictures, <span class="keyword">sizeof</span>(<span class="type">DWORD</span>));
+    <span class="function">RegCloseKey</span>(key);
+}</code></pre>
+<p>Three things to remember. Sizes are in bytes, and a <code>REG_SZ</code> string's size includes its terminating zero. Reads can fail on the first run, so start from defaults and only overwrite what was found. And always check the type you got back, because another version of your program may have written something different. <code>RegEnumKeyExW</code> and <code>RegEnumValueW</code> list keys and values, and <code>RegDeleteKeyW</code> removes a key.</p>
+<aside>
+<strong>Velo Tip</strong>
+<p>The registry is in the object store, so it's in memory and not encrypted. velo-bluesky keeps its refresh token there, which is reasonable for a session token. Never keep a password.</p>
+</aside>
+</section>
+
+<section>
+<h2>Time</h2>
+<p><code>GetLocalTime</code> and <code>GetSystemTime</code> fill a <code>SYSTEMTIME</code> with the local time and UTC. <code>GetTickCount</code> counts milliseconds since the Velo started, for measuring how long things take. There's no <code>time()</code>: to get Unix time, go through a <code>FILETIME</code>, which counts 100-nanosecond steps since 1601:</p>
+<pre><code><span class="keyword">static</span> <span class="type">DWORD</span> <span class="function">unix_time</span>(<span class="type">void</span>) {
+    <span class="type">SYSTEMTIME</span> now;
+    <span class="type">FILETIME</span> file_time;
+    <span class="function">GetSystemTime</span>(&amp;now);
+    <span class="function">SystemTimeToFileTime</span>(&amp;now, &amp;file_time);
+    <span class="type">unsigned</span> <span class="type">long</span> <span class="type">long</span> ticks = ((<span class="type">unsigned</span> <span class="type">long</span> <span class="type">long</span>)file_time.dwHighDateTime &lt;&lt; <span class="number">32</span>) | file_time.dwLowDateTime;
+    <span class="keyword">return</span> (<span class="type">DWORD</span>)(ticks / <span class="number">10000000</span> - <span class="number">11644473600ULL</span>);
+}</code></pre>
+<p>Internet timestamps are usually ISO 8601 in UTC, like <code>2026-10-04T12:00:00.000Z</code>, which is a <code>wsprintfW</code> of the <code>SYSTEMTIME</code> fields. Remember that the Velo's clock may simply be wrong: a new Velo starts in 1996 or 1997 until someone sets it.</p>
+</section>
+
+<section>
+<h2>Processes and DLLs</h2>
+<h3>Starting a program</h3>
+<pre><code><span class="keyword">static</span> <span class="type">BOOL</span> <span class="function">run</span>(<span class="type">LPCWSTR</span> program, <span class="type">LPWSTR</span> arguments) {
+    <span class="type">PROCESS_INFORMATION</span> started;
+    <span class="keyword">if</span> (!<span class="function">CreateProcessW</span>(program, arguments, <span class="constant">NULL</span>, <span class="constant">NULL</span>, <span class="constant">FALSE</span>, <span class="number">0</span>, <span class="constant">NULL</span>, <span class="constant">NULL</span>, <span class="constant">NULL</span>, &amp;started)) {
+        <span class="keyword">return</span> <span class="constant">FALSE</span>;
+    }
+    <span class="function">CloseHandle</span>(started.hThread);
+    <span class="function">CloseHandle</span>(started.hProcess);
+    <span class="keyword">return</span> <span class="constant">TRUE</span>;
+}</code></pre>
+<p>Given a bare name, CE looks on the PC Card, then in <code>\Windows</code>, then in the root. For anything else, give the full path. Unlike desktop Windows, the arguments don't include the program's name, and the other parameters must be <code>NULL</code>, <code>FALSE</code> or 0. <code>WaitForSingleObject(started.hProcess, INFINITE)</code> waits for it to finish, on CE 2.0. On CE 1.0 a new process's handle reports finished straight away, so that doesn't work there.</p>
+<h3>Loading a DLL</h3>
+<pre data-file="examples/dll/greeter.c"><code><span class="preprocessor">#include</span> &lt;windows.h&gt;
+
+<span class="keyword">typedef</span> <span class="type">int</span> (*add_function)(<span class="type">int</span>, <span class="type">int</span>);
+<span class="keyword">typedef</span> <span class="type">int</span> (*greeting_function)(<span class="type">LPWSTR</span>, <span class="type">int</span>);
+
+<span class="type">int</span> <span class="constant">WINAPI</span> <span class="function">WinMain</span>(<span class="type">HINSTANCE</span> instance, <span class="type">HINSTANCE</span> previous, <span class="type">LPWSTR</span> command_line, <span class="type">int</span> show) {
+    <span class="type">WCHAR</span> greeting[<span class="number">64</span>], text[<span class="number">128</span>];
+    <span class="type">LPCWSTR</span> library_path = command_line[<span class="number">0</span>] ? command_line : <span class="string">L"greet.dll"</span>;
+    <span class="type">HMODULE</span> library = <span class="function">LoadLibraryW</span>(library_path);
+    <span class="keyword">if</span> (!library) {
+        <span class="function">wsprintfW</span>(text, <span class="string">L"Couldn't load %s"</span>, library_path);
+        <span class="function">MessageBoxW</span>(<span class="number">0</span>, text, <span class="string">L"Greeter"</span>, <span class="constant">MB_OK</span> | <span class="constant">MB_ICONERROR</span>);
+        <span class="keyword">return</span> <span class="number">1</span>;
+    }
+    add_function add = (add_function)<span class="function">GetProcAddressW</span>(library, <span class="string">L"Add"</span>);
+    greeting_function get_greeting = (greeting_function)<span class="function">GetProcAddressW</span>(library, <span class="string">L"Greeting"</span>);
+    <span class="type">int</span> sum = <span class="function">add</span>(<span class="number">2</span>, <span class="number">3</span>);
+    <span class="function">get_greeting</span>(greeting, <span class="number">64</span>);
+    <span class="function">wsprintfW</span>(text, <span class="string">L"%s\n2 + 3 = %d"</span>, greeting, sum);
+    <span class="function">MessageBoxW</span>(<span class="number">0</span>, text, <span class="string">L"Greeter"</span>, <span class="constant">MB_OK</span> | <span class="constant">MB_ICONINFORMATION</span>);
+    <span class="function">FreeLibrary</span>(library);
+    <span class="keyword">return</span> <span class="number">0</span>;
+}</code></pre>
+<p>Note <code>GetProcAddressW</code>: on CE the function name is a wide string. A DLL's own functions are exported by name with <code>EXPORTS</code> in <code>velo_add_library</code>. On CE 1.0, <code>LoadLibraryW</code> looks in <code>\Windows</code> but not in the program's folder, so either put DLLs in <code>\Windows</code> or load them by full path.</p>
+</section>
+</main>
+<footer>
+<ul>
+<li><a href="4-layout.html" rel="prev">&lt; 4. Layout</a></li>
+<li><a href="6-network.html" rel="next">6. Network &gt;</a></li>
+</ul>
+<p>The Velo CE Primer, for velo-toolchain. Screenshots are from velo-emu.</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meet the Velo - The Velo CE Primer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+<p>The Velo CE Primer</p>
+<h1><small>Chapter 1</small>Meet the Velo</h1>
+<nav aria-label="Chapters">
+<ol>
+<li><a href="index.html">Cover</a></li>
+<li><a href="1-velo.html" aria-current="page">1. Meet the Velo</a></li>
+<li><a href="2-tools.html">2. Tools</a></li>
+<li><a href="3-win32.html">3. Win32</a></li>
+<li><a href="4-layout.html">4. Layout</a></li>
+<li><a href="5-system.html">5. System</a></li>
+<li><a href="6-network.html">6. Network</a></li>
+<li><a href="7-bluesky.html">7. Bluesky</a></li>
+<li><a href="8-appstore.html">8. App Store</a></li>
+<li><a href="9-reference.html">9. Reference</a></li>
+</ol>
+</nav>
+</header>
+<main>
+<section>
+<h2>The Machine</h2>
+<p>The Philips Velo 1 is a 1997 Handheld PC: a clamshell with a keyboard, a wide touch screen and a stylus, running Windows CE from ROM. Programs for it are ordinary Windows programs in spirit, but small, Unicode-only and built for one fixed screen.</p>
+<figure>
+<table>
+<thead><tr><th>Part</th><th>What you get</th><th>What it means for your code</th></tr></thead>
+<tbody>
+<tr><th>Processor</th><td>Philips PR31500 (compatible with Toshiba's TX3912), a PR3910 core (MIPS I, compatible with the R3000A), little-endian, no floating point unit</td><td>Floating point is done in software: correct, but slow. 64-bit integer division is a library call. Unaligned memory access faults.</td></tr>
+<tr><th>Screen</th><td>480 x 240 pixels, touch sensitive, backlit, greyscale: 4 greys on CE 1.0, 16 on CE 2.0</td><td>Design for 480 x 240 minus the taskbar, in black, white and two greys.</td></tr>
+<tr><th>Input</th><td>Keyboard and stylus</td><td>A tap is a left mouse click. There's no right button and no hovering.</td></tr>
+<tr><th>Memory</th><td>4 to 16 MB of RAM, shared between storage and running programs</td><td>Every allocation matters. A large file you save takes memory from programs.</td></tr>
+<tr><th>Storage</th><td>The <em>object store</em> in RAM (files, registry, databases), the ROM, and a PC Card slot</td><td>Files live at paths like <code>\My Documents\notes.txt</code>. A card appears as a folder in the root.</td></tr>
+<tr><th>Connections</th><td>Serial port, and PPP networking over it</td><td>Winsock works once the Velo is connected. There's no TLS: chapter 6 explains the proxy.</td></tr>
+</tbody>
+</table>
+</figure>
+<p>velo-emu emulates all of this, which is where you'll do most of your testing. It runs the original ROMs, so what works there almost always works on a real Velo.</p>
+</section>
+
+<section>
+<h2>CE 1.0 and CE 2.0</h2>
+<p>The Velo 1 shipped with Windows CE 1.0. Philips later sold a CE 2.0 upgrade on a ROM card. They're different enough that velo-toolchain builds a separate program for each: <code>-DVELO_CE_VERSION=1</code> or <code>2</code>, which sets <code>_WIN32_WCE</code> to <code>100</code> or <code>200</code> and links against that system's DLLs.</p>
+<figure>
+<table>
+<thead><tr><th></th><th>CE 1.0</th><th>CE 2.0</th></tr></thead>
+<tbody>
+<tr><th>Greys</th><td>4 (2 bits per pixel)</td><td>16 (4 bits per pixel)</td></tr>
+<tr><th>PC Card folder</th><td><code>\PC Card</code></td><td><code>\Storage Card</code></td></tr>
+<tr><th>Functions exported by <code>coredll.dll</code></th><td>512</td><td>934</td></tr>
+<tr><th>Other DLLs you can link</th><td><code>commctrl</code>, <code>winsock</code></td><td>Those, plus <code>commdlg</code>, <code>ole32</code>, <code>oleaut32</code>, <code>ceshell</code></td></tr>
+<tr><th>Character set conversion</th><td>None: convert UTF-8 yourself</td><td><code>MultiByteToWideChar</code>, <code>WideCharToMultiByte</code></td></tr>
+<tr><th>Find your own program's path</th><td>Not possible</td><td><code>GetModuleFileNameW</code></td></tr>
+<tr><th>Dialog helpers</th><td><code>GetDlgItem</code>, <code>SetDlgItemInt</code>, <code>GetDlgItemInt</code> only</td><td>Also <code>SetDlgItemTextW</code>, <code>GetDlgItemTextW</code>, <code>SendDlgItemMessageW</code></td></tr>
+<tr><th>Pens</th><td><code>CreatePenIndirect</code> only</td><td>Also <code>CreatePen</code></td></tr>
+</tbody>
+</table>
+<figcaption>Some differences that catch people out. Chapter 9 has a longer list.</figcaption>
+</figure>
+<p>Write one set of sources and build them twice. Where CE 2.0 has something CE 1.0 lacks, either avoid it or put it behind <code>#if _WIN32_WCE >= 200</code>. The toolchain's headers know what each ROM exports, so calling something the target doesn't have stops the build with the reason:</p>
+<pre><code>error: 'GetModuleFileNameW' is unavailable: not in Windows CE 1.0</code></pre>
+<aside>
+<strong>Velo Tip</strong>
+<p>Every function in the headers has documentation, written from Microsoft's CE 1.0 and 2.0 references, which your editor shows when you hover over a call, including which version has it. The raw lists of what each ROM exports are in <code>exports/ce1/</code> and <code>exports/ce2/</code>, one text file per DLL: <code>grep -x CreatePen exports/ce*/coredll.txt</code> answers "can I use this?" from the shell.</p>
+</aside>
+</section>
+
+<section>
+<h2>Not the Windows You Know</h2>
+<p>If you've used Win32 on a desktop, most of it carries over. These are the differences that matter from day one.</p>
+<h3>Unicode only</h3>
+<p>Every function that takes text takes 16-bit <code>WCHAR</code> strings, and has a <code>W</code> on the end: <code>MessageBoxW</code>, <code>CreateWindowExW</code>. Write string literals as <code>L"text"</code>. There are no <code>A</code> versions to fall back on. Network protocols and files are usually bytes (ASCII or UTF-8), so you'll convert at the edges: chapter 5 shows how.</p>
+<h3>No C library</h3>
+<p>There's no <code>printf</code>, <code>malloc</code>, <code>strlen</code> or <code>fopen</code>. velo-toolchain gives you <code>memcpy</code>, <code>memmove</code>, <code>memset</code> and <code>memcmp</code>, plus the compiler's helpers for floating point and 64-bit maths. Windows CE gives you the rest in its own form:</p>
+<ul>
+<li><code>wsprintfW</code> for formatting text (integers and strings, no floating point).</li>
+<li><code>LocalAlloc</code> and <code>LocalFree</code> for memory.</li>
+<li><code>CreateFileW</code>, <code>ReadFile</code> and <code>WriteFile</code> for files.</li>
+<li>Wide string functions from <code>coredll.dll</code>, such as <code>wcslen</code>, <code>wcscmp</code> and <code>wcsstr</code>, which <code>windows.h</code> brings in.</li>
+</ul>
+<h3>No console, no current directory, no drive letters</h3>
+<p>Programs start at <code>WinMain</code> and talk to the user through windows. There's nowhere for <code>stdout</code> to go: use <code>OutputDebugStringW</code> and the debugger. Every path is absolute from the root, <code>\</code>, with backslashes. There's no <code>C:</code>, and no current directory, so <code>data.txt</code> on its own doesn't mean "next to my program".</p>
+<h3>One screen, one window</h3>
+<p>A CE program normally has one top-level window that fills the screen above the taskbar, with no title bar. Menus and buttons go on a <em>command bar</em> at the top, which also holds the close button. Starting a program that's already running brings the existing window forward instead of opening a second one.</p>
+<h3>Small everything</h3>
+<p>A few megabytes of RAM, a slow processor and a serial connection measured in kilobits. Allocate what you need, free it promptly, avoid floating point in loops, and expect the network to take seconds. CE runs at most 32 processes at a time.</p>
+<h3>MIPS manners</h3>
+<p>The processor can't read a 32-bit value from an address that isn't a multiple of 4. Normal C code is fine, but casting a pointer into the middle of a byte buffer (a network packet, say) and reading an <code>int</code> through it will crash. Copy with <code>memcpy</code> or read byte by byte. Integer division by zero doesn't trap: it gives a meaningless result.</p>
+</section>
+
+<section>
+<h2>A Tour of the Desktop</h2>
+<figure>
+<figure><img src="screenshots/ce1/hello.png" alt="A message box saying Hello from velo-toolchain on the CE 1.0 desktop" width="976" height="496"><figcaption>CE 1.0</figcaption></figure>
+<figure><img src="screenshots/ce2/hello.png" alt="The same message box on the CE 2.0 desktop" width="976" height="496"><figcaption>CE 2.0</figcaption></figure>
+<figcaption>The <code>hello</code> example over the desktop. The taskbar along the bottom has the Start button, a button per running program, and the clock.</figcaption>
+</figure>
+<p>A few places you'll use while testing:</p>
+<dl>
+<dt>Start &gt; Run</dt><dd>Type a full path, such as <code>\PC Card\HELLO\hello.exe</code>, to start a program. The automated screenshots in this book are taken this way.</dd>
+<dt>My Handheld PC</dt><dd>The file manager. The root folder shows <code>Windows</code>, <code>My Documents</code>, <code>Program Files</code> and the card.</dd>
+<dt><code>\Windows</code></dt><dd>System files, most of them in ROM. Programs often install here, and DLLs normally must.</dd>
+<dt><code>\Windows\Programs</code></dt><dd>The Start menu's Programs folder. A shortcut here appears under Start &gt; Programs.</dd>
+<dt>Control Panel</dt><dd>Settings, including System, which shows how memory is divided between storage and programs.</dd>
+</dl>
+</section>
+</main>
+<footer>
+<ul>
+<li><a href="index.html" rel="prev">&lt; Cover</a></li>
+<li><a href="2-tools.html" rel="next">2. Tools &gt;</a></li>
+</ul>
+<p>The Velo CE Primer, for velo-toolchain. Screenshots are from velo-emu.</p>
+</footer>
+</body>
+</html>

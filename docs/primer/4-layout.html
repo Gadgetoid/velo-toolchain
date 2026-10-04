@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screen Layout Cookbook - The Velo CE Primer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+<p>The Velo CE Primer</p>
+<h1><small>Chapter 4</small>Screen Layout Cookbook</h1>
+<nav aria-label="Chapters">
+<ol>
+<li><a href="index.html">Cover</a></li>
+<li><a href="1-velo.html">1. Meet the Velo</a></li>
+<li><a href="2-tools.html">2. Tools</a></li>
+<li><a href="3-win32.html">3. Win32</a></li>
+<li><a href="4-layout.html" aria-current="page">4. Layout</a></li>
+<li><a href="5-system.html">5. System</a></li>
+<li><a href="6-network.html">6. Network</a></li>
+<li><a href="7-bluesky.html">7. Bluesky</a></li>
+<li><a href="8-appstore.html">8. App Store</a></li>
+<li><a href="9-reference.html">9. Reference</a></li>
+</ol>
+</nav>
+</header>
+<main>
+<section>
+<h2>Designing for 480 x 240</h2>
+<p>The Velo's screen is wide and short, and the taskbar takes a strip off the bottom. Every layout in this chapter follows the same rules, which are also how Microsoft's own CE programs look:</p>
+<ul>
+<li><strong>One full-screen main window, no title bar.</strong> Create it with <code>WS_VISIBLE | WS_CLIPCHILDREN</code> and <code>CW_USEDEFAULT</code> for the size, and CE fills the space above the taskbar. The taskbar button shows its title.</li>
+<li><strong>A command bar on top.</strong> It holds the menus, toolbar buttons, perhaps a drop-down list, and the close and help buttons. It replaces both the menu bar and the title bar.</li>
+<li><strong>A status bar underneath</strong>, when there's something to report.</li>
+<li><strong>Size everything in <code>WM_SIZE</code></strong>, from the client rectangle minus the command bar's and status bar's heights. Don't hard-code 480.</li>
+<li><strong>Use system colours</strong> (<code>GetSysColor</code>, <code>GetSysColorBrush</code>) for anything that should look like the rest of CE, and the four safe greys below for your own drawing.</li>
+<li><strong>Make tap targets at least 20 pixels tall.</strong> A stylus is precise, but a thumb on the move isn't.</li>
+</ul>
+<p>The examples below are in <code>docs/primer/examples</code>. Each one builds for both CE versions and starts in the state shown.</p>
+</section>
+
+<section>
+<h2>Recipe 1: Two Panes</h2>
+<p>A list on the left, the selected item on the right: the mail reader layout, and velo-bluesky's. Here the list is a <code>LISTBOX</code> and the reader a read-only multi-line <code>EDIT</code>, which wraps and scrolls text for free.</p>
+<figure>
+<figure><img src="screenshots/ce1/frame.png" alt="Notes example on CE 1.0: command bar with File and View menus, two toolbar buttons and a folder drop-down; a list of notes on the left, the selected note on the right, and a status bar" width="976" height="496"><figcaption>CE 1.0</figcaption></figure>
+<figure><img src="screenshots/ce2/frame.png" alt="Notes example on CE 2.0" width="976" height="496"><figcaption>CE 2.0</figcaption></figure>
+<figcaption><code>frame</code>: command bar with menus, buttons from CE's standard bitmap, a combo box and the help and close buttons.</figcaption>
+</figure>
+<h3>The command bar</h3>
+<pre data-file="docs/primer/examples/frame/frame.c"><code><span class="keyword">static</span> <span class="type">void</span> <span class="function">create_command_bar</span>(<span class="type">HWND</span> frame) {
+    <span class="keyword">static</span> <span class="keyword">const</span> <span class="type">int</span> commands[] = {<span class="constant">ID_FILE_NEW</span>, <span class="constant">ID_FILE_DELETE</span>};
+    <span class="keyword">static</span> <span class="keyword">const</span> <span class="type">int</span> bitmaps[] = {<span class="constant">STD_FILENEW</span>, <span class="constant">STD_DELETE</span>};
+    <span class="type">TBBUTTON</span> buttons[<span class="number">3</span>] = {<span class="number">0</span>};
+    command_bar = <span class="function">CommandBar_Create</span>(instance, frame, <span class="constant">IDC_COMMAND_BAR</span>);
+    <span class="function">CommandBar_InsertMenubar</span>(command_bar, instance, <span class="constant">IDM_MAIN</span>, <span class="number">0</span>);
+    <span class="function">CommandBar_AddBitmap</span>(command_bar, <span class="constant">HINST_COMMCTRL</span>, <span class="constant">IDB_STD_SMALL_COLOR</span>, <span class="number">15</span>, <span class="number">16</span>, <span class="number">16</span>);
+    buttons[<span class="number">0</span>].fsStyle = <span class="constant">TBSTYLE_SEP</span>;
+    <span class="keyword">for</span> (<span class="type">int</span> index = <span class="number">0</span>; index &lt; <span class="number">2</span>; index++) {
+        buttons[index + <span class="number">1</span>].iBitmap = bitmaps[index];
+        buttons[index + <span class="number">1</span>].idCommand = commands[index];
+        buttons[index + <span class="number">1</span>].fsState = <span class="constant">TBSTATE_ENABLED</span>;
+        buttons[index + <span class="number">1</span>].fsStyle = <span class="constant">TBSTYLE_BUTTON</span>;
+    }
+    <span class="function">CommandBar_AddButtons</span>(command_bar, <span class="number">3</span>, buttons);
+    <span class="type">HWND</span> folder = <span class="function">CommandBar_InsertComboBox</span>(command_bar, instance, <span class="constant">FOLDER_WIDTH</span>, <span class="constant">CBS_DROPDOWNLIST</span> | <span class="constant">WS_VSCROLL</span>, <span class="constant">IDC_FOLDER</span>, <span class="number">4</span>);
+    <span class="function">SendMessageW</span>(folder, <span class="constant">CB_ADDSTRING</span>, <span class="number">0</span>, (<span class="type">LPARAM</span>)<span class="string">L"All Notes"</span>);
+    <span class="function">SendMessageW</span>(folder, <span class="constant">CB_ADDSTRING</span>, <span class="number">0</span>, (<span class="type">LPARAM</span>)<span class="string">L"Personal"</span>);
+    <span class="function">SendMessageW</span>(folder, <span class="constant">CB_ADDSTRING</span>, <span class="number">0</span>, (<span class="type">LPARAM</span>)<span class="string">L"Work"</span>);
+    <span class="function">SendMessageW</span>(folder, <span class="constant">CB_SETCURSEL</span>, <span class="number">0</span>, <span class="number">0</span>);
+    <span class="function">CommandBar_AddAdornments</span>(command_bar, <span class="constant">CMDBAR_HELP</span>, <span class="number">0</span>);
+}</code></pre>
+<p>Things go on the bar left to right, in the order you add them:</p>
+<ol>
+<li><code>CommandBar_InsertMenubar</code> puts a menu resource on the bar. It counts as button 0.</li>
+<li><code>CommandBar_AddBitmap</code> adds button pictures. <code>HINST_COMMCTRL</code> and <code>IDB_STD_SMALL_COLOR</code> give CE's standard 15: <code>STD_FILENEW</code>, <code>STD_DELETE</code>, <code>STD_FIND</code> and the rest. For your own, pass your instance and a <code>BITMAP</code> resource with 16 x 16 pictures side by side.</li>
+<li><code>CommandBar_AddButtons</code> adds buttons, each a <code>TBBUTTON</code> with a picture index and the command ID it sends in <code>WM_COMMAND</code>. A <code>TBSTYLE_SEP</code> entry is a gap.</li>
+<li><code>CommandBar_InsertComboBox</code> puts a drop-down list before the given button position (4: after the menu, a gap and two buttons).</li>
+<li><code>CommandBar_AddAdornments</code> comes last and adds the close button, and the <kbd>?</kbd> button with <code>CMDBAR_HELP</code>, which sends <code>WM_HELP</code>.</li>
+</ol>
+<p>The menu is an ordinary resource. Text after <code>\t</code> is shown on the right, as a reminder of the shortcut, but it's the <code>ACCELERATORS</code> table that makes the key work:</p>
+<pre data-file="docs/primer/examples/frame/frame.rc"><code><span class="preprocessor">#include</span> &lt;windows.h&gt;
+<span class="preprocessor">#include</span> <span class="string">"resource.h"</span>
+
+<span class="constant">IDM_MAIN</span> <span class="keyword">MENU</span>
+<span class="keyword">BEGIN</span>
+    <span class="keyword">POPUP</span> <span class="string">"&amp;File"</span>
+    <span class="keyword">BEGIN</span>
+        <span class="keyword">MENUITEM</span> <span class="string">"&amp;New Note\tCtrl+N"</span>, <span class="constant">ID_FILE_NEW</span>
+        <span class="keyword">MENUITEM</span> <span class="string">"&amp;Delete Note\tDel"</span>, <span class="constant">ID_FILE_DELETE</span>
+        <span class="keyword">MENUITEM</span> <span class="keyword">SEPARATOR</span>
+        <span class="keyword">MENUITEM</span> <span class="string">"E&amp;xit"</span>, <span class="constant">ID_FILE_EXIT</span>
+    <span class="keyword">END</span>
+    <span class="keyword">POPUP</span> <span class="string">"&amp;View"</span>
+    <span class="keyword">BEGIN</span>
+        <span class="keyword">MENUITEM</span> <span class="string">"&amp;Next Note\tCtrl+Down"</span>, <span class="constant">ID_VIEW_NEXT</span>
+        <span class="keyword">MENUITEM</span> <span class="string">"&amp;Previous Note\tCtrl+Up"</span>, <span class="constant">ID_VIEW_PREVIOUS</span>
+        <span class="keyword">MENUITEM</span> <span class="keyword">SEPARATOR</span>
+        <span class="keyword">MENUITEM</span> <span class="string">"&amp;About Notes..."</span>, <span class="constant">ID_HELP_ABOUT</span>
+    <span class="keyword">END</span>
+<span class="keyword">END</span>
+
+<span class="constant">IDA_MAIN</span> <span class="keyword">ACCELERATORS</span>
+<span class="keyword">BEGIN</span>
+    <span class="string">"N"</span>, <span class="constant">ID_FILE_NEW</span>, <span class="keyword">VIRTKEY</span>, <span class="keyword">CONTROL</span>, <span class="keyword">NOINVERT</span>
+    <span class="constant">VK_DOWN</span>, <span class="constant">ID_VIEW_NEXT</span>, <span class="keyword">VIRTKEY</span>, <span class="keyword">CONTROL</span>, <span class="keyword">NOINVERT</span>
+    <span class="constant">VK_UP</span>, <span class="constant">ID_VIEW_PREVIOUS</span>, <span class="keyword">VIRTKEY</span>, <span class="keyword">CONTROL</span>, <span class="keyword">NOINVERT</span>
+<span class="keyword">END</span></code></pre>
+<h3>Laying out</h3>
+<pre data-file="docs/primer/examples/frame/frame.c"><code><span class="keyword">static</span> <span class="type">void</span> <span class="function">layout</span>(<span class="type">HWND</span> frame) {
+    <span class="type">RECT</span> client;
+    <span class="type">RECT</span> status;
+    <span class="function">GetClientRect</span>(frame, &amp;client);
+    <span class="function">SendMessageW</span>(status_bar, <span class="constant">WM_SIZE</span>, <span class="number">0</span>, <span class="number">0</span>);
+    <span class="function">GetWindowRect</span>(status_bar, &amp;status);
+    <span class="type">int</span> top = <span class="function">CommandBar_Height</span>(command_bar);
+    <span class="type">int</span> height = client.bottom - top - (status.bottom - status.top);
+    <span class="type">int</span> split = client.right * <span class="constant">LIST_PERCENT</span> / <span class="number">100</span>;
+    <span class="function">MoveWindow</span>(note_list, <span class="number">0</span>, top, split, height, <span class="constant">TRUE</span>);
+    <span class="function">MoveWindow</span>(reader, split, top, client.right - split, height, <span class="constant">TRUE</span>);
+}</code></pre>
+<p>The status bar sizes itself when it gets <code>WM_SIZE</code>, so pass that on first and then measure it. <code>SB_SETPARTS</code> divides it into sections, given as the right edge of each, with -1 meaning "to the end".</p>
+<aside>
+<strong>Velo Tip</strong>
+<p>Setting the list box's selection with <code>LB_SETCURSEL</code> doesn't send <code>LBN_SELCHANGE</code>: notifications are for what the user does. After changing a control from code, update whatever depends on it yourself, as <code>show_note</code> does.</p>
+</aside>
+<p>For a pane divider the user can drag, leave a gap between the panes, paint it in <code>WM_PAINT</code>, and handle the stylus on the frame itself with <code>SetCapture</code>. velo-bluesky's <code>src/main.c</code> does this in about 30 lines.</p>
+</section>
+
+<section>
+<h2>Recipe 2: List and Details</h2>
+<p>A <em>list view</em> in report mode shows rows with columns, icons and full-row selection. The details on the right are drawn straight onto the frame window in <code>WM_PAINT</code>, with a progress bar and a button as child windows below them. This is the shape of an app store.</p>
+<figure>
+<figure><img src="screenshots/ce1/appstore.png" alt="App store example on CE 1.0: a list view with Name, Version and Size columns, details for Bluesky on the right with a progress bar and a disabled Install button, and a status bar showing free space" width="976" height="496"><figcaption>CE 1.0</figcaption></figure>
+<figure><img src="screenshots/ce2/appstore.png" alt="App store example on CE 2.0" width="976" height="496"><figcaption>CE 2.0</figcaption></figure>
+<figcaption><code>appstore</code>: it starts a pretend download at launch so the progress bar shows. Free space comes from <code>GetStoreInformation</code>.</figcaption>
+</figure>
+<h3>Filling a list view</h3>
+<pre data-file="docs/primer/examples/appstore/appstore.c"><code><span class="keyword">static</span> <span class="type">void</span> <span class="function">add_column</span>(<span class="type">int</span> index, <span class="keyword">const</span> <span class="type">WCHAR</span> *title, <span class="type">int</span> width, <span class="type">int</span> format) {
+    <span class="type">LVCOLUMNW</span> column = {<span class="number">0</span>};
+    column.mask = <span class="constant">LVCF_TEXT</span> | <span class="constant">LVCF_WIDTH</span> | <span class="constant">LVCF_FMT</span> | <span class="constant">LVCF_SUBITEM</span>;
+    column.fmt = format;
+    column.cx = width;
+    column.pszText = (<span class="type">LPWSTR</span>)title;
+    column.iSubItem = index;
+    <span class="function">SendMessageW</span>(app_list, <span class="constant">LVM_INSERTCOLUMNW</span>, index, (<span class="type">LPARAM</span>)&amp;column);
+}
+
+<span class="keyword">static</span> <span class="type">void</span> <span class="function">set_cell</span>(<span class="type">int</span> row, <span class="type">int</span> column, <span class="keyword">const</span> <span class="type">WCHAR</span> *text) {
+    <span class="type">LVITEMW</span> item = {<span class="number">0</span>};
+    item.iSubItem = column;
+    item.pszText = (<span class="type">LPWSTR</span>)text;
+    <span class="function">SendMessageW</span>(app_list, <span class="constant">LVM_SETITEMTEXTW</span>, row, (<span class="type">LPARAM</span>)&amp;item);
+}
+
+<span class="keyword">static</span> <span class="type">void</span> <span class="function">fill_list</span>(<span class="type">void</span>) {
+    <span class="type">HIMAGELIST</span> icons = <span class="function">ImageList_Create</span>(<span class="number">16</span>, <span class="number">16</span>, <span class="constant">ILC_COLOR</span> | <span class="constant">ILC_MASK</span>, <span class="number">1</span>, <span class="number">0</span>);
+    <span class="function">ImageList_AddIcon</span>(icons, <span class="function">LoadImageW</span>(instance, <span class="constant">MAKEINTRESOURCEW</span>(<span class="number">1</span>), <span class="constant">IMAGE_ICON</span>, <span class="number">16</span>, <span class="number">16</span>, <span class="number">0</span>));
+    <span class="function">SendMessageW</span>(app_list, <span class="constant">LVM_SETIMAGELIST</span>, <span class="constant">LVSIL_SMALL</span>, (<span class="type">LPARAM</span>)icons);
+    <span class="function">SendMessageW</span>(app_list, <span class="constant">LVM_SETEXTENDEDLISTVIEWSTYLE</span>, <span class="constant">LVS_EX_FULLROWSELECT</span>, <span class="constant">LVS_EX_FULLROWSELECT</span>);
+    <span class="function">add_column</span>(<span class="number">0</span>, <span class="string">L"Name"</span>, <span class="number">100</span>, <span class="constant">LVCFMT_LEFT</span>);
+    <span class="function">add_column</span>(<span class="number">1</span>, <span class="string">L"Version"</span>, <span class="number">50</span>, <span class="constant">LVCFMT_LEFT</span>);
+    <span class="function">add_column</span>(<span class="number">2</span>, <span class="string">L"Size"</span>, <span class="number">50</span>, <span class="constant">LVCFMT_RIGHT</span>);
+    <span class="keyword">for</span> (<span class="type">int</span> index = <span class="number">0</span>; index &lt; (<span class="type">int</span>)<span class="constant">APP_COUNT</span>; index++) {
+        <span class="type">WCHAR</span> size[<span class="number">16</span>];
+        <span class="type">LVITEMW</span> item = {<span class="number">0</span>};
+        item.mask = <span class="constant">LVIF_TEXT</span> | <span class="constant">LVIF_IMAGE</span> | <span class="constant">LVIF_PARAM</span>;
+        item.iItem = index;
+        item.pszText = (<span class="type">LPWSTR</span>)apps[index].name;
+        item.iImage = <span class="number">0</span>;
+        item.lParam = index;
+        <span class="function">SendMessageW</span>(app_list, <span class="constant">LVM_INSERTITEMW</span>, <span class="number">0</span>, (<span class="type">LPARAM</span>)&amp;item);
+        <span class="function">wsprintfW</span>(size, <span class="string">L"%d KB"</span>, apps[index].size_kb);
+        <span class="function">set_cell</span>(index, <span class="number">1</span>, apps[index].version);
+        <span class="function">set_cell</span>(index, <span class="number">2</span>, size);
+    }
+}</code></pre>
+<p>Insert a row with <code>LVM_INSERTITEMW</code>, which sets the first column, then fill the others with <code>LVM_SETITEMTEXTW</code>. <code>lParam</code> on each row is yours: store an index or pointer there, because rows move if the list is sorted. Icons come from an <em>image list</em> made with <code>ImageList_Create</code>.</p>
+<h3>Hearing about selection</h3>
+<p>Common controls report through <code>WM_NOTIFY</code>. The <code>NMHDR</code> at the start says which control and what happened. For list views it's the start of an <code>NMLISTVIEW</code>:</p>
+<pre data-file="docs/primer/examples/appstore/appstore.c"><code><span class="keyword">case</span> <span class="constant">WM_NOTIFY</span>: {
+    <span class="type">NMLISTVIEW</span> *change = (<span class="type">NMLISTVIEW</span> *)lparam;
+    <span class="keyword">if</span> (change-&gt;hdr.idFrom == <span class="constant">IDC_APPS</span> &amp;&amp; change-&gt;hdr.code == <span class="constant">LVN_ITEMCHANGED</span> &amp;&amp; (change-&gt;uNewState &amp; <span class="constant">LVIS_SELECTED</span>)) {
+        selected = (<span class="type">int</span>)change-&gt;lParam;
+        <span class="function">update_details</span>();
+    }
+    <span class="keyword">return</span> <span class="number">0</span>;
+}</code></pre>
+<p><code>LVN_ITEMCHANGED</code> fires for every state change of every row, including the old selection being cleared, so check that the new state includes <code>LVIS_SELECTED</code>.</p>
+<h3>Drawing the details</h3>
+<pre data-file="docs/primer/examples/appstore/appstore.c"><code><span class="keyword">static</span> <span class="type">void</span> <span class="function">paint_details</span>(<span class="type">HWND</span> frame) {
+    <span class="type">PAINTSTRUCT</span> paint;
+    <span class="type">WCHAR</span> line[<span class="number">64</span>];
+    <span class="type">HDC</span> dc = <span class="function">BeginPaint</span>(frame, &amp;paint);
+    <span class="keyword">if</span> (selected &gt;= <span class="number">0</span>) {
+        <span class="keyword">const</span> <span class="type">app_t</span> *app = &amp;apps[selected];
+        <span class="type">RECT</span> area = details;
+        <span class="function">SetBkMode</span>(dc, <span class="constant">TRANSPARENT</span>);
+        <span class="type">HGDIOBJ</span> previous = <span class="function">SelectObject</span>(dc, title_font);
+        <span class="function">DrawTextW</span>(dc, app-&gt;name, -<span class="number">1</span>, &amp;area, <span class="constant">DT_LEFT</span> | <span class="constant">DT_SINGLELINE</span> | <span class="constant">DT_NOPREFIX</span>);
+        <span class="function">SelectObject</span>(dc, previous);
+        area.top += <span class="number">22</span>;
+        <span class="function">wsprintfW</span>(line, <span class="string">L"Version %s by %s"</span>, app-&gt;version, app-&gt;author);
+        <span class="function">DrawTextW</span>(dc, line, -<span class="number">1</span>, &amp;area, <span class="constant">DT_LEFT</span> | <span class="constant">DT_SINGLELINE</span> | <span class="constant">DT_NOPREFIX</span> | <span class="constant">DT_END_ELLIPSIS</span>);
+        area.top += <span class="number">20</span>;
+        <span class="function">DrawTextW</span>(dc, app-&gt;description, -<span class="number">1</span>, &amp;area, <span class="constant">DT_LEFT</span> | <span class="constant">DT_WORDBREAK</span> | <span class="constant">DT_NOPREFIX</span>);
+    }
+    <span class="function">EndPaint</span>(frame, &amp;paint);
+}</code></pre>
+<p><code>DrawTextW</code> does the work: single lines with <code>DT_SINGLELINE</code>, an ellipsis when they don't fit with <code>DT_END_ELLIPSIS</code>, and wrapped paragraphs with <code>DT_WORDBREAK</code>. <code>DT_NOPREFIX</code> stops <code>&amp;</code> being treated as a shortcut marker, which you want for any text you didn't write.</p>
+<aside>
+<strong>Velo Tip</strong>
+<p>Timers are the simplest way to animate or poll: <code>SetTimer(window, ID, milliseconds, NULL)</code> sends <code>WM_TIMER</code> until <code>KillTimer</code>. They're not precise, and they don't fire while your program is busy in a message handler.</p>
+</aside>
+</section>
+
+<section>
+<h2>Recipe 3: A Dialog</h2>
+<p>Forms are easiest as dialog resources: you describe the controls in the <code>.rc</code> file and CE creates them, handles <kbd>Tab</kbd> between them, and presses the default button on <kbd>Enter</kbd>. This one also loads and saves its settings in the registry.</p>
+<figure>
+<figure><img src="screenshots/ce1/form.png" alt="Account dialog on CE 1.0: handle, password and server fields, a Show pictures check box, a Refresh group of three radio buttons, and OK and Cancel" width="976" height="496"><figcaption>CE 1.0</figcaption></figure>
+<figure><img src="screenshots/ce2/form.png" alt="Account dialog on CE 2.0" width="976" height="496"><figcaption>CE 2.0</figcaption></figure>
+<figcaption><code>form</code>: a modal dialog with no main window behind it.</figcaption>
+</figure>
+<pre data-file="docs/primer/examples/form/form.rc"><code><span class="preprocessor">#include</span> &lt;windows.h&gt;
+<span class="preprocessor">#include</span> <span class="string">"resource.h"</span>
+
+<span class="constant">IDD_ACCOUNT</span> <span class="keyword">DIALOG</span> <span class="number">0</span>, <span class="number">0</span>, <span class="number">230</span>, <span class="number">100</span>
+<span class="keyword">STYLE</span> <span class="constant">DS_MODALFRAME</span> | <span class="constant">DS_CENTER</span> | <span class="constant">WS_POPUP</span> | <span class="constant">WS_CAPTION</span> | <span class="constant">WS_SYSMENU</span>
+<span class="keyword">CAPTION</span> <span class="string">"Account"</span>
+<span class="keyword">BEGIN</span>
+    <span class="keyword">LTEXT</span> <span class="string">"&amp;Handle:"</span>, <span class="constant">IDC_STATIC</span>, <span class="number">6</span>, <span class="number">8</span>, <span class="number">40</span>, <span class="number">10</span>
+    <span class="keyword">EDITTEXT</span> <span class="constant">IDC_HANDLE</span>, <span class="number">50</span>, <span class="number">6</span>, <span class="number">104</span>, <span class="number">13</span>, <span class="constant">ES_AUTOHSCROLL</span> | <span class="constant">WS_TABSTOP</span>
+    <span class="keyword">LTEXT</span> <span class="string">"&amp;Password:"</span>, <span class="constant">IDC_STATIC</span>, <span class="number">6</span>, <span class="number">26</span>, <span class="number">40</span>, <span class="number">10</span>
+    <span class="keyword">EDITTEXT</span> <span class="constant">IDC_PASSWORD</span>, <span class="number">50</span>, <span class="number">24</span>, <span class="number">104</span>, <span class="number">13</span>, <span class="constant">ES_AUTOHSCROLL</span> | <span class="constant">ES_PASSWORD</span> | <span class="constant">WS_TABSTOP</span>
+    <span class="keyword">LTEXT</span> <span class="string">"&amp;Server:"</span>, <span class="constant">IDC_STATIC</span>, <span class="number">6</span>, <span class="number">44</span>, <span class="number">40</span>, <span class="number">10</span>
+    <span class="keyword">COMBOBOX</span> <span class="constant">IDC_SERVER</span>, <span class="number">50</span>, <span class="number">42</span>, <span class="number">104</span>, <span class="number">60</span>, <span class="constant">CBS_DROPDOWNLIST</span> | <span class="constant">WS_VSCROLL</span> | <span class="constant">WS_TABSTOP</span>
+    <span class="keyword">AUTOCHECKBOX</span> <span class="string">"Show &amp;pictures"</span>, <span class="constant">IDC_PICTURES</span>, <span class="number">50</span>, <span class="number">62</span>, <span class="number">100</span>, <span class="number">10</span>, <span class="constant">WS_TABSTOP</span>
+    <span class="keyword">AUTORADIOBUTTON</span> <span class="string">"&amp;Manually"</span>, <span class="constant">IDC_MANUAL</span>, <span class="number">168</span>, <span class="number">14</span>, <span class="number">52</span>, <span class="number">10</span>, <span class="constant">WS_GROUP</span> | <span class="constant">WS_TABSTOP</span>
+    <span class="keyword">AUTORADIOBUTTON</span> <span class="string">"Ho&amp;urly"</span>, <span class="constant">IDC_HOURLY</span>, <span class="number">168</span>, <span class="number">28</span>, <span class="number">52</span>, <span class="number">10</span>
+    <span class="keyword">AUTORADIOBUTTON</span> <span class="string">"&amp;Daily"</span>, <span class="constant">IDC_DAILY</span>, <span class="number">168</span>, <span class="number">42</span>, <span class="number">52</span>, <span class="number">10</span>
+    <span class="keyword">GROUPBOX</span> <span class="string">"Refresh"</span>, <span class="constant">IDC_STATIC</span>, <span class="number">162</span>, <span class="number">2</span>, <span class="number">62</span>, <span class="number">58</span>, <span class="constant">WS_GROUP</span>
+    <span class="keyword">DEFPUSHBUTTON</span> <span class="string">"OK"</span>, <span class="constant">IDOK</span>, <span class="number">122</span>, <span class="number">80</span>, <span class="number">48</span>, <span class="number">14</span>, <span class="constant">WS_TABSTOP</span>
+    <span class="keyword">PUSHBUTTON</span> <span class="string">"Cancel"</span>, <span class="constant">IDCANCEL</span>, <span class="number">176</span>, <span class="number">80</span>, <span class="number">48</span>, <span class="number">14</span>, <span class="constant">WS_TABSTOP</span>
+<span class="keyword">END</span></code></pre>
+<p>Positions are in <em>dialog units</em>, which scale with the dialog font: this 230-unit-wide dialog is about 350 pixels wide on the Velo. <code>&amp;</code> in a label underlines the next letter. <code>WS_GROUP</code> starts a group of radio buttons, which ends at the next control with <code>WS_GROUP</code>.</p>
+<aside>
+<strong>Velo Tip</strong>
+<p>On CE a group box paints its whole inside. Controls created after it are underneath and disappear, so list the group box <em>after</em> the controls it surrounds. The same goes for a tab control in recipe 4. Siblings stack in the order they're created, first on top.</p>
+</aside>
+<h3>Running it</h3>
+<p>CE's DLLs don't export <code>DialogBoxParamW</code>. Microsoft's SDK headers made it a macro that finds the template and calls the <code>Indirect</code> version, which is all this does:</p>
+<pre data-file="docs/primer/examples/form/form.c"><code><span class="keyword">static</span> <span class="type">int</span> <span class="function">run_dialog</span>(<span class="type">HINSTANCE</span> instance, <span class="type">int</span> id, <span class="type">HWND</span> owner, <span class="type">DLGPROC</span> procedure, <span class="type">void</span> *parameter) {
+    <span class="type">HRSRC</span> resource = <span class="function">FindResource</span>(instance, <span class="constant">MAKEINTRESOURCEW</span>(id), <span class="constant">RT_DIALOG</span>);
+    <span class="type">HGLOBAL</span> loaded = resource ? <span class="function">LoadResource</span>(instance, resource) : <span class="constant">NULL</span>;
+    <span class="keyword">if</span> (!loaded) {
+        <span class="keyword">return</span> -<span class="number">1</span>;
+    }
+    <span class="keyword">return</span> <span class="function">DialogBoxIndirectParamW</span>(instance, <span class="function">LockResource</span>(loaded), owner, procedure, (<span class="type">LPARAM</span>)parameter);
+}</code></pre>
+<p><code>DialogBoxIndirectParamW</code> runs its own message loop and returns the value passed to <code>EndDialog</code>. The last argument arrives in <code>WM_INITDIALOG</code>'s <code>lParam</code>: pass a pointer to the data the dialog edits, and keep it with <code>DWL_USER</code>.</p>
+<pre data-file="docs/primer/examples/form/form.c"><code><span class="keyword">static</span> <span class="type">BOOL</span> <span class="constant">CALLBACK</span> <span class="function">account_procedure</span>(<span class="type">HWND</span> dialog, <span class="type">UINT</span> message, <span class="type">WPARAM</span> wparam, <span class="type">LPARAM</span> lparam) {
+    <span class="type">account_t</span> *account = (<span class="type">account_t</span> *)<span class="function">GetWindowLongW</span>(dialog, <span class="constant">DWL_USER</span>);
+    <span class="keyword">switch</span> (message) {
+    <span class="keyword">case</span> <span class="constant">WM_INITDIALOG</span>:
+        account = (<span class="type">account_t</span> *)lparam;
+        <span class="function">SetWindowLongW</span>(dialog, <span class="constant">DWL_USER</span>, (<span class="type">LONG</span>)account);
+        <span class="function">fill_dialog</span>(dialog, account);
+        <span class="function">SetFocus</span>(<span class="function">GetDlgItem</span>(dialog, <span class="constant">IDC_PASSWORD</span>));
+        <span class="keyword">return</span> <span class="constant">FALSE</span>;
+    <span class="keyword">case</span> <span class="constant">WM_COMMAND</span>:
+        <span class="keyword">if</span> (<span class="constant">LOWORD</span>(wparam) == <span class="constant">IDOK</span>) {
+            <span class="keyword">if</span> (<span class="function">read_dialog</span>(dialog, account)) {
+                <span class="function">EndDialog</span>(dialog, <span class="constant">IDOK</span>);
+            }
+            <span class="keyword">return</span> <span class="constant">TRUE</span>;
+        }
+        <span class="keyword">if</span> (<span class="constant">LOWORD</span>(wparam) == <span class="constant">IDCANCEL</span>) {
+            <span class="function">EndDialog</span>(dialog, <span class="constant">IDCANCEL</span>);
+            <span class="keyword">return</span> <span class="constant">TRUE</span>;
+        }
+        <span class="keyword">break</span>;
+    }
+    <span class="keyword">return</span> <span class="constant">FALSE</span>;
+}</code></pre>
+<p>A dialog procedure returns <code>TRUE</code> when it handled a message and <code>FALSE</code> to let the dialog manager do the default. From <code>WM_INITDIALOG</code>, return <code>FALSE</code> if you set the focus yourself. To refuse OK, show why and return without calling <code>EndDialog</code>.</p>
+<p>For a dialog that stays open beside your main window, such as a find box, use <code>CreateDialogIndirectParamW</code> and pass messages through <code>IsDialogMessageW</code> in your main loop.</p>
+<aside>
+<strong>Velo Tip</strong>
+<p>CE 1.0 has no <code>SetDlgItemTextW</code>, <code>GetDlgItemTextW</code> or <code>SendDlgItemMessageW</code>. <code>SetWindowTextW(GetDlgItem(dialog, ID), text)</code> does the same on both, which is why the examples do it that way.</p>
+</aside>
+</section>
+
+<section>
+<h2>Recipe 4: Tabs and Common Controls</h2>
+<p>A tab control is only the row of tabs. The pages are your own child windows, shown and hidden when the selection changes. This page also has a tree view, a trackbar driving a progress bar, a number box with up and down arrows, a check box and radio buttons.</p>
+<figure>
+<figure><img src="screenshots/ce1/controls.png" alt="Controls example on CE 1.0: Settings and About tabs; a tree of Velo and Network settings on the left; a volume trackbar, a level progress bar, a repeats box with arrows, a Key clicks check box, Loud and Soft radio buttons and an Apply button" width="976" height="496"><figcaption>CE 1.0</figcaption></figure>
+<figure><img src="screenshots/ce2/controls.png" alt="Controls example on CE 2.0" width="976" height="496"><figcaption>CE 2.0</figcaption></figure>
+<figcaption><code>controls</code>: everything here is a stock control.</figcaption>
+</figure>
+<pre data-file="docs/primer/examples/controls/controls.c"><code><span class="keyword">static</span> <span class="type">void</span> <span class="function">create_settings_page</span>(<span class="type">HWND</span> frame) {
+    <span class="type">HWND</span> tree = <span class="function">add_control</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="constant">WC_TREEVIEW</span>, <span class="constant">NULL</span>, <span class="constant">WS_BORDER</span> | <span class="constant">TVS_HASBUTTONS</span> | <span class="constant">TVS_HASLINES</span> | <span class="constant">TVS_LINESATROOT</span> | <span class="constant">TVS_SHOWSELALWAYS</span>,
+                            <span class="constant">IDC_TREE</span>, frame);
+    <span class="type">HTREEITEM</span> device = <span class="function">add_tree_item</span>(tree, <span class="constant">TVI_ROOT</span>, <span class="string">L"Velo"</span>);
+    <span class="type">HTREEITEM</span> sound = <span class="function">add_tree_item</span>(tree, device, <span class="string">L"Sound"</span>);
+    <span class="function">add_tree_item</span>(tree, device, <span class="string">L"Display"</span>);
+    <span class="function">add_tree_item</span>(tree, device, <span class="string">L"Power"</span>);
+    <span class="type">HTREEITEM</span> network = <span class="function">add_tree_item</span>(tree, <span class="constant">TVI_ROOT</span>, <span class="string">L"Network"</span>);
+    <span class="function">add_tree_item</span>(tree, network, <span class="string">L"Modem"</span>);
+    <span class="function">add_tree_item</span>(tree, network, <span class="string">L"Proxy"</span>);
+    <span class="function">SendMessageW</span>(tree, <span class="constant">TVM_EXPAND</span>, <span class="constant">TVE_EXPAND</span>, (<span class="type">LPARAM</span>)device);
+    <span class="function">SendMessageW</span>(tree, <span class="constant">TVM_EXPAND</span>, <span class="constant">TVE_EXPAND</span>, (<span class="type">LPARAM</span>)network);
+    <span class="function">SendMessageW</span>(tree, <span class="constant">TVM_SELECTITEM</span>, <span class="constant">TVGN_CARET</span>, (<span class="type">LPARAM</span>)sound);
+
+    <span class="function">add_control</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="string">L"STATIC"</span>, <span class="string">L"Volume:"</span>, <span class="constant">SS_LEFT</span>, <span class="constant">IDC_VOLUME_LABEL</span>, frame);
+    <span class="type">HWND</span> volume = <span class="function">add_control</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="constant">TRACKBAR_CLASS</span>, <span class="constant">NULL</span>, <span class="constant">TBS_HORZ</span> | <span class="constant">TBS_AUTOTICKS</span> | <span class="constant">WS_TABSTOP</span>, <span class="constant">IDC_VOLUME</span>, frame);
+    <span class="function">SendMessageW</span>(volume, <span class="constant">TBM_SETRANGE</span>, <span class="constant">TRUE</span>, <span class="constant">MAKELPARAM</span>(<span class="number">0</span>, <span class="number">10</span>));
+    <span class="function">SendMessageW</span>(volume, <span class="constant">TBM_SETTICFREQ</span>, <span class="number">1</span>, <span class="number">0</span>);
+    <span class="function">SendMessageW</span>(volume, <span class="constant">TBM_SETPOS</span>, <span class="constant">TRUE</span>, <span class="number">7</span>);
+
+    <span class="function">add_control</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="string">L"STATIC"</span>, <span class="string">L"Level:"</span>, <span class="constant">SS_LEFT</span>, <span class="constant">IDC_LEVEL_LABEL</span>, frame);
+    <span class="type">HWND</span> level = <span class="function">add_control</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="constant">PROGRESS_CLASS</span>, <span class="constant">NULL</span>, <span class="constant">WS_BORDER</span>, <span class="constant">IDC_LEVEL</span>, frame);
+    <span class="function">SendMessageW</span>(level, <span class="constant">PBM_SETRANGE</span>, <span class="number">0</span>, <span class="constant">MAKELPARAM</span>(<span class="number">0</span>, <span class="number">10</span>));
+    <span class="function">SendMessageW</span>(level, <span class="constant">PBM_SETPOS</span>, <span class="number">7</span>, <span class="number">0</span>);
+
+    <span class="function">add_control</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="string">L"STATIC"</span>, <span class="string">L"Repeats:"</span>, <span class="constant">SS_LEFT</span>, <span class="constant">IDC_COPIES_LABEL</span>, frame);
+    <span class="type">HWND</span> copies = <span class="function">add_control</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="string">L"EDIT"</span>, <span class="constant">NULL</span>, <span class="constant">WS_BORDER</span> | <span class="constant">ES_NUMBER</span> | <span class="constant">WS_TABSTOP</span>, <span class="constant">IDC_COPIES</span>, frame);
+    <span class="type">HWND</span> arrows = <span class="function">add_control</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="constant">UPDOWN_CLASS</span>, <span class="constant">NULL</span>, <span class="constant">UDS_SETBUDDYINT</span> | <span class="constant">UDS_ALIGNRIGHT</span> | <span class="constant">UDS_ARROWKEYS</span>, <span class="constant">IDC_COPIES_ARROWS</span>, frame);
+    <span class="function">SendMessageW</span>(arrows, <span class="constant">UDM_SETBUDDY</span>, (<span class="type">WPARAM</span>)copies, <span class="number">0</span>);
+    <span class="function">SendMessageW</span>(arrows, <span class="constant">UDM_SETRANGE</span>, <span class="number">0</span>, <span class="constant">MAKELPARAM</span>(<span class="number">9</span>, <span class="number">1</span>));
+    <span class="function">SendMessageW</span>(arrows, <span class="constant">UDM_SETPOS</span>, <span class="number">0</span>, <span class="constant">MAKELPARAM</span>(<span class="number">3</span>, <span class="number">0</span>));
+
+    <span class="type">HWND</span> sounds = <span class="function">add_control</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="string">L"BUTTON"</span>, <span class="string">L"Key clicks"</span>, <span class="constant">BS_AUTOCHECKBOX</span> | <span class="constant">WS_TABSTOP</span>, <span class="constant">IDC_SOUNDS</span>, frame);
+    <span class="function">SendMessageW</span>(sounds, <span class="constant">BM_SETCHECK</span>, <span class="constant">BST_CHECKED</span>, <span class="number">0</span>);
+    <span class="function">add_control</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="string">L"BUTTON"</span>, <span class="string">L"Loud"</span>, <span class="constant">BS_AUTORADIOBUTTON</span> | <span class="constant">WS_GROUP</span> | <span class="constant">WS_TABSTOP</span>, <span class="constant">IDC_LARGE</span>, frame);
+    <span class="function">add_control</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="string">L"BUTTON"</span>, <span class="string">L"Soft"</span>, <span class="constant">BS_AUTORADIOBUTTON</span>, <span class="constant">IDC_SMALL</span>, frame);
+    <span class="function">CheckRadioButton</span>(frame, <span class="constant">IDC_LARGE</span>, <span class="constant">IDC_SMALL</span>, <span class="constant">IDC_SMALL</span>);
+    <span class="function">add_control</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="string">L"BUTTON"</span>, <span class="string">L"Apply"</span>, <span class="constant">BS_PUSHBUTTON</span> | <span class="constant">WS_TABSTOP</span>, <span class="constant">IDC_APPLY</span>, frame);
+}</code></pre>
+<p>Things to notice:</p>
+<ul>
+<li>A tree view item is added with <code>TVM_INSERTITEMW</code> under a parent, and the returned <code>HTREEITEM</code> is the parent for the next level.</li>
+<li>Range messages pack two numbers into <code>lParam</code> with <code>MAKELPARAM</code>, but not always in the same order. A trackbar takes the minimum then the maximum. An up-down control takes the maximum then the minimum, so <code>MAKELPARAM(9, 1)</code> gives 1 to 9, with the up arrow counting up.</li>
+<li>An up-down control with <code>UDS_SETBUDDYINT</code> writes its number into its <em>buddy</em>, the edit box, and <code>UDS_ALIGNRIGHT</code> sits it on the buddy's right edge.</li>
+<li>A trackbar reports movement with <code>WM_HSCROLL</code>, its handle in <code>lParam</code>.</li>
+</ul>
+<pre data-file="docs/primer/examples/controls/controls.c"><code><span class="keyword">case</span> <span class="constant">WM_CREATE</span>:
+    command_bar = <span class="function">CommandBar_Create</span>(instance, frame, <span class="constant">IDC_COMMAND_BAR</span>);
+    <span class="function">CommandBar_AddAdornments</span>(command_bar, <span class="number">0</span>, <span class="number">0</span>);
+    <span class="function">create_settings_page</span>(frame);
+    <span class="function">create_about_page</span>(frame);
+    tabs = <span class="function">CreateWindowExW</span>(<span class="number">0</span>, <span class="constant">WC_TABCONTROL</span>, <span class="constant">NULL</span>, <span class="constant">WS_CHILD</span> | <span class="constant">WS_VISIBLE</span> | <span class="constant">WS_CLIPSIBLINGS</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, frame, (<span class="type">HMENU</span>)<span class="constant">IDC_TABS</span>,
+                           instance, <span class="constant">NULL</span>);
+    <span class="function">add_tab</span>(<span class="number">0</span>, <span class="string">L"Settings"</span>);
+    <span class="function">add_tab</span>(<span class="number">1</span>, <span class="string">L"About"</span>);
+    <span class="function">show_page</span>(<span class="number">0</span>);
+    <span class="keyword">return</span> <span class="number">0</span>;
+
+<span class="keyword">case</span> <span class="constant">WM_HSCROLL</span>:
+    <span class="keyword">if</span> ((<span class="type">HWND</span>)lparam == <span class="function">GetDlgItem</span>(frame, <span class="constant">IDC_VOLUME</span>)) {
+        <span class="type">int</span> volume = (<span class="type">int</span>)<span class="function">SendMessageW</span>((<span class="type">HWND</span>)lparam, <span class="constant">TBM_GETPOS</span>, <span class="number">0</span>, <span class="number">0</span>);
+        <span class="function">SendMessageW</span>(<span class="function">GetDlgItem</span>(frame, <span class="constant">IDC_LEVEL</span>), <span class="constant">PBM_SETPOS</span>, volume, <span class="number">0</span>);
+    }
+    <span class="keyword">return</span> <span class="number">0</span>;</code></pre>
+<p>Create the pages first and the tab control last, so the pages are on top of it. <code>WS_CLIPSIBLINGS</code> stops the tab control painting over them.</p>
+<h3>What's there</h3>
+<p>Tested by creating each class on both ROMs after <code>InitCommonControls</code>:</p>
+<figure>
+<table>
+<thead><tr><th>Class</th><th>Control</th><th>CE 1.0</th><th>CE 2.0</th></tr></thead>
+<tbody>
+<tr><td><code>BUTTON</code>, <code>EDIT</code>, <code>STATIC</code>, <code>LISTBOX</code>, <code>COMBOBOX</code>, <code>SCROLLBAR</code></td><td>Standard controls</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>SysListView32</code> (<code>WC_LISTVIEW</code>)</td><td>List view</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>SysTreeView32</code> (<code>WC_TREEVIEW</code>)</td><td>Tree view</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>SysTabControl32</code> (<code>WC_TABCONTROL</code>)</td><td>Tabs</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>msctls_progress32</code> (<code>PROGRESS_CLASS</code>)</td><td>Progress bar</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>msctls_trackbar32</code> (<code>TRACKBAR_CLASS</code>)</td><td>Trackbar (slider)</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>msctls_updown32</code> (<code>UPDOWN_CLASS</code>)</td><td>Up-down arrows</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>ToolbarWindow32</code>, <code>msctls_statusbar32</code>, <code>SysHeader32</code></td><td>Toolbar, status bar, column header</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>SysMonthCal32</code>, <code>SysDateTimePick32</code></td><td>Calendar, date picker</td><td>No</td><td>No</td></tr>
+<tr><td><code>ReBarWindow32</code>, <code>tooltips_class32</code></td><td>Rebar, tooltips</td><td>No</td><td>No</td></tr>
+<tr><td><code>RICHEDIT</code>, <code>RichInk</code></td><td>Rich text</td><td>No</td><td>No</td></tr>
+</tbody>
+</table>
+</figure>
+</section>
+
+<section>
+<h2>Recipe 5: Drawing Your Own</h2>
+<p>When stock controls don't fit, paint it yourself. velo-bluesky's timeline and post views are custom windows drawn this way. This example shows the greys, fonts, shapes and a post card.</p>
+<figure>
+<figure><img src="screenshots/ce1/drawing.png" alt="Drawing example on CE 1.0: a sixteen-step grey ramp that repeats black, dark grey, light grey, white four times; four safe greys; fonts including a badly drawn italic; edges, a zigzag, a dashed ellipse, an inverted rectangle; a post card; 2 bits per pixel" width="976" height="496"><figcaption>CE 1.0</figcaption></figure>
+<figure><img src="screenshots/ce2/drawing.png" alt="Drawing example on CE 2.0: a smooth sixteen-step grey ramp, the same shapes and card, 4 bits per pixel" width="976" height="496"><figcaption>CE 2.0</figcaption></figure>
+<figcaption><code>drawing</code>: look at the top row on CE 1.0.</figcaption>
+</figure>
+<h3>The four safe greys</h3>
+<p>CE 2.0 maps any colour to the nearest of its 16 greys. CE 1.0 doesn't match colours at all: it uses the bottom two bits of the red value as the grey's number. So <code>RGB(128, 128, 128)</code> is black on CE 1.0 (128 ends in binary <code>00</code>), <code>RGB(17, 17, 17)</code> is dark grey, and pure red is white. The top row above is <code>RGB(17n, 17n, 17n)</code> for n from 0 to 15: smooth on CE 2.0, four repeats of the same four greys on CE 1.0.</p>
+<figure>
+<table>
+<thead><tr><th>Use</th><th>Value</th><th>CE 1.0</th><th>CE 2.0</th></tr></thead>
+<tbody>
+<tr><td>Black</td><td><code>RGB(0, 0, 0)</code></td><td>Black</td><td>Black</td></tr>
+<tr><td>Dark grey</td><td><code>RGB(85, 85, 85)</code></td><td>Dark grey</td><td>Dark grey</td></tr>
+<tr><td>Light grey</td><td><code>RGB(170, 170, 170)</code></td><td>Light grey</td><td>Light grey</td></tr>
+<tr><td>White</td><td><code>RGB(255, 255, 255)</code></td><td>White</td><td>White</td></tr>
+</tbody>
+</table>
+<figcaption>Stick to these for anything that has to look right on both, or use the system colours.</figcaption>
+</figure>
+<pre data-file="docs/primer/examples/drawing/drawing.c"><code><span class="keyword">static</span> <span class="type">void</span> <span class="function">fill</span>(<span class="type">HDC</span> dc, <span class="type">int</span> left, <span class="type">int</span> top, <span class="type">int</span> right, <span class="type">int</span> bottom, <span class="type">COLORREF</span> colour) {
+    <span class="type">RECT</span> area = {left, top, right, bottom};
+    <span class="type">HBRUSH</span> brush = <span class="function">CreateSolidBrush</span>(colour);
+    <span class="function">FillRect</span>(dc, &amp;area, brush);
+    <span class="function">DeleteObject</span>(brush);
+}
+
+<span class="keyword">static</span> <span class="type">int</span> <span class="function">draw_greys</span>(<span class="type">HDC</span> dc, <span class="type">int</span> x, <span class="type">int</span> y) {
+    <span class="keyword">static</span> <span class="keyword">const</span> <span class="type">int</span> safe[] = {<span class="number">0</span>, <span class="number">85</span>, <span class="number">170</span>, <span class="number">255</span>};
+    <span class="type">WCHAR</span> label[<span class="number">8</span>];
+    y = <span class="function">text_line</span>(dc, fonts.normal, x, y, <span class="string">L"RGB(17n, 17n, 17n):"</span>);
+    <span class="keyword">for</span> (<span class="type">int</span> step = <span class="number">0</span>; step &lt; <span class="constant">GREY_STEPS</span>; step++) {
+        <span class="type">int</span> level = step * <span class="number">17</span>;
+        <span class="function">fill</span>(dc, x + step * <span class="constant">STEP_WIDTH</span>, y, x + (step + <span class="number">1</span>) * <span class="constant">STEP_WIDTH</span>, y + <span class="constant">SWATCH_SIZE</span> / <span class="number">2</span>, <span class="constant">RGB</span>(level, level, level));
+    }
+    y = <span class="function">text_line</span>(dc, fonts.normal, x, y + <span class="constant">SWATCH_SIZE</span> / <span class="number">2</span> + <span class="number">2</span>, <span class="string">L"Safe on CE 1.0 and 2.0:"</span>);
+    <span class="keyword">for</span> (<span class="type">int</span> index = <span class="number">0</span>; index &lt; <span class="number">4</span>; index++) {
+        <span class="type">int</span> left = x + index * (<span class="constant">SWATCH_SIZE</span> + <span class="number">40</span>);
+        <span class="function">fill</span>(dc, left, y, left + <span class="constant">SWATCH_SIZE</span>, y + <span class="constant">SWATCH_SIZE</span>, <span class="constant">RGB</span>(safe[index], safe[index], safe[index]));
+        <span class="function">Rectangle</span>(dc, left - <span class="number">1</span>, y - <span class="number">1</span>, left + <span class="constant">SWATCH_SIZE</span> + <span class="number">1</span>, y + <span class="constant">SWATCH_SIZE</span> + <span class="number">1</span>);
+        <span class="function">fill</span>(dc, left, y, left + <span class="constant">SWATCH_SIZE</span>, y + <span class="constant">SWATCH_SIZE</span>, <span class="constant">RGB</span>(safe[index], safe[index], safe[index]));
+        <span class="function">wsprintfW</span>(label, <span class="string">L"%d"</span>, safe[index]);
+        <span class="function">text_line</span>(dc, fonts.normal, left + <span class="constant">SWATCH_SIZE</span> + <span class="number">4</span>, y + <span class="number">4</span>, label);
+    }
+    <span class="keyword">return</span> y + <span class="constant">SWATCH_SIZE</span>;
+}</code></pre>
+<p>Every GDI object you create (brush, pen, font, bitmap) must be deleted with <code>DeleteObject</code>, and not while it's selected into a device context. Stock objects from <code>GetStockObject</code> are never deleted.</p>
+<h3>Fonts</h3>
+<p>Start from the system font and change what you need, so text matches the rest of CE:</p>
+<pre data-file="docs/primer/examples/drawing/drawing.c"><code><span class="keyword">static</span> <span class="type">HFONT</span> <span class="function">make_font</span>(<span class="keyword">const</span> <span class="type">LOGFONTW</span> *base, <span class="type">LONG</span> weight, <span class="type">LONG</span> height, <span class="type">BYTE</span> italic, <span class="keyword">const</span> <span class="type">WCHAR</span> *face) {
+    <span class="type">LOGFONTW</span> font = *base;
+    font.lfWeight = weight;
+    font.lfHeight = height;
+    font.lfWidth = <span class="number">0</span>;
+    font.lfItalic = italic;
+    <span class="keyword">if</span> (face) {
+        <span class="type">int</span> length = <span class="number">0</span>;
+        <span class="keyword">while</span> (face[length] &amp;&amp; length &lt; <span class="number">31</span>) {
+            font.lfFaceName[length] = face[length];
+            length++;
+        }
+        font.lfFaceName[length] = <span class="number">0</span>;
+        font.lfPitchAndFamily = <span class="constant">FIXED_PITCH</span> | <span class="constant">FF_MODERN</span>;
+    }
+    <span class="keyword">return</span> <span class="function">CreateFontIndirectW</span>(&amp;font);
+}
+
+<span class="keyword">static</span> <span class="type">void</span> <span class="function">create_fonts</span>(<span class="type">void</span>) {
+    <span class="type">LOGFONTW</span> base = {<span class="number">0</span>};
+    <span class="function">GetObjectW</span>(<span class="function">GetStockObject</span>(<span class="constant">SYSTEM_FONT</span>), <span class="keyword">sizeof</span> base, &amp;base);
+    fonts.normal = <span class="function">make_font</span>(&amp;base, <span class="constant">FW_NORMAL</span>, base.lfHeight, <span class="number">0</span>, <span class="constant">NULL</span>);
+    fonts.bold = <span class="function">make_font</span>(&amp;base, <span class="constant">FW_BOLD</span>, base.lfHeight, <span class="number">0</span>, <span class="constant">NULL</span>);
+    fonts.large = <span class="function">make_font</span>(&amp;base, <span class="constant">FW_BOLD</span>, base.lfHeight * <span class="number">2</span>, <span class="number">0</span>, <span class="constant">NULL</span>);
+    fonts.italic = <span class="function">make_font</span>(&amp;base, <span class="constant">FW_NORMAL</span>, base.lfHeight, <span class="number">1</span>, <span class="constant">NULL</span>);
+    fonts.fixed = <span class="function">make_font</span>(&amp;base, <span class="constant">FW_NORMAL</span>, base.lfHeight, <span class="number">0</span>, <span class="string">L"Courier New"</span>);
+}</code></pre>
+<p>Make fonts once at startup, keep them, and delete them at exit. <code>GetTextMetricsW</code> gives a font's line height, and <code>DrawTextW</code> with <code>DT_CALCRECT</code> measures wrapped text without drawing it, which is how you lay out a list of variable-height items.</p>
+<aside>
+<strong>Velo Tip</strong>
+<p>CE 1.0 draws italic badly, and on CE 2.0 "Courier New" quietly falls back to the proportional system font. Use bold and size for emphasis, and don't count on a fixed-pitch font on CE 2.0.</p>
+</aside>
+<h3>No flicker</h3>
+<p>Drawing a busy window piece by piece makes it flash. Draw into a bitmap the size of the window, then copy it to the screen in one go:</p>
+<pre data-file="docs/primer/examples/drawing/drawing.c"><code><span class="keyword">static</span> <span class="type">void</span> <span class="function">paint_buffered</span>(<span class="type">HWND</span> frame) {
+    <span class="type">PAINTSTRUCT</span> paint_info;
+    <span class="type">RECT</span> client;
+    <span class="type">HDC</span> dc = <span class="function">BeginPaint</span>(frame, &amp;paint_info);
+    <span class="function">GetClientRect</span>(frame, &amp;client);
+    <span class="type">HDC</span> buffer = <span class="function">CreateCompatibleDC</span>(dc);
+    <span class="type">HBITMAP</span> bitmap = <span class="function">CreateCompatibleBitmap</span>(dc, client.right, client.bottom);
+    <span class="type">HGDIOBJ</span> previous_bitmap = <span class="function">SelectObject</span>(buffer, bitmap);
+    <span class="type">HGDIOBJ</span> previous_font = <span class="function">SelectObject</span>(buffer, fonts.normal);
+    <span class="type">HGDIOBJ</span> previous_brush = <span class="function">SelectObject</span>(buffer, <span class="function">GetStockObject</span>(<span class="constant">WHITE_BRUSH</span>));
+    <span class="function">paint</span>(frame, buffer, &amp;client);
+    <span class="function">BitBlt</span>(dc, <span class="number">0</span>, <span class="number">0</span>, client.right, client.bottom, buffer, <span class="number">0</span>, <span class="number">0</span>, <span class="constant">SRCCOPY</span>);
+    <span class="function">SelectObject</span>(buffer, previous_brush);
+    <span class="function">SelectObject</span>(buffer, previous_font);
+    <span class="function">SelectObject</span>(buffer, previous_bitmap);
+    <span class="function">DeleteObject</span>(bitmap);
+    <span class="function">DeleteDC</span>(buffer);
+    <span class="function">EndPaint</span>(frame, &amp;paint_info);
+}</code></pre>
+<p>With that, return 1 from <code>WM_ERASEBKGND</code>, because the bitmap covers everything. A 480 x 240 bitmap is 29 KB at 2 bits per pixel and 57 KB at 4: you can make one per paint, or keep one.</p>
+<h3>Pens and CE 1.0</h3>
+<p>CE 1.0 has no <code>CreatePen</code>. <code>CreatePenIndirect</code> works on both:</p>
+<pre data-file="docs/primer/examples/drawing/drawing.c"><code><span class="keyword">static</span> <span class="type">void</span> <span class="function">draw_shapes</span>(<span class="type">HDC</span> dc, <span class="type">int</span> x, <span class="type">int</span> y) {
+    <span class="type">LOGPEN</span> dashed = {<span class="constant">PS_DASH</span>, {<span class="number">1</span>, <span class="number">0</span>}, <span class="constant">RGB</span>(<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>)};
+    <span class="type">RECT</span> edge = {x, y, x + <span class="number">40</span>, y + <span class="number">28</span>};
+    <span class="type">POINT</span> zigzag[] = {{x + <span class="number">150</span>, y + <span class="number">28</span>}, {x + <span class="number">162</span>, y}, {x + <span class="number">174</span>, y + <span class="number">28</span>}, {x + <span class="number">186</span>, y}, {x + <span class="number">198</span>, y + <span class="number">28</span>}};
+    <span class="function">SelectObject</span>(dc, <span class="function">GetStockObject</span>(<span class="constant">WHITE_BRUSH</span>));
+    <span class="function">DrawEdge</span>(dc, &amp;edge, <span class="constant">EDGE_RAISED</span>, <span class="constant">BF_RECT</span>);
+    <span class="function">SetRect</span>(&amp;edge, x + <span class="number">48</span>, y, x + <span class="number">88</span>, y + <span class="number">28</span>);
+    <span class="function">DrawEdge</span>(dc, &amp;edge, <span class="constant">EDGE_SUNKEN</span>, <span class="constant">BF_RECT</span>);
+    <span class="function">SetRect</span>(&amp;edge, x + <span class="number">96</span>, y, x + <span class="number">136</span>, y + <span class="number">28</span>);
+    <span class="function">DrawEdge</span>(dc, &amp;edge, <span class="constant">EDGE_ETCHED</span>, <span class="constant">BF_RECT</span>);
+    <span class="function">Polyline</span>(dc, zigzag, <span class="number">5</span>);
+    <span class="type">HPEN</span> pen = <span class="function">CreatePenIndirect</span>(&amp;dashed);
+    <span class="type">HGDIOBJ</span> previous = <span class="function">SelectObject</span>(dc, pen);
+    <span class="function">Ellipse</span>(dc, x + <span class="number">206</span>, y, x + <span class="number">246</span>, y + <span class="number">28</span>);
+    <span class="function">SelectObject</span>(dc, previous);
+    <span class="function">DeleteObject</span>(pen);
+    <span class="function">SelectObject</span>(dc, <span class="function">GetStockObject</span>(<span class="constant">GRAY_BRUSH</span>));
+    <span class="function">Rectangle</span>(dc, x + <span class="number">254</span>, y, x + <span class="number">294</span>, y + <span class="number">28</span>);
+    <span class="function">PatBlt</span>(dc, x + <span class="number">264</span>, y + <span class="number">7</span>, <span class="number">20</span>, <span class="number">14</span>, <span class="constant">DSTINVERT</span>);
+}</code></pre>
+</section>
+</main>
+<footer>
+<ul>
+<li><a href="3-win32.html" rel="prev">&lt; 3. Win32</a></li>
+<li><a href="5-system.html" rel="next">5. System &gt;</a></li>
+</ul>
+<p>The Velo CE Primer, for velo-toolchain. Screenshots are from velo-emu.</p>
+</footer>
+</body>
+</html>

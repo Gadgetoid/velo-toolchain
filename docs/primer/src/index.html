@@ -1,0 +1,74 @@
+<article>
+<header>
+<p>velo-toolchain Press</p>
+<h1>The Velo CE Primer <small>Programming Windows CE 1.0 and 2.0 on the Philips Velo 1</small></h1>
+<svg viewBox="0 0 320 250" role="img" aria-labelledby="cover-art">
+<title id="cover-art">A Philips Velo 1 surrounded by Memphis shapes</title>
+<circle cx="268" cy="52" r="40" fill="#ffd23f" stroke="#17142b" stroke-width="4"/>
+<path d="M18 40 l26 -26 l26 26 z" fill="#ff3d8b" stroke="#17142b" stroke-width="4"/>
+<path d="M210 222 q12 -16 24 0 t24 0 t24 0 t24 0" fill="none" stroke="#6c4ee0" stroke-width="6" stroke-linecap="round"/>
+<g fill="#17142b">
+<circle cx="24" cy="180" r="3"/><circle cx="38" cy="180" r="3"/><circle cx="52" cy="180" r="3"/>
+<circle cx="24" cy="194" r="3"/><circle cx="38" cy="194" r="3"/><circle cx="52" cy="194" r="3"/>
+<circle cx="24" cy="208" r="3"/><circle cx="38" cy="208" r="3"/><circle cx="52" cy="208" r="3"/>
+</g>
+<rect x="60" y="34" width="200" height="110" rx="10" fill="#3b3b4f" stroke="#17142b" stroke-width="4"/>
+<rect x="74" y="48" width="172" height="86" fill="#b9c48d" stroke="#17142b" stroke-width="3"/>
+<rect x="74" y="48" width="172" height="12" fill="#2f3a1c"/>
+<rect x="80" y="66" width="70" height="60" fill="none" stroke="#2f3a1c" stroke-width="2"/>
+<path d="M84 74 h60 M84 84 h52 M84 94 h58 M84 104 h44 M84 114 h56" stroke="#2f3a1c" stroke-width="3"/>
+<path d="M158 70 h80 M158 80 h72 M158 90 h80 M158 100 h66" stroke="#2f3a1c" stroke-width="2"/>
+<path d="M52 150 h216 l18 56 h-252 z" fill="#5a5a70" stroke="#17142b" stroke-width="4" stroke-linejoin="round"/>
+<g fill="#e8e4d8" stroke="#17142b" stroke-width="1.5">
+<rect x="62" y="158" width="18" height="10"/><rect x="84" y="158" width="18" height="10"/><rect x="106" y="158" width="18" height="10"/><rect x="128" y="158" width="18" height="10"/><rect x="150" y="158" width="18" height="10"/><rect x="172" y="158" width="18" height="10"/><rect x="194" y="158" width="18" height="10"/><rect x="216" y="158" width="18" height="10"/><rect x="238" y="158" width="20" height="10"/>
+<rect x="58" y="172" width="18" height="10"/><rect x="80" y="172" width="18" height="10"/><rect x="102" y="172" width="18" height="10"/><rect x="124" y="172" width="18" height="10"/><rect x="146" y="172" width="18" height="10"/><rect x="168" y="172" width="18" height="10"/><rect x="190" y="172" width="18" height="10"/><rect x="212" y="172" width="18" height="10"/><rect x="234" y="172" width="28" height="10"/>
+<rect x="54" y="186" width="26" height="10"/><rect x="84" y="186" width="132" height="10"/><rect x="220" y="186" width="18" height="10"/><rect x="242" y="186" width="24" height="10"/>
+</g>
+<rect x="250" y="120" width="40" height="8" rx="4" fill="#00a5a8" stroke="#17142b" stroke-width="3" transform="rotate(-35 270 124)"/>
+</svg>
+<mark>Includes six example programs and screenshots</mark>
+<p>A beginner's guide for competent programmers: from an empty folder to windows, dialogs, sockets and two real projects, built on your Mac with velo-toolchain and tested in velo-emu.</p>
+</header>
+
+<section>
+<h2>What's Inside</h2>
+<p>Each chapter builds on the last, but the later ones work as a reference too. If you've written Win32 programs before, skim chapters 1 to 3 for the parts marked as different on CE.</p>
+<ol>
+<li><a href="1-velo.html"><strong>Meet the Velo</strong><span>The hardware, Windows CE 1.0 and 2.0, and how CE differs from the Windows you know.</span></a></li>
+<li><a href="2-tools.html"><strong>Toolchain and Emulator</strong><span>Install, build your first program, run it in velo-emu, debug it with GDB and VS Code.</span></a></li>
+<li><a href="3-win32.html"><strong>Win32 in a Hurry</strong><span>WinMain, the message loop, window procedures, painting, the pen and the keyboard.</span></a></li>
+<li><a href="4-layout.html"><strong>Screen Layout Cookbook</strong><span>Five layouts with screenshots: two panes, list and details, a dialog, tabs and controls, custom drawing.</span></a></li>
+<li><a href="5-system.html"><strong>Strings, Memory, Files and the Registry</strong><span>Life without a C library, Unicode, the object store, cards, settings, processes and DLLs.</span></a></li>
+<li><a href="6-network.html"><strong>Networking and Threads</strong><span>Winsock, HTTP through the proxy, worker threads and talking to the user interface safely.</span></a></li>
+<li><a href="7-bluesky.html"><strong>Project: A Bluesky Client</strong><span>The AT Protocol calls, sessions, JSON, pictures and how velo-bluesky fits together.</span></a></li>
+<li><a href="8-appstore.html"><strong>Project: An App Store</strong><span>Catalogues, downloads, installing, shortcuts, uninstalling and free space.</span></a></li>
+<li><a href="9-reference.html"><strong>Reference</strong><span>What exists on CE 1.0 and 2.0, messages, gotchas, a glossary and further reading.</span></a></li>
+</ol>
+</section>
+
+<section>
+<h2>Before You Start</h2>
+<p>You'll need a Mac or Linux machine with these, all covered in chapter 2:</p>
+<ul>
+<li>velo-toolchain (this repository) with Homebrew's <code>llvm</code>, <code>lld</code> and <code>cmake</code>.</li>
+<li>A built velo-emu checkout and its ROMs, to run what you build.</li>
+<li>Optionally Homebrew's <code>gdb</code> and VS Code with the C/C++ and CMake Tools extensions, for debugging.</li>
+</ul>
+<p>You should be comfortable with C: pointers, structs, function pointers and building with CMake. You don't need to know anything about Windows.</p>
+</section>
+
+<section>
+<h2>How to Read This Book</h2>
+<p>Code you can type or copy is printed on green-bar paper. The label at the top says which file it's from:</p>
+<pre data-file="examples/hello/hello.c"><code>@source examples/hello/hello.c</code></pre>
+<p>Listings marked with a file name are copied from that file in the repository, as it was when this primer was written. Names in <code>this style</code> are functions, messages, files and settings. Keys look like <kbd>Ctrl</kbd>+<kbd>N</kbd>.</p>
+<aside>
+<strong>Velo Tip</strong>
+<p>Boxes like this one point out where Windows CE, or the Velo, behaves differently from desktop Windows or from what you'd guess. Most of them were found the hard way, in the emulator, while writing this book.</p>
+</aside>
+<p>Screenshots come in pairs, CE 1.0 on the left with its four greys and CE 2.0 on the right with sixteen, taken from velo-emu's simulated LCD. To make them again:</p>
+<pre><code>make primer-screenshots</code></pre>
+<p>That needs the same settings as <code>make test</code>, listed in the repository's <code>README.md</code>. The example programs are in <code>docs/primer/examples</code>, and build with:</p>
+<pre><code>make primer</code></pre>
+</section>
+</article>

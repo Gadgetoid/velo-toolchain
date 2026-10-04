@@ -1,7 +1,7 @@
 TOOLCHAIN = $(CURDIR)/cmake/velo-ce.cmake
 CLANG ?= $(firstword $(wildcard $(shell brew --prefix llvm 2>/dev/null)/bin/clang) clang)
 
-.PHONY: examples test screenshots debugmgr debug-state headers docstrings check-headers clean
+.PHONY: examples test screenshots primer primer-screenshots debugmgr debug-state headers docstrings check-headers clean
 
 examples:
 	cmake -S examples -B build/ce1 -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) -DVELO_CE_VERSION=1
@@ -17,6 +17,18 @@ screenshots: examples
 	python3 tests/emulator.py build/ce1 --ce 1 --cell 2 --output docs/screenshots/ce1
 	python3 tests/emulator.py build/ce2 --ce 2 --cell 2 --output docs/screenshots/ce2
 	pngquant --force --strip --quality=60-80 --ext .png docs/screenshots/ce*/*.png
+
+primer:
+	cmake -S docs/primer/examples -B build/primer/ce1 -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) -DVELO_CE_VERSION=1
+	cmake --build build/primer/ce1
+	cmake -S docs/primer/examples -B build/primer/ce2 -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) -DVELO_CE_VERSION=2
+	cmake --build build/primer/ce2
+
+primer-screenshots: primer
+	python3 docs/primer/examples/screenshots.py build/primer/ce1 --ce 1 --cell 2 --output docs/primer/screenshots/ce1
+	python3 docs/primer/examples/screenshots.py build/primer/ce2 --ce 2 --cell 2 --output docs/primer/screenshots/ce2
+	rm -f docs/primer/screenshots/ce2/fetch.png
+	pngquant --force --strip --quality=60-80 --ext .png docs/primer/screenshots/ce*/*.png
 
 debugmgr:
 	cmake -S debugmgr -B build/debugmgr/ce1 -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) -DVELO_CE_VERSION=1

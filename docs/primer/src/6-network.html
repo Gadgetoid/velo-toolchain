@@ -1,0 +1,78 @@
+<section>
+<h2>Getting Online</h2>
+<p>A Velo reaches the network with PPP over its serial port, through a cable to a PC or a modem. Once it's connected, Winsock works as on any other system. velo-emu provides that link with its own small network: start it with <code>--net=SECONDS</code> on <code>headless</code>, or from the PC Link menu in the window.</p>
+<p>The catch is security. The Velo can't speak modern TLS, so it can't make an <code>https://</code> connection to anything on today's internet. It needs a <em>proxy</em>: a program on a PC that takes plain HTTP requests from the Velo and makes the HTTPS requests for it. velo-emu has one built in, at <code>10.0.2.4</code> port <code>8080</code>:</p>
+<ul>
+<li>It fetches an <code>http://</code> address over HTTPS first, then plain HTTP, so you can ask for <code>http://bsky.social/...</code> and get the real thing.</li>
+<li>It turns pictures (PNG, JPEG, GIF, BMP, SVG) into four-grey GIFs at most 436 pixels wide.</li>
+<li>It compresses responses with gzip when the request has <code>Accept-Encoding: gzip</code>.</li>
+<li>Through it, <code>127.0.0.1</code> means your Mac, so you can test against a server running there.</li>
+</ul>
+<p>On a real Velo you'd run a proxy that does the same on the PC it connects to. Make the proxy a setting in your program, as velo-bluesky does, and let it be blank to connect directly to a plain HTTP server.</p>
+<aside>
+<strong>Velo Tip</strong>
+<p>Everything between the Velo and the proxy is unencrypted, including passwords and tokens. That's acceptable on a serial cable to your own PC, not across a network you don't control.</p>
+</aside>
+</section>
+
+<section>
+<h2>Winsock in Brief</h2>
+<p>Link <code>velo::winsock</code> and include <code>winsock.h</code>. It's BSD sockets with Windows names: <code>socket</code>, <code>connect</code>, <code>send</code>, <code>recv</code>, <code>select</code>, <code>closesocket</code> (not <code>close</code>), <code>gethostbyname</code> and <code>inet_addr</code>. A few CE details:</p>
+<ul>
+<li>The Velo's Winsock exports no <code>WSAStartup</code>: just call <code>socket</code>.</li>
+<li>Calls block, and <code>connect</code> can block for a long time when the network isn't there. Never call them on the thread that runs your windows.</li>
+<li>Use <code>select</code> with a short timeout before each <code>recv</code>. That gives you a place to check for cancellation and to give up on a silent server.</li>
+<li>Socket handles are <code>SOCKET</code>, and failure is <code>INVALID_SOCKET</code> or <code>SOCKET_ERROR</code>, not -1.</li>
+</ul>
+<h3>HTTP through a proxy</h3>
+<p>HTTP/1.0 is the easiest dialect to write by hand: one request per connection, no chunked encoding, and the response ends when the server closes the connection. Through a proxy, the request line has the full address:</p>
+<pre><code>GET http://example.com/ HTTP/1.0
+Host: example.com
+Connection: close
+</code></pre>
+<p>Then a blank line, and the response comes back as a status line, headers, a blank line and the body. The <code>fetch</code> example does exactly this on a worker thread, and shows the raw response:</p>
+<figure>
+<img src="screenshots/ce1/fetch.png" alt="Fetch example on CE 1.0: an address box with http://example.com/ and a Go button, the HTTP response headers and HTML below, and Done, 497 bytes in the status bar" width="976" height="496">
+<figcaption><code>fetch</code> on CE 1.0, through velo-emu's proxy. The tray shows the network connection.</figcaption>
+</figure>
+<pre data-file="docs/primer/examples/fetch/fetch.c"><code>@function docs/primer/examples/fetch/fetch.c fetch</code></pre>
+<p>A real client goes further: it parses the status and headers, honours <code>Content-Length</code>, decompresses gzip, and hands the body to a parser as it arrives. velo-bluesky's <code>src/http.c</code> is about 300 lines and does all of that, with POST bodies and an <code>Authorization</code> header.</p>
+</section>
+
+<section>
+<h2>Worker Threads</h2>
+<p>Your windows belong to the thread that created them, the one running the message loop. If that thread is waiting on the network, nothing repaints and taps go nowhere. So network work goes on a second thread, and the two talk through messages.</p>
+<h3>Start the work</h3>
+<pre data-file="docs/primer/examples/fetch/fetch.c"><code>@function docs/primer/examples/fetch/fetch.c start_fetch</code></pre>
+<p>Everything the thread needs goes in one allocated struct, so the interface can't change it underneath. The handle from <code>CreateThread</code> is closed at once: the thread keeps running, and closing just says you won't wait for it.</p>
+<h3>Report back</h3>
+<pre data-file="docs/primer/examples/fetch/fetch.c"><code>@function docs/primer/examples/fetch/fetch.c fetch_thread</code></pre>
+<p>The worker never touches a window. It posts a message from the <code>WM_APP</code> range to the frame, with the request in <code>lParam</code>, and that hands the memory over: the frame's handler frees it. If <code>PostMessageW</code> fails, nobody will receive it, so the thread frees it itself. Progress works the same way, with numbers in <code>wParam</code>:</p>
+<pre data-file="docs/primer/examples/fetch/fetch.c"><code>@between docs/primer/examples/fetch/fetch.c /case WM_FETCH_PROGRESS/ /return 0;/
+@between docs/primer/examples/fetch/fetch.c /case WM_FETCH_DONE/ /return 0;/
+@function docs/primer/examples/fetch/fetch.c fetch_done</code></pre>
+<h3>Rules</h3>
+<ul>
+<li>Only the interface thread calls window functions. Workers use <code>PostMessageW</code>.</li>
+<li>Data goes one way per message, in allocated memory the receiver frees.</li>
+<li>Shared state is protected by a <code>CRITICAL_SECTION</code>: <code>InitializeCriticalSection</code> once, then <code>EnterCriticalSection</code> and <code>LeaveCriticalSection</code> around every use.</li>
+<li>A <code>volatile LONG</code> flag, set with <code>InterlockedExchange</code>, is enough to ask a worker to stop. Check it between <code>select</code> calls.</li>
+<li>Don't let the user close the program while a worker is still using its windows: wait for it, or refuse <code>WM_CLOSE</code> as <code>fetch</code> does.</li>
+</ul>
+<aside>
+<strong>Velo Tip</strong>
+<p>CE has no <code>SetEvent</code> or <code>ResetEvent</code> functions. The ROM exports <code>EventModify</code>, and the toolchain's headers define <code>SetEvent</code>, <code>ResetEvent</code> and <code>PulseEvent</code> as small inline functions that call it. Code from elsewhere that declares them as imports won't link.</p>
+</aside>
+<h3>A job queue</h3>
+<p>One thread per request is fine for a simple program. A client that makes many requests is better with one worker that runs <em>jobs</em> from a queue, one at a time: requests can't overwhelm a 19200 baud link, and cancelling is easy. velo-bluesky's <code>src/worker.c</code> is a complete version in about 300 lines. Its heart is this loop:</p>
+<pre data-file="velo-bluesky/src/worker.c"><code>@function ../velo-bluesky/src/worker.c take_job
+@function ../velo-bluesky/src/worker.c worker_main</code></pre>
+<p><code>worker_submit</code> adds a job under the lock and sets the <code>wake</code> event. Each job gets a ticket number, so when the user moves on (say, to a different post) the interface can cancel the old job and ignore any results still on their way for it.</p>
+</section>
+
+<section>
+<h2>Testing Against Your Own Server</h2>
+<p>Because the proxy maps <code>127.0.0.1</code> to your Mac, a local server is the easiest way to test without the real internet, or to reproduce awkward responses:</p>
+<pre><code>python3 -m http.server 8123</code></pre>
+<p>Then fetch <code>http://127.0.0.1:8123/</code> on the Velo. velo-bluesky's <code>tests/server.py</code> is a fake Bluesky server in this style, which its automated tests use.</p>
+</section>

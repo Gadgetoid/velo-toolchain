@@ -1,0 +1,27 @@
+#include <windows.h>
+#include "resource.h"
+
+IDM_MAIN MENU
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&New Note\tCtrl+N", ID_FILE_NEW
+        MENUITEM "&Delete Note\tDel", ID_FILE_DELETE
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit", ID_FILE_EXIT
+    END
+    POPUP "&View"
+    BEGIN
+        MENUITEM "&Next Note\tCtrl+Down", ID_VIEW_NEXT
+        MENUITEM "&Previous Note\tCtrl+Up", ID_VIEW_PREVIOUS
+        MENUITEM SEPARATOR
+        MENUITEM "&About Notes...", ID_HELP_ABOUT
+    END
+END
+
+IDA_MAIN ACCELERATORS
+BEGIN
+    "N", ID_FILE_NEW, VIRTKEY, CONTROL, NOINVERT
+    VK_DOWN, ID_VIEW_NEXT, VIRTKEY, CONTROL, NOINVERT
+    VK_UP, ID_VIEW_PREVIOUS, VIRTKEY, CONTROL, NOINVERT
+END

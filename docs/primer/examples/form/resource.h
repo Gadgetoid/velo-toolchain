@@ -1,0 +1,14 @@
+#ifndef FORM_RESOURCE_H
+#define FORM_RESOURCE_H
+
+#define IDD_ACCOUNT 100
+
+#define IDC_HANDLE 200
+#define IDC_PASSWORD 201
+#define IDC_SERVER 202
+#define IDC_MANUAL 203
+#define IDC_HOURLY 204
+#define IDC_DAILY 205
+#define IDC_PICTURES 206
+
+#endif

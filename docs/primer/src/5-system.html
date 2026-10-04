@@ -1,0 +1,163 @@
+<section>
+<h2>Strings</h2>
+<p>Text inside your program is <code>WCHAR</code>: 16-bit UTF-16 code units, with <code>L"literals"</code>. velo-toolchain builds with <code>-fshort-wchar</code>, so <code>wchar_t</code> is the same type and GDB prints <code>WCHAR</code> strings as text.</p>
+<h3>Formatting</h3>
+<p><code>wsprintfW(output, format, ...)</code> is your formatter. It knows <code>%d</code>, <code>%u</code>, <code>%x</code>, <code>%c</code>, <code>%s</code> (a <code>WCHAR</code> string) and <code>%hs</code> (an 8-bit <code>char</code> string, widened as it's copied), with <code>l</code> for <code>long</code>, widths and zero padding like <code>%08x</code>. It doesn't know floating point, and it doesn't know how big <code>output</code> is, so make the buffer big enough. To show a <code>double</code>, scale it to an integer and format the parts, as <code>examples/maths</code> does.</p>
+<h3>String functions</h3>
+<p>CE's <code>coredll.dll</code> exports the C library's wide string functions on both versions, and <code>windows.h</code> declares them: <code>wcslen</code>, <code>wcscpy</code>, <code>wcsncpy</code>, <code>wcscat</code>, <code>wcscmp</code>, <code>wcsncmp</code>, <code>_wcsicmp</code>, <code>_wcsnicmp</code>, <code>wcschr</code>, <code>wcsrchr</code>, <code>wcsstr</code>, <code>wcstok</code>, <code>_wcsdup</code>, <code>_wcsupr</code>, <code>_wcslwr</code> and <code>_wtol</code> for turning text into a number, among others. <code>towlower</code> and <code>towupper</code> are CE 2.0 only.</p>
+<p>There's nothing for 8-bit <code>char</code> strings except <code>memchr</code>: no <code>strlen</code>, <code>strcmp</code> or <code>atoi</code>. Write the few you need. They're short, and a dozen of them cover a whole network client: velo-bluesky's <code>src/text.c</code> has its set.</p>
+<h3>UTF-8</h3>
+<p>The web, JSON and most files are UTF-8. CE 1.0 has no conversion functions at all, and CE 2.0's <code>MultiByteToWideChar</code> is only on CE 2.0. These two work everywhere, and let you decide what happens to bad input:</p>
+<pre><code>static int utf16_to_utf8(const WCHAR *text, char *output, int size) {
+    static const unsigned char leads[] = {0, 0, 0xC0, 0xE0, 0xF0};
+    int written = 0;
+    for (; *text; text++) {
+        DWORD code = *text;
+        if (code >= 0xD800 &amp;&amp; code &lt; 0xDC00 &amp;&amp; text[1] >= 0xDC00 &amp;&amp; text[1] &lt; 0xE000) {
+            code = 0x10000 + ((code - 0xD800) &lt;&lt; 10) + (text[1] - 0xDC00);
+            text++;
+        }
+        int length = code &lt; 0x80 ? 1 : code &lt; 0x800 ? 2 : code &lt; 0x10000 ? 3 : 4;
+        if (written + length >= size) {
+            break;
+        }
+        for (int index = length - 1; index > 0; index--) {
+            output[written + index] = (char)(0x80 | (code &amp; 0x3F));
+            code >>= 6;
+        }
+        output[written] = (char)(leads[length] | code);
+        written += length;
+    }
+    output[written] = 0;
+    return written;
+}</code></pre>
+<p>The other direction is in the <code>fetch</code> example, which also turns <code>\n</code> into <code>\r\n</code>, as edit controls need:</p>
+<pre data-file="docs/primer/examples/fetch/fetch.c"><code>@function docs/primer/examples/fetch/fetch.c utf8_to_edit_text</code></pre>
+<aside>
+<strong>Velo Tip</strong>
+<p>The Velo's fonts have no emoji. velo-bluesky turns common emoji into text emoticons and drops the rest, which reads better than a row of boxes.</p>
+</aside>
+</section>
+
+<section>
+<h2>Memory</h2>
+<p><code>LocalAlloc</code> is your <code>malloc</code>. <code>LPTR</code> gives fixed, zeroed memory, which is what you want almost every time:</p>
+<pre><code>post_t *post = LocalAlloc(LPTR, sizeof(post_t));
+if (!post) {
+    return FALSE;
+}
+LocalFree(post);</code></pre>
+<p><code>LocalReAlloc(memory, size, LMEM_MOVEABLE)</code> grows a block, possibly moving it, and <code>LocalSize</code> says how big one is. <code>VirtualAlloc</code> reserves big regions directly, for buffers in the hundreds of kilobytes. <code>GlobalMemoryStatus</code> reports what's free.</p>
+<p>Check every allocation. On a desktop, running out is a theoretical problem. On a Velo it happens: a user with a full object store may have well under a megabyte for programs. When memory runs low CE sends <code>WM_HIBERNATE</code> (0x03FF) to running programs, asking them to free what they can, such as caches and pictures.</p>
+<h3>Patterns that help</h3>
+<ul>
+<li><strong>Arenas.</strong> Parse a network response into a block that you free in one go. velo-bluesky gives every job and every page of posts an arena (<code>src/memory.c</code>, 65 lines), which makes freeing a whole timeline one call.</li>
+<li><strong>Stream.</strong> Process data as it arrives rather than holding all of it. velo-bluesky decompresses, parses and decodes pictures in chunks.</li>
+<li><strong>Keep large buffers off the stack.</strong> Use the heap or a <code>static</code> for anything over a few kilobytes.</li>
+</ul>
+</section>
+
+<section>
+<h2>Files and Folders</h2>
+<p>Files work as on desktop Windows, through handles:</p>
+<pre><code>static BOOL save_text(LPCWSTR path, const char *data, DWORD length) {
+    DWORD written;
+    HANDLE file = CreateFileW(path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (file == INVALID_HANDLE_VALUE) {
+        return FALSE;
+    }
+    BOOL saved = WriteFile(file, data, length, &amp;written, NULL) &amp;&amp; written == length;
+    CloseHandle(file);
+    return saved;
+}</code></pre>
+<p>Read with <code>OPEN_EXISTING</code>, <code>GetFileSize</code> and <code>ReadFile</code>. <code>FindFirstFileW</code>, <code>FindNextFileW</code> and <code>FindClose</code> list a folder. <code>CreateDirectoryW</code>, <code>DeleteFileW</code>, <code>MoveFileW</code>, <code>CopyFileW</code> and <code>GetFileAttributesW</code> do the rest. <code>GetLastError</code> says why something failed.</p>
+<h3>Where things go</h3>
+<p>These folders exist on both ROMs:</p>
+<figure>
+<table>
+<thead><tr><th>Folder</th><th>For</th></tr></thead>
+<tbody>
+<tr><td><code>\My Documents</code></td><td>The user's documents.</td></tr>
+<tr><td><code>\Program Files</code></td><td>Installed programs, one folder each.</td></tr>
+<tr><td><code>\Windows</code></td><td>System files (mostly in ROM), shared DLLs, help files, fonts in <code>\Windows\Fonts</code>.</td></tr>
+<tr><td><code>\Windows\Programs</code></td><td>Start &gt; Programs shortcuts.</td></tr>
+<tr><td><code>\Windows\Desktop</code></td><td>Desktop shortcuts.</td></tr>
+<tr><td><code>\Windows\StartUp</code></td><td>Shortcuts here run at startup.</td></tr>
+<tr><td><code>\PC Card</code> (CE 1.0), <code>\Storage Card</code> (CE 2.0)</td><td>The PC Card, when one is in.</td></tr>
+</tbody>
+</table>
+<figcaption>CE 2.0 also has <code>\Temp</code>. CE 1.0 doesn't.</figcaption>
+</figure>
+<p>Card folders have <code>FILE_ATTRIBUTE_TEMPORARY</code> (0x100) set as well as <code>FILE_ATTRIBUTE_DIRECTORY</code>. Look for that rather than a name, because the name depends on the version and the card:</p>
+<pre><code>static BOOL find_card(WCHAR *folder, int size) {
+    WIN32_FIND_DATAW found;
+    BOOL found_card = FALSE;
+    HANDLE search = FindFirstFileW(L"\\*", &amp;found);
+    if (search == INVALID_HANDLE_VALUE) {
+        return FALSE;
+    }
+    do {
+        DWORD wanted = FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_TEMPORARY;
+        if ((found.dwFileAttributes &amp; wanted) == wanted &amp;&amp; (int)wcslen(found.cFileName) + 2 &lt; size) {
+            folder[0] = '\\';
+            for (int index = 0; index &lt;= (int)wcslen(found.cFileName); index++) {
+                folder[index + 1] = found.cFileName[index];
+            }
+            found_card = TRUE;
+        }
+    } while (!found_card &amp;&amp; FindNextFileW(search, &amp;found));
+    FindClose(search);
+    return found_card;
+}</code></pre>
+<h3>Where am I?</h3>
+<p>There's no current directory, so a program can't open "the file next to me" by name. On CE 2.0, <code>GetModuleFileNameW(NULL, path, MAX_PATH)</code> gives the program's full path: cut it at the last backslash. CE 1.0 doesn't have it. Either install to a known folder, or have whatever starts the program pass the folder on the command line, as the screenshot runner does for <code>greeter.exe</code>.</p>
+<aside>
+<strong>Velo Tip</strong>
+<p>The object store lives in battery-backed RAM. It survives a soft reset, but not a flat backup battery or a hard reset. Anything precious belongs on a card too.</p>
+</aside>
+</section>
+
+<section>
+<h2>The Registry</h2>
+<p>Settings go in the registry, not in files. The convention is a key per program under <code>HKEY_CURRENT_USER\Software</code>. The <code>form</code> example reads and writes its settings like this:</p>
+<pre data-file="docs/primer/examples/form/form.c"><code>@function docs/primer/examples/form/form.c read_number
+@function docs/primer/examples/form/form.c load_account
+@function docs/primer/examples/form/form.c save_account</code></pre>
+<p>Three things to remember. Sizes are in bytes, and a <code>REG_SZ</code> string's size includes its terminating zero. Reads can fail on the first run, so start from defaults and only overwrite what was found. And always check the type you got back, because another version of your program may have written something different. <code>RegEnumKeyExW</code> and <code>RegEnumValueW</code> list keys and values, and <code>RegDeleteKeyW</code> removes a key.</p>
+<aside>
+<strong>Velo Tip</strong>
+<p>The registry is in the object store, so it's in memory and not encrypted. velo-bluesky keeps its refresh token there, which is reasonable for a session token. Never keep a password.</p>
+</aside>
+</section>
+
+<section>
+<h2>Time</h2>
+<p><code>GetLocalTime</code> and <code>GetSystemTime</code> fill a <code>SYSTEMTIME</code> with the local time and UTC. <code>GetTickCount</code> counts milliseconds since the Velo started, for measuring how long things take. There's no <code>time()</code>: to get Unix time, go through a <code>FILETIME</code>, which counts 100-nanosecond steps since 1601:</p>
+<pre><code>static DWORD unix_time(void) {
+    SYSTEMTIME now;
+    FILETIME file_time;
+    GetSystemTime(&amp;now);
+    SystemTimeToFileTime(&amp;now, &amp;file_time);
+    unsigned long long ticks = ((unsigned long long)file_time.dwHighDateTime &lt;&lt; 32) | file_time.dwLowDateTime;
+    return (DWORD)(ticks / 10000000 - 11644473600ULL);
+}</code></pre>
+<p>Internet timestamps are usually ISO 8601 in UTC, like <code>2026-10-04T12:00:00.000Z</code>, which is a <code>wsprintfW</code> of the <code>SYSTEMTIME</code> fields. Remember that the Velo's clock may simply be wrong: a new Velo starts in 1996 or 1997 until someone sets it.</p>
+</section>
+
+<section>
+<h2>Processes and DLLs</h2>
+<h3>Starting a program</h3>
+<pre><code>static BOOL run(LPCWSTR program, LPWSTR arguments) {
+    PROCESS_INFORMATION started;
+    if (!CreateProcessW(program, arguments, NULL, NULL, FALSE, 0, NULL, NULL, NULL, &amp;started)) {
+        return FALSE;
+    }
+    CloseHandle(started.hThread);
+    CloseHandle(started.hProcess);
+    return TRUE;
+}</code></pre>
+<p>Given a bare name, CE looks on the PC Card, then in <code>\Windows</code>, then in the root. For anything else, give the full path. Unlike desktop Windows, the arguments don't include the program's name, and the other parameters must be <code>NULL</code>, <code>FALSE</code> or 0. <code>WaitForSingleObject(started.hProcess, INFINITE)</code> waits for it to finish, on CE 2.0. On CE 1.0 a new process's handle reports finished straight away, so that doesn't work there.</p>
+<h3>Loading a DLL</h3>
+<pre data-file="examples/dll/greeter.c"><code>@source examples/dll/greeter.c</code></pre>
+<p>Note <code>GetProcAddressW</code>: on CE the function name is a wide string. A DLL's own functions are exported by name with <code>EXPORTS</code> in <code>velo_add_library</code>. On CE 1.0, <code>LoadLibraryW</code> looks in <code>\Windows</code> but not in the program's folder, so either put DLLs in <code>\Windows</code> or load them by full path.</p>
+</section>

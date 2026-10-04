@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toolchain and Emulator - The Velo CE Primer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+<p>The Velo CE Primer</p>
+<h1><small>Chapter 2</small>Toolchain and Emulator</h1>
+<nav aria-label="Chapters">
+<ol>
+<li><a href="index.html">Cover</a></li>
+<li><a href="1-velo.html">1. Meet the Velo</a></li>
+<li><a href="2-tools.html" aria-current="page">2. Tools</a></li>
+<li><a href="3-win32.html">3. Win32</a></li>
+<li><a href="4-layout.html">4. Layout</a></li>
+<li><a href="5-system.html">5. System</a></li>
+<li><a href="6-network.html">6. Network</a></li>
+<li><a href="7-bluesky.html">7. Bluesky</a></li>
+<li><a href="8-appstore.html">8. App Store</a></li>
+<li><a href="9-reference.html">9. Reference</a></li>
+</ol>
+</nav>
+</header>
+<main>
+<section>
+<h2>Install</h2>
+<p>velo-toolchain is a CMake toolchain that compiles C with clang and links with lld. A Python script, <code>tools/mkpe.py</code>, then turns the linked ELF file into a Windows CE executable. Apple's clang can't target MIPS, so you need Homebrew's LLVM:</p>
+<pre><code><span class="function">brew</span> install llvm lld cmake</code></pre>
+<p>On Debian or Ubuntu, <code>sudo apt install clang lld llvm cmake</code> does the same. Then point an environment variable at your checkout, so your own projects can find it:</p>
+<pre><code><span class="function">export</span> VELO_TOOLCHAIN=~/Development/velo-toolchain</code></pre>
+<p>Build velo-emu by following its <code>README.md</code>, and put the ROMs where it says. Set <code>VELO_EMU</code> to that checkout too. For CE 2.0, <code>VELO_CE2_ROM</code> is the CE 2.0 <code>nk.bin</code> (or velo-emu's merged image) and <code>VELO_CE2_SYSTEM_CARD</code> its system card image, if the ROM isn't merged.</p>
+</section>
+
+<section>
+<h2>Your First Program</h2>
+<p>Make a folder with two files. The program shows a message box and exits:</p>
+<pre data-file="hello/hello.c"><code><span class="preprocessor">#include</span> &lt;windows.h&gt;
+
+<span class="type">int</span> <span class="constant">WINAPI</span> <span class="function">WinMain</span>(<span class="type">HINSTANCE</span> instance, <span class="type">HINSTANCE</span> previous, <span class="type">LPWSTR</span> command_line, <span class="type">int</span> show) {
+    <span class="function">MessageBoxW</span>(<span class="number">0</span>, <span class="string">L"Hello from velo-toolchain!"</span>, <span class="string">L"Hello"</span>, <span class="constant">MB_OK</span> | <span class="constant">MB_ICONINFORMATION</span>);
+    <span class="keyword">return</span> <span class="number">0</span>;
+}</code></pre>
+<pre data-file="hello/CMakeLists.txt"><code><span class="function">cmake_minimum_required</span>(<span class="keyword">VERSION</span> 3.20)
+<span class="function">project</span>(hello C)
+
+<span class="function">include</span>(VeloCE)
+
+<span class="function">velo_add_executable</span>(hello hello.c)</code></pre>
+<p>Configure and build it once for each version of CE:</p>
+<pre><code><span class="function">cmake</span> <span class="keyword">-S</span> . <span class="keyword">-B</span> build/ce1 <span class="keyword">-DCMAKE_TOOLCHAIN_FILE=</span><span class="constant">$VELO_TOOLCHAIN</span>/cmake/velo-ce.cmake <span class="keyword">-DVELO_CE_VERSION=</span>1
+<span class="function">cmake</span> <span class="keyword">--build</span> build/ce1
+<span class="function">cmake</span> <span class="keyword">-S</span> . <span class="keyword">-B</span> build/ce2 <span class="keyword">-DCMAKE_TOOLCHAIN_FILE=</span><span class="constant">$VELO_TOOLCHAIN</span>/cmake/velo-ce.cmake <span class="keyword">-DVELO_CE_VERSION=</span>2
+<span class="function">cmake</span> <span class="keyword">--build</span> build/ce2</code></pre>
+<p>You get <code>build/ce1/hello.exe</code> and <code>build/ce2/hello.exe</code>, each about 3.5 KB, with a <code>hello.elf</code> beside it that holds the symbols for debugging. A <code>Makefile</code> with a target that runs those four lines saves typing: the toolchain's own <code>Makefile</code> does exactly that for its examples.</p>
+<h3>What <code>WINAPI WinMain</code> means</h3>
+<p><code>WinMain</code> is where a Windows program starts. CE passes it the program's <em>instance</em> handle (needed to load resources and create windows), an unused handle, the command line without the program's name, and how to show the first window. Chapter 3 explains the rest.</p>
+<h3>Adding to a project</h3>
+<figure>
+<table>
+<thead><tr><th>In <code>CMakeLists.txt</code></th><th>Does</th></tr></thead>
+<tbody>
+<tr><td><code>velo_add_executable(app a.c b.c)</code></td><td>Builds <code>app.exe</code>, starting at <code>WinMain</code>.</td></tr>
+<tr><td><code>ICON app.ico</code></td><td>Gives it an icon (resource 1), shown in the file manager and on shortcuts.</td></tr>
+<tr><td><code>RESOURCES app.rc resource.h</code></td><td>Compiles menus, dialogs, strings, bitmaps and accelerators from a <code>.rc</code> file with <code>llvm-rc</code>. Other files listed are dependencies.</td></tr>
+<tr><td><code>target_link_libraries(app PRIVATE velo::commctrl)</code></td><td>Links a ROM DLL: <code>commctrl</code> for the command bar and common controls, <code>winsock</code> for networking. <code>coredll</code> is always linked.</td></tr>
+<tr><td><code>velo_add_library(lib lib.c EXPORTS Name)</code></td><td>Builds a DLL. See <code>examples/dll</code>.</td></tr>
+<tr><td><code>-DCMAKE_BUILD_TYPE=Debug</code></td><td>Builds without optimisation and with debug information, for stepping through in GDB. The default is <code>MinSizeRel</code>.</td></tr>
+</tbody>
+</table>
+</figure>
+</section>
+
+<section>
+<h2>Run It in the Emulator</h2>
+<p>There are three ways to get a program into velo-emu, from simplest to quickest to repeat.</p>
+<h3>On a card</h3>
+<p>velo-emu comes with a script that makes a PC Card image from files and folders:</p>
+<pre><code><span class="function">mkdir</span> <span class="keyword">-p</span> card/HELLO
+<span class="function">cp</span> build/ce1/hello.exe card/HELLO/
+<span class="constant">$VELO_EMU</span>/tools/mkcard.sh hello.img 16 card/HELLO</code></pre>
+<p>In velo-emu, insert <code>hello.img</code> from the Card menu, then choose Start &gt; Run and type <code>\PC Card\HELLO\hello.exe</code> (<code>\Storage Card\...</code> on CE 2.0). This is also how you'd carry a program to a real Velo: copy it onto a CompactFlash card in a PC Card adapter.</p>
+<h3>With the debug manager</h3>
+<p><code>debugmgr</code> is a small agent that runs on the emulated Velo and copies and starts programs for you, in milliseconds. Make a saved emulator state with it already running, once:</p>
+<pre><code><span class="function">make</span> debug-state</code></pre>
+<p>That needs the settings listed under "Examples and tests" in the toolchain's <code>README.md</code>. Then start the emulator from that state with an agent socket, and drive it with <code>tools/velo-debug</code>:</p>
+<pre><code><span class="constant">$VELO_EMU</span>/headless <span class="constant">$VELO_EMU</span>/rom/nk.bin <span class="keyword">--load=</span>build/debugmgr/ce1/debug-desktop.state <span class="keyword">--agent=</span>agent.sock <span class="keyword">--seconds=</span>100000 &amp;
+<span class="function">export</span> VELO_AGENT=agent.sock
+<span class="function">tools/velo-debug</span> put build/ce1/hello.exe /Windows/hello.exe
+<span class="function">tools/velo-debug</span> run /Windows/hello.exe</code></pre>
+<p><code>velo-debug</code> also has <code>get</code>, <code>ls</code>, <code>rm</code>, <code>mkdir</code>, <code>mv</code> and <code>kill</code>. <code>--seconds</code> is emulated time, which passes much faster than real time while the Velo is idle, so give it plenty and stop the emulator with <kbd>Ctrl</kbd>+<kbd>C</kbd> when you're done.</p>
+<h3>In the debugger</h3>
+<p>Each executable gets a GDB script beside its <code>.elf</code> that loads the symbols and defines <code>velo-load</code>, which uploads the program through debugmgr. <code>tools/velo-emulator</code> starts velo-emu from the debug state with its GDB server listening on port 2001 (CE 1.0) or 2002 (CE 2.0):</p>
+<pre><code><span class="function">tools/velo-emulator</span> <span class="keyword">--ce</span> 1 &amp;
+<span class="function">gdb</span> <span class="keyword">-x</span> build/ce1/hello.elf.gdb <span class="keyword">-ex</span> <span class="string">"target extended-remote :2001"</span> <span class="keyword">-ex</span> <span class="string">"set target-wide-charset UTF-16LE"</span> <span class="keyword">-ex</span> velo-load <span class="keyword">-ex</span> <span class="string">"break WinMain"</span> <span class="keyword">-ex</span> run</code></pre>
+<p>Breakpoints, stepping, <code>bt</code> and printing variables all work, and <code>WCHAR</code> strings print as text. Build with <code>-DCMAKE_BUILD_TYPE=Debug</code> first, or the optimiser will have rearranged everything. On macOS, Homebrew's <code>gdb</code> understands MIPS. On Linux, use <code>gdb-multiarch</code>.</p>
+<h3>In VS Code</h3>
+<p>Copy <code>vscode/launch.json</code> and <code>vscode/tasks.json</code> from the toolchain into your project's <code>.vscode</code> folder, install the C/C++ and CMake Tools extensions, and configure the project with the toolchain file and <code>CMAKE_BUILD_TYPE=Debug</code>. A <code>CMakePresets.json</code> keeps those settings in one place:</p>
+<pre data-file="CMakePresets.json"><code>{
+    <span class="type">"version"</span>: <span class="number">3</span>,
+    <span class="type">"configurePresets"</span>: [
+        {
+            <span class="type">"name"</span>: <span class="string">"ce1-debug"</span>,
+            <span class="type">"binaryDir"</span>: <span class="string">"${sourceDir}/build/debug-ce1"</span>,
+            <span class="type">"toolchainFile"</span>: <span class="string">"$env{VELO_TOOLCHAIN}/cmake/velo-ce.cmake"</span>,
+            <span class="type">"cacheVariables"</span>: {
+                <span class="type">"CMAKE_BUILD_TYPE"</span>: <span class="string">"Debug"</span>,
+                <span class="type">"VELO_CE_VERSION"</span>: <span class="string">"1"</span>
+            }
+        }
+    ]
+}</code></pre>
+<p>Copy <code>vscode/settings.json</code> too: it makes IntelliSense use the include paths from CMake Tools, so it sees the toolchain's headers and shows their documentation when you hover over a function. VS Code needs <code>VELO_TOOLCHAIN</code>, <code>VELO_EMU</code> and, for CE 2.0, <code>VELO_CE2_ROM</code> in its environment. Press <kbd>F5</kbd> and it starts the emulator if needed, uploads the program, runs it, and stops at your breakpoints. Only the <code>.exe</code> is uploaded: copy any DLL it loads with <code>remote put</code> in the debug console.</p>
+</section>
+
+<section>
+<h2>Debug Output and Crashes</h2>
+<p><code>OutputDebugStringW(L"got here\r\n")</code> is your <code>printf</code>. Its output appears in GDB, in the windowed emulator under Machine &gt; Show Debug Output, and on <code>headless</code>'s standard error with <code>--debug-output</code>.</p>
+<p>When a program crashes, CE prints the registers, with addresses that mean nothing on their own. <code>tools/velo-symbolize</code> turns them into functions and line numbers:</p>
+<pre><code><span class="constant">$VELO_EMU</span>/headless <span class="constant">$VELO_EMU</span>/rom/nk.bin ... <span class="keyword">--debug-output</span> 2&gt;&amp;1 | <span class="function">tools/velo-symbolize</span> build/ce1/app.exe
+<span class="function">debug</span>: AKY=00000003 PC=000110bc [deep crash.c:7] RA=000110ac [deep crash.c:7] BVA=00000000</code></pre>
+<p><code>PC</code> is where it crashed. <code>BVA</code>, the bad address, is <code>00000000</code> here: a null pointer. Under GDB, a crash stops the program at the faulting line, with the stack intact.</p>
+<aside>
+<strong>Velo Tip</strong>
+<p>A crash on CE usually just closes your program without a word. If a program vanishes, run it under GDB or with <code>--debug-output</code> before guessing.</p>
+</aside>
+</section>
+
+<section>
+<h2>Automated Screenshots</h2>
+<p><code>tests/emulator.py</code> builds a card from a build folder, starts each program in velo-emu from Start &gt; Run, and saves a screenshot. Your own project can use it as this primer does, from a few lines of Python:</p>
+<pre data-file="docs/primer/examples/screenshots.py"><code><span class="keyword">import</span> os
+<span class="keyword">import</span> sys
+
+sys.path.<span class="function">insert</span>(<span class="number">0</span>, os.path.<span class="function">join</span>(os.path.<span class="function">dirname</span>(os.path.<span class="function">abspath</span>(__file__)), <span class="string">".."</span>, <span class="string">".."</span>, <span class="string">".."</span>, <span class="string">"tests"</span>))
+
+<span class="keyword">import</span> emulator
+
+emulator.EXTRA_EVENTS = {<span class="string">"fetch.exe"</span>: [<span class="string">"--net=1"</span>, <span class="string">"--realtime"</span>], <span class="string">"window.exe"</span>: [<span class="string">"--tap={at}:200:120"</span>]}
+emulator.ARGUMENTS = {<span class="string">"fetch.exe"</span>: <span class="string">"http://example.com/"</span>}
+
+<span class="keyword">if</span> __name__ == <span class="string">"__main__"</span>:
+    emulator.<span class="function">main</span>(<span class="string">"Run each primer example in velo-emu and screenshot it"</span>)</code></pre>
+<p><code>ARGUMENTS</code> gives a program its command line, and <code>EXTRA_EVENTS</code> adds options to the emulator's command line for one program: here, a network connection in real time for the <code>fetch</code> example. Run it with a build folder, <code>--ce 1</code> or <code>--ce 2</code>, and <code>--output</code> for where the pictures go.</p>
+</section>
+</main>
+<footer>
+<ul>
+<li><a href="1-velo.html" rel="prev">&lt; 1. Meet the Velo</a></li>
+<li><a href="3-win32.html" rel="next">3. Win32 &gt;</a></li>
+</ul>
+<p>The Velo CE Primer, for velo-toolchain. Screenshots are from velo-emu.</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<section>
+<h2>The Goal</h2>
+<p>A program that lists software from the web, downloads what the user picks, installs it with a Start menu shortcut, and removes it again later. The interface is recipe 2 from chapter 4. The network part is chapter 6. This chapter is the rest: what "installing" means on a Velo.</p>
+<figure>
+<figure><img src="screenshots/ce1/appstore.png" alt="The appstore example on CE 1.0" width="976" height="496"><figcaption>CE 1.0</figcaption></figure>
+<figure><img src="screenshots/ce2/appstore.png" alt="The appstore example on CE 2.0" width="976" height="496"><figcaption>CE 2.0</figcaption></figure>
+<figcaption>The <code>appstore</code> example's interface, with a pretend download.</figcaption>
+</figure>
+<p>There's a complete on-device installer to learn from: velo-apps' Velo Software Library (<code>installer/library.c</code>), which installs from a card catalogue with dependencies, shared files, shortcuts, registry entries and uninstalling, on both CE versions.</p>
+</section>
+
+<section>
+<h2>No Installer to Lean On</h2>
+<p>Later versions of CE install <code>.cab</code> packages with <code>wceload.exe</code>. Neither Velo ROM has it. In the 1990s, Velo software was installed from a PC over the desktop connection. So your store does the installing itself, which turns out to be simple: copy files, make a shortcut, write some registry values. Distribute programs as plain files, not CABs.</p>
+</section>
+
+<section>
+<h2>The Catalogue</h2>
+<p>Keep it easy to parse on the Velo. A tab-separated text file, one app per line, needs no JSON parser and downloads in a second:</p>
+<pre data-file="catalogue.txt"><code>bluesky	Bluesky	1.0	98304	BlueskyFrame	http://example.com/velo/ce1/bluesky.exe	Read and post to Bluesky through a web proxy.
+clock	Pocket Clock	2.1	18432	ClockFrame	http://example.com/velo/ce1/clock.exe	A big clock with alarms.</code></pre>
+<p>The fields are an ID, the name, version, size in bytes, the program's window class (so the store can tell if it's running), the download address and a description. Serve one catalogue per CE version, since every program needs a CE 1.0 and a CE 2.0 build. The store knows which it is at compile time:</p>
+<pre><code>#if _WIN32_WCE >= 200
+#define CATALOGUE_URL "http://example.com/velo/ce2/catalogue.txt"
+#else
+#define CATALOGUE_URL "http://example.com/velo/ce1/catalogue.txt"
+#endif</code></pre>
+<p>Add a CRC-32 or a hash of each file to the line, so a download that was cut short or garbled is caught before it's installed.</p>
+</section>
+
+<section>
+<h2>Downloading</h2>
+<p>Download like <code>fetch</code>, but instead of keeping the body in memory, write each chunk to a file as it arrives, and keep a running checksum:</p>
+<pre><code>static DWORD crc32_update(DWORD crc, const BYTE *data, DWORD length) {
+    crc = ~crc;
+    while (length--) {
+        crc ^= *data++;
+        for (int bit = 0; bit &lt; 8; bit++) {
+            crc = (crc >> 1) ^ (0xEDB88320 &amp; (0 - (crc &amp; 1)));
+        }
+    }
+    return ~crc;
+}</code></pre>
+<p>Start with a CRC of 0 and pass each chunk through. Write to a temporary name such as <code>\Program Files\Bluesky\bluesky.exe.part</code>, and only move it into place when the size and checksum match. Then a failed download never leaves a broken program behind. Report progress to the interface with <code>PostMessageW</code>, as chapter 6 does.</p>
+<h3>Is there room?</h3>
+<p>Check before you start. <code>GetStoreInformation</code> fills a <code>STORE_INFORMATION</code> with the object store's size and free space:</p>
+<pre data-file="docs/primer/examples/appstore/appstore.c"><code>@function docs/primer/examples/appstore/appstore.c update_status</code></pre>
+<p>Storage and program memory share the same RAM, so leave a margin. A store that fills the object store leaves the Velo unable to run anything, including itself.</p>
+</section>
+
+<section>
+<h2>Installing</h2>
+<p>An install is three steps. Each is something the user could undo by hand in the file manager, which is how it should be.</p>
+<ol>
+<li><strong>Files.</strong> Programs go in their own folder in <code>\Program Files</code>. DLLs that other programs load go in <code>\Windows</code>, because CE 1.0's <code>LoadLibraryW</code> doesn't look in the program's own folder.</li>
+<li><strong>A shortcut</strong> in <code>\Windows\Programs</code>, so it's on Start &gt; Programs. <code>\Windows\Desktop</code> puts one on the desktop as well.</li>
+<li><strong>A record</strong> in the registry of what was installed, for updating and removing.</li>
+</ol>
+<pre><code>static BOOL install_program(LPCWSTR name, LPCWSTR downloaded) {
+    WCHAR folder[MAX_PATH];
+    WCHAR program[MAX_PATH];
+    WCHAR shortcut[MAX_PATH];
+    wsprintfW(folder, L"\\Program Files\\%s", name);
+    wsprintfW(program, L"%s\\%s.exe", folder, name);
+    wsprintfW(shortcut, L"\\Windows\\Programs\\%s.lnk", name);
+    CreateDirectoryW(folder, NULL);
+    DeleteFileW(program);
+    if (!MoveFileW(downloaded, program)) {
+        return FALSE;
+    }
+    return SHCreateShortcut(shortcut, program) != 0;
+}
+
+static void record_install(LPCWSTR id, LPCWSTR version, LPCWSTR folder, LPCWSTR shortcut) {
+    HKEY key;
+    DWORD disposition;
+    WCHAR path[96];
+    wsprintfW(path, L"Software\\VeloStore\\Apps\\%s", id);
+    if (RegCreateKeyExW(HKEY_LOCAL_MACHINE, path, 0, NULL, 0, KEY_ALL_ACCESS, NULL, &amp;key, &amp;disposition) != ERROR_SUCCESS) {
+        return;
+    }
+    RegSetValueExW(key, L"Version", 0, REG_SZ, (const BYTE *)version, (wcslen(version) + 1) * sizeof(WCHAR));
+    RegSetValueExW(key, L"Folder", 0, REG_SZ, (const BYTE *)folder, (wcslen(folder) + 1) * sizeof(WCHAR));
+    RegSetValueExW(key, L"Shortcut", 0, REG_SZ, (const BYTE *)shortcut, (wcslen(shortcut) + 1) * sizeof(WCHAR));
+    RegCloseKey(key);
+}</code></pre>
+<p><code>SHCreateShortcut</code> works on both ROMs, and returns nonzero when it succeeds. A CE shortcut is just a small text file, the target's length, <code>#</code>, then the target in quotes: <code>SHCreateShortcut(L"\\Windows\\Desktop\\Calc.lnk", L"\\Windows\\calc.exe")</code> writes <code>19#"\Windows\calc.exe"</code>. You can write one with <code>WriteFile</code> if you prefer.</p>
+<aside>
+<strong>Velo Tip</strong>
+<p>Some old programs refuse to start unless <code>HKEY_LOCAL_MACHINE\Software\Apps\&lt;name&gt;</code> exists, because the desktop installer always created it. If you package one of those, create the key too. Keep your own records under your own key.</p>
+</aside>
+<h3>Starting it</h3>
+<p>Offer to run the program once it's installed, with <code>CreateProcessW</code> and its full path (chapter 5). Programs started this way have no current directory either, so they can't assume their files are next to them on CE 1.0.</p>
+</section>
+
+<section>
+<h2>Updating and Removing</h2>
+<p>Compare the installed <code>Version</code> with the catalogue's to show updates. Close a program before replacing or deleting it: CE loads a program's code from its file as it runs, and a loaded DLL or font can't be deleted at all. Look for its window class with <code>FindWindowW</code>, and ask it to close by posting <code>WM_CLOSE</code>, or ask the user to.</p>
+<p>Removing reverses the install: delete the files in the recorded folder (<code>FindFirstFileW</code> on <code>folder\*</code>), the folder (<code>RemoveDirectoryW</code>), the shortcut, then the registry key. If a file won't delete, <code>GetLastError</code> says why. velo-apps' library renames such a file to <code>.del</code>, remembers it, and deletes it next time it runs, after a soft reset has unloaded it.</p>
+<p>Shared DLLs in <code>\Windows</code> need a reference count: keep a count per file in your registry key, and only delete the file when the last program using it is removed. Never delete a file in <code>\Windows</code> that you didn't put there.</p>
+</section>
+
+<section>
+<h2>Trust</h2>
+<p>Downloads are as trustworthy as the proxy and the server. The Velo can't check a TLS certificate, so the proxy does that, and the link from the Velo to the proxy is in the clear. A checksum in the catalogue catches damage, not tampering: someone who can change the file can change the catalogue. For a hobby store run from your own PC, that's fine. Say so in the store's About box, and don't present it as more.</p>
+</section>

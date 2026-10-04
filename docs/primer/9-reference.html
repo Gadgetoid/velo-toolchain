@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference - The Velo CE Primer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+<p>The Velo CE Primer</p>
+<h1><small>Chapter 9</small>Reference</h1>
+<nav aria-label="Chapters">
+<ol>
+<li><a href="index.html">Cover</a></li>
+<li><a href="1-velo.html">1. Meet the Velo</a></li>
+<li><a href="2-tools.html">2. Tools</a></li>
+<li><a href="3-win32.html">3. Win32</a></li>
+<li><a href="4-layout.html">4. Layout</a></li>
+<li><a href="5-system.html">5. System</a></li>
+<li><a href="6-network.html">6. Network</a></li>
+<li><a href="7-bluesky.html">7. Bluesky</a></li>
+<li><a href="8-appstore.html">8. App Store</a></li>
+<li><a href="9-reference.html" aria-current="page">9. Reference</a></li>
+</ol>
+</nav>
+</header>
+<main>
+<section>
+<h2>What Each ROM Has</h2>
+<p>A selection of functions people reach for, checked against the export lists in <code>exports/</code>. A blank cell means the ROM doesn't export it, so a program that calls it won't compile for that version.</p>
+<figure>
+<table>
+<thead><tr><th>Function</th><th>CE 1.0</th><th>CE 2.0</th></tr></thead>
+<tbody>
+<tr><th colspan="3" scope="rowgroup">Text</th></tr>
+<tr><td><code>wsprintfW</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>wcslen</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>wcscpy</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>wcscmp</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>_wcsicmp</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>lstrcmpW</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>lstrcmpiW</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>CharUpperW</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>CharLowerW</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>towlower</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>MultiByteToWideChar</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>WideCharToMultiByte</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>FormatMessageW</code></td><td></td><td>Yes</td></tr>
+<tr><th colspan="3" scope="rowgroup">Dialogs</th></tr>
+<tr><td><code>DialogBoxIndirectParamW</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>CreateDialogIndirectParamW</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>GetDlgItem</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>SetDlgItemTextW</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>GetDlgItemTextW</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>SendDlgItemMessageW</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>SetDlgItemInt</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>CheckRadioButton</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>GetOpenFileNameW</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>GetSaveFileNameW</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><th colspan="3" scope="rowgroup">Drawing</th></tr>
+<tr><td><code>CreatePen</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>CreatePenIndirect</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>CreateSolidBrush</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>CreatePatternBrush</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>CreateDIBSection</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>StretchBlt</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>TransparentImage</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>DrawFrameControl</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>CreateRectRgn</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>SetROP2</code></td><td></td><td>Yes</td></tr>
+<tr><th colspan="3" scope="rowgroup">Windows and input</th></tr>
+<tr><td><code>LoadCursorW</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>SetCursor</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>RegisterWindowMessageW</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>GetClassLongW</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>DrawMenuBar</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>PlaySoundW</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>sndPlaySoundW</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>MessageBeep</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><th colspan="3" scope="rowgroup">Files and system</th></tr>
+<tr><td><code>GetModuleFileNameW</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>GetTempPathW</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>GetDiskFreeSpaceExW</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>GetStoreInformation</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>CopyFileW</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>SHCreateShortcut</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>ShellExecuteEx</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>GetVersionEx</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>GetSystemPowerStatusEx</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>QueryPerformanceCounter</code></td><td></td><td>Yes</td></tr>
+<tr><th colspan="3" scope="rowgroup">Processes and threads</th></tr>
+<tr><td><code>CreateProcessW</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>OpenProcess</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>GetExitCodeProcess</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>CreateMutexW</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>CreateEventW</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>CreateThread</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>TerminateThread</code></td><td></td><td>Yes</td></tr>
+<tr><th colspan="3" scope="rowgroup">Scheduling and databases</th></tr>
+<tr><td><code>CeRunAppAtTime</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>PegRunAppAtTime</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>CeRunAppAtEvent</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>CeCreateDatabase</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>CeOpenDatabase</code></td><td></td><td>Yes</td></tr>
+<tr><td><code>PegCreateDatabase</code></td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>PegOpenDatabase</code></td><td>Yes</td><td>Yes</td></tr>
+</tbody>
+</table>
+<figcaption>CE 1.0 names the database and notification functions <code>Peg</code> where CE 2.0 says <code>Ce</code>: <code>PegOpenDatabase</code>, <code>PegRunAppAtTime</code>. CE 2.0 has both.</figcaption>
+</figure>
+<p>Microsoft's SDK headers covered some gaps with macros: <code>DialogBoxParamW</code>, and on CE 1.0 <code>SetDlgItemTextW</code>, <code>GetDlgItemTextW</code> and <code>SendDlgItemMessageW</code>, are built from the functions that are exported. Some functions are exported without the <code>W</code>, such as <code>GetVersionEx</code> and <code>FindResource</code>, though they take wide strings. The toolchain's headers accept either name.</p>
+<h3>What the headers declare</h3>
+<p>The toolchain's headers are CeGCC's w32api, patched so constants, structures and signatures match Microsoft's CE 1.0 and 2.0 SDKs. <code>windows.h</code> gives the API as the target version has it, with the C runtime's wide string functions and the object store databases. <code>commctrl.h</code>, <code>commdlg.h</code>, <code>winsock.h</code> and the others add their parts. A function the target ROM doesn't export is marked unavailable, so using it is a compile error that names the version.</p>
+<p>Not covered: COM and OLE, telephony, drivers and kernel internals, the address book and mail APIs, and ANSI (<code>A</code>) structures. The toolchain's <code>README.md</code> has the full list. For those, check the export list and declare what you need yourself, with <code>WINAPI</code>.</p>
+</section>
+
+<section>
+<h2>Gotchas</h2>
+<p>Everything in this book that's different from what you'd expect, in one place.</p>
+<figure>
+<table>
+<thead><tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>Greys come out black on CE 1.0</td><td>CE 1.0 uses the low two bits of the red value as the grey</td><td>Use <code>RGB(0,0,0)</code>, <code>RGB(85,85,85)</code>, <code>RGB(170,170,170)</code>, <code>RGB(255,255,255)</code> or system colours</td></tr>
+<tr><td>Controls inside a group box or tab control are invisible</td><td>Siblings stack in creation order, first on top, and these paint their insides</td><td>Create the group box or tab control after its contents</td></tr>
+<tr><td>"'<em>Function</em>' is unavailable: not in Windows CE 1.0"</td><td>That ROM doesn't export it</td><td>Use an alternative, or put it behind <code>#if _WIN32_WCE >= 200</code></td></tr>
+<tr><td>Program crashes reading a struct from a buffer</td><td>Unaligned access on MIPS</td><td>Copy with <code>memcpy</code> or read bytes</td></tr>
+<tr><td>Program can't find its own files</td><td>No current directory, and no <code>GetModuleFileNameW</code> on CE 1.0</td><td>Full paths, a known install folder, or the folder on the command line</td></tr>
+<tr><td><code>LoadLibraryW(L"mine.dll")</code> fails on CE 1.0</td><td>It doesn't search the program's folder</td><td>Put DLLs in <code>\Windows</code> or use a full path</td></tr>
+<tr><td>The interface freezes during a download</td><td>Blocking socket calls on the interface thread</td><td>A worker thread, results by <code>PostMessageW</code></td></tr>
+<tr><td>Tap coordinates are huge numbers</td><td><code>LOWORD</code> of a negative coordinate</td><td>Cast through <code>short</code></td></tr>
+<tr><td>Nothing happens after <code>LB_SETCURSEL</code> or similar</td><td>Notifications only follow what the user does</td><td>Update dependent state yourself</td></tr>
+<tr><td>Waiting for a started program returns at once on CE 1.0</td><td>A new process's handle reports finished there</td><td>Poll for its window instead</td></tr>
+<tr><td>Italic text looks broken on CE 1.0, Courier New isn't fixed-pitch on CE 2.0</td><td>The ROMs' fonts</td><td>Use bold and size for emphasis</td></tr>
+<tr><td>HTTPS fails</td><td>No modern TLS on the Velo</td><td>Plain HTTP through a proxy</td></tr>
+<tr><td><code>SetEvent</code> doesn't link</td><td>CE has no such export: it's an inline function over <code>EventModify</code></td><td>Use the toolchain's <code>windows.h</code></td></tr>
+<tr><td>Dividing by zero gives a strange number</td><td>Integer division doesn't trap</td><td>Check divisors</td></tr>
+<tr><td>Program closes silently</td><td>It crashed</td><td>Run it under GDB, or with <code>--debug-output</code> and <code>velo-symbolize</code></td></tr>
+</tbody>
+</table>
+</figure>
+</section>
+
+<section>
+<h2>Notification Codes</h2>
+<p>How each control tells its parent something happened.</p>
+<figure>
+<table>
+<thead><tr><th>Control</th><th>Message</th><th>Codes</th></tr></thead>
+<tbody>
+<tr><td>Button, check box, radio button</td><td><code>WM_COMMAND</code></td><td><code>BN_CLICKED</code>. Read a check with <code>BM_GETCHECK</code>.</td></tr>
+<tr><td>Edit</td><td><code>WM_COMMAND</code></td><td><code>EN_CHANGE</code> after each edit</td></tr>
+<tr><td>List box</td><td><code>WM_COMMAND</code></td><td><code>LBN_SELCHANGE</code>, <code>LBN_DBLCLK</code>, both only with <code>LBS_NOTIFY</code></td></tr>
+<tr><td>Combo box</td><td><code>WM_COMMAND</code></td><td><code>CBN_SELCHANGE</code></td></tr>
+<tr><td>Menu, accelerator, command bar button</td><td><code>WM_COMMAND</code></td><td>The command ID in <code>LOWORD(wParam)</code></td></tr>
+<tr><td>List view</td><td><code>WM_NOTIFY</code></td><td><code>LVN_ITEMCHANGED</code>, <code>NM_CLICK</code>, <code>NM_DBLCLK</code>, and <code>LVN_ITEMACTIVATE</code> on CE 2.0</td></tr>
+<tr><td>Tree view</td><td><code>WM_NOTIFY</code></td><td><code>TVN_SELCHANGEDW</code></td></tr>
+<tr><td>Tab control</td><td><code>WM_NOTIFY</code></td><td><code>TCN_SELCHANGE</code></td></tr>
+<tr><td>Trackbar</td><td><code>WM_HSCROLL</code></td><td>Its handle in <code>lParam</code></td></tr>
+<tr><td>Scroll bar on a window</td><td><code>WM_VSCROLL</code>, <code>WM_HSCROLL</code></td><td><code>SB_LINEUP</code>, <code>SB_PAGEDOWN</code>, <code>SB_THUMBTRACK</code> and the rest in <code>LOWORD(wParam)</code></td></tr>
+</tbody>
+</table>
+</figure>
+</section>
+
+<section>
+<h2>Glossary</h2>
+<dl>
+<dt>Accelerator</dt><dd>A shortcut key, mapped to a command ID by an <code>ACCELERATORS</code> resource.</dd>
+<dt>Command bar</dt><dd>CE's combined menu bar, toolbar and title bar, at the top of a program's window.</dd>
+<dt>Common controls</dt><dd>The controls in <code>commctrl.dll</code>: list view, tree view, tabs, progress bar, trackbar, up-down, toolbar, status bar. Call <code>InitCommonControls</code> before using them.</dd>
+<dt>Device context (DC)</dt><dd>A drawing surface with its current font, pen, brush and colours. <code>HDC</code>.</dd>
+<dt>Dialog units</dt><dd>The coordinates in dialog resources, which scale with the dialog's font.</dd>
+<dt>GDI</dt><dd>The drawing part of Windows: device contexts, fonts, pens, brushes and bitmaps.</dd>
+<dt>Handle</dt><dd>An opaque value naming something the system owns: <code>HWND</code>, <code>HFONT</code>, <code>HANDLE</code>.</dd>
+<dt>Instance</dt><dd>A loaded program or DLL, <code>HINSTANCE</code>. Needed to load its resources and register its window classes.</dd>
+<dt>Object store</dt><dd>CE's storage in battery-backed RAM: the file system, the registry and databases.</dd>
+<dt>Resource</dt><dd>Data built into the program from a <code>.rc</code> file: menus, dialogs, icons, bitmaps, strings, accelerators.</dd>
+<dt>Window class</dt><dd>A name plus a window procedure and defaults, registered with <code>RegisterClassW</code>, that windows are created from.</dd>
+<dt>Window procedure</dt><dd>The function that handles a window's messages.</dd>
+<dt><code>_WIN32_WCE</code></dt><dd>100 when building for CE 1.0, 200 for CE 2.0.</dd>
+</dl>
+</section>
+
+<section>
+<h2>Further Reading</h2>
+<ul>
+<li>Douglas Boling, <cite>Programming Microsoft Windows CE</cite> (Microsoft Press, 1998). The book on CE programming, written for CE 2.0.</li>
+<li>Charles Petzold, <cite>Programming Windows</cite>, fifth edition (Microsoft Press, 1998). Win32 in depth: messages, GDI, controls and dialogs.</li>
+<li>The toolchain's <code>README.md</code>, and <code>debugmgr/PROTOCOL.md</code> for the debug manager.</li>
+<li>velo-emu's <code>README.md</code>: the emulator, its proxy, headless options, GDB and the host mailbox.</li>
+<li>velo-bluesky's source, for everything in chapters 6 and 7 at full size.</li>
+<li>velo-apps' <code>installer/library.c</code>, for chapter 8 at full size.</li>
+<li>The AT Protocol at <a href="https://atproto.com/">atproto.com</a> and Bluesky's API reference at <a href="https://docs.bsky.app/">docs.bsky.app</a>.</li>
+</ul>
+</section>
+</main>
+<footer>
+<ul>
+<li><a href="8-appstore.html" rel="prev">&lt; 8. App Store</a></li>
+</ul>
+<p>The Velo CE Primer, for velo-toolchain. Screenshots are from velo-emu.</p>
+</footer>
+</body>
+</html>

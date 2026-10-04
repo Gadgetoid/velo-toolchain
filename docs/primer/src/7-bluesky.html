@@ -1,0 +1,100 @@
+<section>
+<h2>The Goal</h2>
+<p>A Bluesky client in the style of a 1997 mail reader: the timeline on the left, the selected post and its replies on the right, menus and buttons on the command bar. It exists: velo-bluesky, a sibling project built with this toolchain, is the worked example for this chapter. Read this chapter for the shape of the problem, and its source for the details.</p>
+<figure>
+<figure><img src="screenshots/velo-bluesky-ce1.png" alt="velo-bluesky on CE 1.0: a timeline of posts on the left, a post with a dithered picture on the right, a feed drop-down on the command bar" width="976" height="496"><figcaption>CE 1.0</figcaption></figure>
+<figure><img src="screenshots/velo-bluesky-ce2.png" alt="velo-bluesky on CE 2.0" width="976" height="496"><figcaption>CE 2.0</figcaption></figure>
+<figcaption>velo-bluesky against its fake test server. Recipe 1's layout, with custom-drawn panes and a picture from the proxy.</figcaption>
+</figure>
+</section>
+
+<section>
+<h2>The AT Protocol in Ten Minutes</h2>
+<p>Bluesky runs on the AT Protocol. For a client, it's an HTTP API with JSON in and out.</p>
+<dl>
+<dt>Handle</dt><dd>A user's name, like <code>alice.bsky.social</code>.</dd>
+<dt>DID</dt><dd>A user's permanent ID, like <code>did:plc:abc123</code>. Handles can change. DIDs don't.</dd>
+<dt>PDS</dt><dd>The server that holds a user's data and that the client talks to. For most users, <code>https://bsky.social</code> works as the entry point.</dd>
+<dt>XRPC</dt><dd>How calls are made: <code>GET</code> for queries and <code>POST</code> for procedures, to <code>/xrpc/</code> followed by the method's name, such as <code>app.bsky.feed.getTimeline</code>.</dd>
+<dt>Record</dt><dd>Something a user creates, like a post or a like, stored in their repository under a <em>collection</em> such as <code>app.bsky.feed.post</code>. Each has a URI (<code>at://did/collection/key</code>) and a content hash, the CID.</dd>
+</dl>
+<h3>Signing in</h3>
+<p>Send the handle and an <em>app password</em> (made in Bluesky's settings, so the user's real password never touches the Velo):</p>
+<pre><code>POST http://bsky.social/xrpc/com.atproto.server.createSession HTTP/1.0
+Host: bsky.social
+Content-Type: application/json
+Content-Length: 67
+
+{"identifier":"alice.bsky.social","password":"abcd-efgh-ijkl-mnop"}</code></pre>
+<p>The response has <code>did</code>, <code>handle</code>, a short-lived <code>accessJwt</code> and a long-lived <code>refreshJwt</code>. Send the access token on every other call as <code>Authorization: Bearer ...</code>. When a call fails with the error <code>ExpiredToken</code>, call <code>com.atproto.server.refreshSession</code> with the refresh token as the bearer, take the new pair, and repeat the call. Keep the refresh token and DID in the registry, and the next start can skip signing in.</p>
+<p>If the user signs in with their main password and has email confirmation turned on, <code>createSession</code> fails with <code>AuthFactorTokenRequired</code>. Ask for the emailed code and send it again with <code>"authFactorToken"</code>.</p>
+<h3>The calls you need</h3>
+<figure>
+<table>
+<thead><tr><th>Call</th><th>Method</th><th>Does</th></tr></thead>
+<tbody>
+<tr><td><code>com.atproto.server.createSession</code></td><td>POST</td><td>Sign in.</td></tr>
+<tr><td><code>com.atproto.server.refreshSession</code></td><td>POST</td><td>New tokens, with the refresh token.</td></tr>
+<tr><td><code>com.atproto.server.deleteSession</code></td><td>POST</td><td>Sign out, with the refresh token.</td></tr>
+<tr><td><code>app.bsky.feed.getTimeline?limit=10&amp;cursor=...</code></td><td>GET</td><td>The Following timeline, a page at a time.</td></tr>
+<tr><td><code>app.bsky.feed.getFeed?feed=at://...</code></td><td>GET</td><td>A custom feed.</td></tr>
+<tr><td><code>app.bsky.feed.getListFeed?list=at://...</code></td><td>GET</td><td>A list's posts.</td></tr>
+<tr><td><code>app.bsky.actor.getPreferences</code></td><td>GET</td><td>The user's saved and pinned feeds, among other things.</td></tr>
+<tr><td><code>app.bsky.feed.getPostThread?uri=at://...</code></td><td>GET</td><td>A post with its parents and replies.</td></tr>
+<tr><td><code>com.atproto.repo.createRecord</code></td><td>POST</td><td>Post, reply or like.</td></tr>
+<tr><td><code>com.atproto.repo.deleteRecord</code></td><td>POST</td><td>Delete a post, or unlike.</td></tr>
+</tbody>
+</table>
+</figure>
+<p>Pages come with a <code>cursor</code>: pass it back to get the next page. Each timeline item has a <code>post</code> with <code>uri</code>, <code>cid</code>, <code>author</code> (<code>handle</code>, <code>displayName</code>), <code>record</code> (<code>text</code>, <code>createdAt</code>), counts, and optionally an <code>embed</code> with pictures. A <code>reason</code> marks a repost, and <code>reply</code> gives the parent.</p>
+<h3>Posting</h3>
+<pre><code>{"repo":"did:plc:abc123","collection":"app.bsky.feed.post",
+ "record":{"$type":"app.bsky.feed.post","text":"Posted from a Velo","createdAt":"2026-10-04T12:00:00.000Z"}}</code></pre>
+<p>A reply adds <code>"reply":{"root":{"uri":...,"cid":...},"parent":{"uri":...,"cid":...}}</code> to the record. A like is a record in <code>app.bsky.feed.like</code> with <code>"subject":{"uri":...,"cid":...}</code>. Unliking deletes that record, by the key at the end of its URI. Text is UTF-8 and at most 300 characters (graphemes, strictly). <code>createdAt</code> comes from <code>GetSystemTime</code>, so it's only as right as the Velo's clock.</p>
+</section>
+
+<section>
+<h2>Building It in Layers</h2>
+<p>velo-bluesky is about 6,800 lines of C. Each layer only knows about the one below it, and each was tested on its own:</p>
+<figure>
+<table>
+<thead><tr><th>Layer</th><th>Files</th><th>Chapter</th></tr></thead>
+<tbody>
+<tr><td>Frame: command bar, status bar, panes, message loop</td><td><code>main.c</code></td><td>4</td></tr>
+<tr><td>What each command and each finished job does</td><td><code>app.c</code></td><td>3</td></tr>
+<tr><td>Custom-drawn timeline, post and picture views</td><td><code>feed_view.c</code>, <code>post_view.c</code>, <code>picture_view.c</code>, <code>draw.c</code></td><td>4</td></tr>
+<tr><td>Sign In, Compose, Settings and About dialogs</td><td><code>dialogs.c</code>, <code>bluesky.rc</code></td><td>4</td></tr>
+<tr><td>Network thread and job queue</td><td><code>worker.c</code></td><td>6</td></tr>
+<tr><td>XRPC calls, sessions, token refresh</td><td><code>atproto.c</code></td><td>7</td></tr>
+<tr><td>JSON to posts: only the fields shown</td><td><code>lexicon.c</code>, <code>model.h</code></td><td>7</td></tr>
+<tr><td>HTTP/1.0 through the proxy</td><td><code>http.c</code></td><td>6</td></tr>
+<tr><td>JSON, gzip and GIF decoders, pictures in 2 or 4 bits per pixel</td><td><code>json.c</code>, <code>inflate.c</code>, <code>gif.c</code>, <code>picture.c</code></td><td>7</td></tr>
+<tr><td>Strings, UTF-8, times, arenas, registry</td><td><code>text.c</code>, <code>memory.c</code>, <code>settings.c</code></td><td>5</td></tr>
+</tbody>
+</table>
+</figure>
+<p>The bottom layers (JSON, gzip, GIF, text) are plain C with no Windows calls, so they also compile on the Mac. velo-bluesky tests its gzip decoder and its JSON handling there with the address sanitizer. Do the same with yours: bugs are far quicker to find on the Mac than on a Velo.</p>
+</section>
+
+<section>
+<h2>Problems You'll Meet</h2>
+<h3>Size</h3>
+<p>A page of 10 timeline posts is about 60 KB of JSON. At 19200 baud, about 2 KB a second, that's half a minute. Asking for gzip brings it to about 9 KB, around 6 seconds, which makes a <code>gzip</code> decoder (<code>inflate.c</code>, under 400 lines) the most valuable code in the project. Ask for small pages, show posts as they're parsed rather than at the end, and cap what you download: velo-bluesky stops a thread at 15 replies or 64 KB.</p>
+<h3>Parsing</h3>
+<p>Parse JSON into a tree in an arena, take the few fields you show into your own structs, and free the tree. Don't keep the JSON. A small recursive-descent parser is enough, but limit its depth and check every length: the input comes from the network.</p>
+<h3>Pictures</h3>
+<p>velo-emu's proxy already turns pictures into small four-grey GIFs. Decode them into a <code>CreateDIBSection</code> bitmap at the screen's bit depth, a few rows at a time as data arrives, and draw them with <code>BitBlt</code>. Load pictures only for the post being read, and drop them when the user moves on.</p>
+<h3>Text</h3>
+<p>Posts are UTF-8 with emoji and punctuation the Velo can't draw. Convert to UTF-16, then replace or drop what the fonts don't have. Times arrive as ISO 8601 UTC strings: show them relative ("2h") or in local time.</p>
+<h3>Responsiveness</h3>
+<p>Everything slow is on the worker. The interface shows what it has, says what it's waiting for in the status bar, and stays usable. Every job can be cancelled, and results for a job the user has moved away from are ignored.</p>
+</section>
+
+<section>
+<h2>Try It</h2>
+<p>In a velo-bluesky checkout:</p>
+<pre><code>export VELO_TOOLCHAIN=~/Development/velo-toolchain
+make
+make cards</code></pre>
+<p><code>make cards</code> builds a PC Card image for each CE version. Its <code>README.md</code> covers the fake server, the command line and testing.</p>
+</section>

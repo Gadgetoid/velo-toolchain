@@ -1,0 +1,180 @@
+<section>
+<h2>Designing for 480 x 240</h2>
+<p>The Velo's screen is wide and short, and the taskbar takes a strip off the bottom. Every layout in this chapter follows the same rules, which are also how Microsoft's own CE programs look:</p>
+<ul>
+<li><strong>One full-screen main window, no title bar.</strong> Create it with <code>WS_VISIBLE | WS_CLIPCHILDREN</code> and <code>CW_USEDEFAULT</code> for the size, and CE fills the space above the taskbar. The taskbar button shows its title.</li>
+<li><strong>A command bar on top.</strong> It holds the menus, toolbar buttons, perhaps a drop-down list, and the close and help buttons. It replaces both the menu bar and the title bar.</li>
+<li><strong>A status bar underneath</strong>, when there's something to report.</li>
+<li><strong>Size everything in <code>WM_SIZE</code></strong>, from the client rectangle minus the command bar's and status bar's heights. Don't hard-code 480.</li>
+<li><strong>Use system colours</strong> (<code>GetSysColor</code>, <code>GetSysColorBrush</code>) for anything that should look like the rest of CE, and the four safe greys below for your own drawing.</li>
+<li><strong>Make tap targets at least 20 pixels tall.</strong> A stylus is precise, but a thumb on the move isn't.</li>
+</ul>
+<p>The examples below are in <code>docs/primer/examples</code>. Each one builds for both CE versions and starts in the state shown.</p>
+</section>
+
+<section>
+<h2>Recipe 1: Two Panes</h2>
+<p>A list on the left, the selected item on the right: the mail reader layout, and velo-bluesky's. Here the list is a <code>LISTBOX</code> and the reader a read-only multi-line <code>EDIT</code>, which wraps and scrolls text for free.</p>
+<figure>
+<figure><img src="screenshots/ce1/frame.png" alt="Notes example on CE 1.0: command bar with File and View menus, two toolbar buttons and a folder drop-down; a list of notes on the left, the selected note on the right, and a status bar" width="976" height="496"><figcaption>CE 1.0</figcaption></figure>
+<figure><img src="screenshots/ce2/frame.png" alt="Notes example on CE 2.0" width="976" height="496"><figcaption>CE 2.0</figcaption></figure>
+<figcaption><code>frame</code>: command bar with menus, buttons from CE's standard bitmap, a combo box and the help and close buttons.</figcaption>
+</figure>
+<h3>The command bar</h3>
+<pre data-file="docs/primer/examples/frame/frame.c"><code>@function docs/primer/examples/frame/frame.c create_command_bar</code></pre>
+<p>Things go on the bar left to right, in the order you add them:</p>
+<ol>
+<li><code>CommandBar_InsertMenubar</code> puts a menu resource on the bar. It counts as button 0.</li>
+<li><code>CommandBar_AddBitmap</code> adds button pictures. <code>HINST_COMMCTRL</code> and <code>IDB_STD_SMALL_COLOR</code> give CE's standard 15: <code>STD_FILENEW</code>, <code>STD_DELETE</code>, <code>STD_FIND</code> and the rest. For your own, pass your instance and a <code>BITMAP</code> resource with 16 x 16 pictures side by side.</li>
+<li><code>CommandBar_AddButtons</code> adds buttons, each a <code>TBBUTTON</code> with a picture index and the command ID it sends in <code>WM_COMMAND</code>. A <code>TBSTYLE_SEP</code> entry is a gap.</li>
+<li><code>CommandBar_InsertComboBox</code> puts a drop-down list before the given button position (4: after the menu, a gap and two buttons).</li>
+<li><code>CommandBar_AddAdornments</code> comes last and adds the close button, and the <kbd>?</kbd> button with <code>CMDBAR_HELP</code>, which sends <code>WM_HELP</code>.</li>
+</ol>
+<p>The menu is an ordinary resource. Text after <code>\t</code> is shown on the right, as a reminder of the shortcut, but it's the <code>ACCELERATORS</code> table that makes the key work:</p>
+<pre data-file="docs/primer/examples/frame/frame.rc"><code>@source docs/primer/examples/frame/frame.rc</code></pre>
+<h3>Laying out</h3>
+<pre data-file="docs/primer/examples/frame/frame.c"><code>@function docs/primer/examples/frame/frame.c layout</code></pre>
+<p>The status bar sizes itself when it gets <code>WM_SIZE</code>, so pass that on first and then measure it. <code>SB_SETPARTS</code> divides it into sections, given as the right edge of each, with -1 meaning "to the end".</p>
+<aside>
+<strong>Velo Tip</strong>
+<p>Setting the list box's selection with <code>LB_SETCURSEL</code> doesn't send <code>LBN_SELCHANGE</code>: notifications are for what the user does. After changing a control from code, update whatever depends on it yourself, as <code>show_note</code> does.</p>
+</aside>
+<p>For a pane divider the user can drag, leave a gap between the panes, paint it in <code>WM_PAINT</code>, and handle the stylus on the frame itself with <code>SetCapture</code>. velo-bluesky's <code>src/main.c</code> does this in about 30 lines.</p>
+</section>
+
+<section>
+<h2>Recipe 2: List and Details</h2>
+<p>A <em>list view</em> in report mode shows rows with columns, icons and full-row selection. The details on the right are drawn straight onto the frame window in <code>WM_PAINT</code>, with a progress bar and a button as child windows below them. This is the shape of an app store.</p>
+<figure>
+<figure><img src="screenshots/ce1/appstore.png" alt="App store example on CE 1.0: a list view with Name, Version and Size columns, details for Bluesky on the right with a progress bar and a disabled Install button, and a status bar showing free space" width="976" height="496"><figcaption>CE 1.0</figcaption></figure>
+<figure><img src="screenshots/ce2/appstore.png" alt="App store example on CE 2.0" width="976" height="496"><figcaption>CE 2.0</figcaption></figure>
+<figcaption><code>appstore</code>: it starts a pretend download at launch so the progress bar shows. Free space comes from <code>GetStoreInformation</code>.</figcaption>
+</figure>
+<h3>Filling a list view</h3>
+<pre data-file="docs/primer/examples/appstore/appstore.c"><code>@function docs/primer/examples/appstore/appstore.c add_column
+@function docs/primer/examples/appstore/appstore.c set_cell
+@function docs/primer/examples/appstore/appstore.c fill_list</code></pre>
+<p>Insert a row with <code>LVM_INSERTITEMW</code>, which sets the first column, then fill the others with <code>LVM_SETITEMTEXTW</code>. <code>lParam</code> on each row is yours: store an index or pointer there, because rows move if the list is sorted. Icons come from an <em>image list</em> made with <code>ImageList_Create</code>.</p>
+<h3>Hearing about selection</h3>
+<p>Common controls report through <code>WM_NOTIFY</code>. The <code>NMHDR</code> at the start says which control and what happened. For list views it's the start of an <code>NMLISTVIEW</code>:</p>
+<pre data-file="docs/primer/examples/appstore/appstore.c"><code>@between docs/primer/examples/appstore/appstore.c /case WM_NOTIFY/ /^    }$/</code></pre>
+<p><code>LVN_ITEMCHANGED</code> fires for every state change of every row, including the old selection being cleared, so check that the new state includes <code>LVIS_SELECTED</code>.</p>
+<h3>Drawing the details</h3>
+<pre data-file="docs/primer/examples/appstore/appstore.c"><code>@function docs/primer/examples/appstore/appstore.c paint_details</code></pre>
+<p><code>DrawTextW</code> does the work: single lines with <code>DT_SINGLELINE</code>, an ellipsis when they don't fit with <code>DT_END_ELLIPSIS</code>, and wrapped paragraphs with <code>DT_WORDBREAK</code>. <code>DT_NOPREFIX</code> stops <code>&amp;</code> being treated as a shortcut marker, which you want for any text you didn't write.</p>
+<aside>
+<strong>Velo Tip</strong>
+<p>Timers are the simplest way to animate or poll: <code>SetTimer(window, ID, milliseconds, NULL)</code> sends <code>WM_TIMER</code> until <code>KillTimer</code>. They're not precise, and they don't fire while your program is busy in a message handler.</p>
+</aside>
+</section>
+
+<section>
+<h2>Recipe 3: A Dialog</h2>
+<p>Forms are easiest as dialog resources: you describe the controls in the <code>.rc</code> file and CE creates them, handles <kbd>Tab</kbd> between them, and presses the default button on <kbd>Enter</kbd>. This one also loads and saves its settings in the registry.</p>
+<figure>
+<figure><img src="screenshots/ce1/form.png" alt="Account dialog on CE 1.0: handle, password and server fields, a Show pictures check box, a Refresh group of three radio buttons, and OK and Cancel" width="976" height="496"><figcaption>CE 1.0</figcaption></figure>
+<figure><img src="screenshots/ce2/form.png" alt="Account dialog on CE 2.0" width="976" height="496"><figcaption>CE 2.0</figcaption></figure>
+<figcaption><code>form</code>: a modal dialog with no main window behind it.</figcaption>
+</figure>
+<pre data-file="docs/primer/examples/form/form.rc"><code>@source docs/primer/examples/form/form.rc</code></pre>
+<p>Positions are in <em>dialog units</em>, which scale with the dialog font: this 230-unit-wide dialog is about 350 pixels wide on the Velo. <code>&amp;</code> in a label underlines the next letter. <code>WS_GROUP</code> starts a group of radio buttons, which ends at the next control with <code>WS_GROUP</code>.</p>
+<aside>
+<strong>Velo Tip</strong>
+<p>On CE a group box paints its whole inside. Controls created after it are underneath and disappear, so list the group box <em>after</em> the controls it surrounds. The same goes for a tab control in recipe 4. Siblings stack in the order they're created, first on top.</p>
+</aside>
+<h3>Running it</h3>
+<p>CE's DLLs don't export <code>DialogBoxParamW</code>. Microsoft's SDK headers made it a macro that finds the template and calls the <code>Indirect</code> version, which is all this does:</p>
+<pre data-file="docs/primer/examples/form/form.c"><code>@function docs/primer/examples/form/form.c run_dialog</code></pre>
+<p><code>DialogBoxIndirectParamW</code> runs its own message loop and returns the value passed to <code>EndDialog</code>. The last argument arrives in <code>WM_INITDIALOG</code>'s <code>lParam</code>: pass a pointer to the data the dialog edits, and keep it with <code>DWL_USER</code>.</p>
+<pre data-file="docs/primer/examples/form/form.c"><code>@function docs/primer/examples/form/form.c account_procedure</code></pre>
+<p>A dialog procedure returns <code>TRUE</code> when it handled a message and <code>FALSE</code> to let the dialog manager do the default. From <code>WM_INITDIALOG</code>, return <code>FALSE</code> if you set the focus yourself. To refuse OK, show why and return without calling <code>EndDialog</code>.</p>
+<p>For a dialog that stays open beside your main window, such as a find box, use <code>CreateDialogIndirectParamW</code> and pass messages through <code>IsDialogMessageW</code> in your main loop.</p>
+<aside>
+<strong>Velo Tip</strong>
+<p>CE 1.0 has no <code>SetDlgItemTextW</code>, <code>GetDlgItemTextW</code> or <code>SendDlgItemMessageW</code>. <code>SetWindowTextW(GetDlgItem(dialog, ID), text)</code> does the same on both, which is why the examples do it that way.</p>
+</aside>
+</section>
+
+<section>
+<h2>Recipe 4: Tabs and Common Controls</h2>
+<p>A tab control is only the row of tabs. The pages are your own child windows, shown and hidden when the selection changes. This page also has a tree view, a trackbar driving a progress bar, a number box with up and down arrows, a check box and radio buttons.</p>
+<figure>
+<figure><img src="screenshots/ce1/controls.png" alt="Controls example on CE 1.0: Settings and About tabs; a tree of Velo and Network settings on the left; a volume trackbar, a level progress bar, a repeats box with arrows, a Key clicks check box, Loud and Soft radio buttons and an Apply button" width="976" height="496"><figcaption>CE 1.0</figcaption></figure>
+<figure><img src="screenshots/ce2/controls.png" alt="Controls example on CE 2.0" width="976" height="496"><figcaption>CE 2.0</figcaption></figure>
+<figcaption><code>controls</code>: everything here is a stock control.</figcaption>
+</figure>
+<pre data-file="docs/primer/examples/controls/controls.c"><code>@function docs/primer/examples/controls/controls.c create_settings_page</code></pre>
+<p>Things to notice:</p>
+<ul>
+<li>A tree view item is added with <code>TVM_INSERTITEMW</code> under a parent, and the returned <code>HTREEITEM</code> is the parent for the next level.</li>
+<li>Range messages pack two numbers into <code>lParam</code> with <code>MAKELPARAM</code>, but not always in the same order. A trackbar takes the minimum then the maximum. An up-down control takes the maximum then the minimum, so <code>MAKELPARAM(9, 1)</code> gives 1 to 9, with the up arrow counting up.</li>
+<li>An up-down control with <code>UDS_SETBUDDYINT</code> writes its number into its <em>buddy</em>, the edit box, and <code>UDS_ALIGNRIGHT</code> sits it on the buddy's right edge.</li>
+<li>A trackbar reports movement with <code>WM_HSCROLL</code>, its handle in <code>lParam</code>.</li>
+</ul>
+<pre data-file="docs/primer/examples/controls/controls.c"><code>@between docs/primer/examples/controls/controls.c /case WM_CREATE/ /return 0;/
+@between docs/primer/examples/controls/controls.c /case WM_HSCROLL/ /return 0;/</code></pre>
+<p>Create the pages first and the tab control last, so the pages are on top of it. <code>WS_CLIPSIBLINGS</code> stops the tab control painting over them.</p>
+<h3>What's there</h3>
+<p>Tested by creating each class on both ROMs after <code>InitCommonControls</code>:</p>
+<figure>
+<table>
+<thead><tr><th>Class</th><th>Control</th><th>CE 1.0</th><th>CE 2.0</th></tr></thead>
+<tbody>
+<tr><td><code>BUTTON</code>, <code>EDIT</code>, <code>STATIC</code>, <code>LISTBOX</code>, <code>COMBOBOX</code>, <code>SCROLLBAR</code></td><td>Standard controls</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>SysListView32</code> (<code>WC_LISTVIEW</code>)</td><td>List view</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>SysTreeView32</code> (<code>WC_TREEVIEW</code>)</td><td>Tree view</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>SysTabControl32</code> (<code>WC_TABCONTROL</code>)</td><td>Tabs</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>msctls_progress32</code> (<code>PROGRESS_CLASS</code>)</td><td>Progress bar</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>msctls_trackbar32</code> (<code>TRACKBAR_CLASS</code>)</td><td>Trackbar (slider)</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>msctls_updown32</code> (<code>UPDOWN_CLASS</code>)</td><td>Up-down arrows</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>ToolbarWindow32</code>, <code>msctls_statusbar32</code>, <code>SysHeader32</code></td><td>Toolbar, status bar, column header</td><td>Yes</td><td>Yes</td></tr>
+<tr><td><code>SysMonthCal32</code>, <code>SysDateTimePick32</code></td><td>Calendar, date picker</td><td>No</td><td>No</td></tr>
+<tr><td><code>ReBarWindow32</code>, <code>tooltips_class32</code></td><td>Rebar, tooltips</td><td>No</td><td>No</td></tr>
+<tr><td><code>RICHEDIT</code>, <code>RichInk</code></td><td>Rich text</td><td>No</td><td>No</td></tr>
+</tbody>
+</table>
+</figure>
+</section>
+
+<section>
+<h2>Recipe 5: Drawing Your Own</h2>
+<p>When stock controls don't fit, paint it yourself. velo-bluesky's timeline and post views are custom windows drawn this way. This example shows the greys, fonts, shapes and a post card.</p>
+<figure>
+<figure><img src="screenshots/ce1/drawing.png" alt="Drawing example on CE 1.0: a sixteen-step grey ramp that repeats black, dark grey, light grey, white four times; four safe greys; fonts including a badly drawn italic; edges, a zigzag, a dashed ellipse, an inverted rectangle; a post card; 2 bits per pixel" width="976" height="496"><figcaption>CE 1.0</figcaption></figure>
+<figure><img src="screenshots/ce2/drawing.png" alt="Drawing example on CE 2.0: a smooth sixteen-step grey ramp, the same shapes and card, 4 bits per pixel" width="976" height="496"><figcaption>CE 2.0</figcaption></figure>
+<figcaption><code>drawing</code>: look at the top row on CE 1.0.</figcaption>
+</figure>
+<h3>The four safe greys</h3>
+<p>CE 2.0 maps any colour to the nearest of its 16 greys. CE 1.0 doesn't match colours at all: it uses the bottom two bits of the red value as the grey's number. So <code>RGB(128, 128, 128)</code> is black on CE 1.0 (128 ends in binary <code>00</code>), <code>RGB(17, 17, 17)</code> is dark grey, and pure red is white. The top row above is <code>RGB(17n, 17n, 17n)</code> for n from 0 to 15: smooth on CE 2.0, four repeats of the same four greys on CE 1.0.</p>
+<figure>
+<table>
+<thead><tr><th>Use</th><th>Value</th><th>CE 1.0</th><th>CE 2.0</th></tr></thead>
+<tbody>
+<tr><td>Black</td><td><code>RGB(0, 0, 0)</code></td><td>Black</td><td>Black</td></tr>
+<tr><td>Dark grey</td><td><code>RGB(85, 85, 85)</code></td><td>Dark grey</td><td>Dark grey</td></tr>
+<tr><td>Light grey</td><td><code>RGB(170, 170, 170)</code></td><td>Light grey</td><td>Light grey</td></tr>
+<tr><td>White</td><td><code>RGB(255, 255, 255)</code></td><td>White</td><td>White</td></tr>
+</tbody>
+</table>
+<figcaption>Stick to these for anything that has to look right on both, or use the system colours.</figcaption>
+</figure>
+<pre data-file="docs/primer/examples/drawing/drawing.c"><code>@function docs/primer/examples/drawing/drawing.c fill
+@function docs/primer/examples/drawing/drawing.c draw_greys</code></pre>
+<p>Every GDI object you create (brush, pen, font, bitmap) must be deleted with <code>DeleteObject</code>, and not while it's selected into a device context. Stock objects from <code>GetStockObject</code> are never deleted.</p>
+<h3>Fonts</h3>
+<p>Start from the system font and change what you need, so text matches the rest of CE:</p>
+<pre data-file="docs/primer/examples/drawing/drawing.c"><code>@function docs/primer/examples/drawing/drawing.c make_font
+@function docs/primer/examples/drawing/drawing.c create_fonts</code></pre>
+<p>Make fonts once at startup, keep them, and delete them at exit. <code>GetTextMetricsW</code> gives a font's line height, and <code>DrawTextW</code> with <code>DT_CALCRECT</code> measures wrapped text without drawing it, which is how you lay out a list of variable-height items.</p>
+<aside>
+<strong>Velo Tip</strong>
+<p>CE 1.0 draws italic badly, and on CE 2.0 "Courier New" quietly falls back to the proportional system font. Use bold and size for emphasis, and don't count on a fixed-pitch font on CE 2.0.</p>
+</aside>
+<h3>No flicker</h3>
+<p>Drawing a busy window piece by piece makes it flash. Draw into a bitmap the size of the window, then copy it to the screen in one go:</p>
+<pre data-file="docs/primer/examples/drawing/drawing.c"><code>@function docs/primer/examples/drawing/drawing.c paint_buffered</code></pre>
+<p>With that, return 1 from <code>WM_ERASEBKGND</code>, because the bitmap covers everything. A 480 x 240 bitmap is 29 KB at 2 bits per pixel and 57 KB at 4: you can make one per paint, or keep one.</p>
+<h3>Pens and CE 1.0</h3>
+<p>CE 1.0 has no <code>CreatePen</code>. <code>CreatePenIndirect</code> works on both:</p>
+<pre data-file="docs/primer/examples/drawing/drawing.c"><code>@function docs/primer/examples/drawing/drawing.c draw_shapes</code></pre>
+</section>
