@@ -92,6 +92,7 @@ function(_velo_gdb_scripts)
         file(GENERATE OUTPUT "$<TARGET_FILE:${target}>.gdb" CONTENT
 "set confirm off
 set exec-file-mismatch off
+maint set target-non-stop on
 file \"$<TARGET_FILE:${target}>\"
 set breakpoint pending on
 set solib-search-path $<TARGET_FILE_DIR:${target}>${library_folders}
