@@ -2,6 +2,7 @@
 import argparse
 import os
 import re
+import subprocess
 import sys
 import urllib.parse
 import urllib.request
@@ -15,6 +16,7 @@ SETS = [
     (TOOLKIT_2, "include/ce200", VCCE + "WCE/INCLUDE/WCE200/"),
     (TOOLKIT_2, "samples/win32", VCCE + "WCE/SAMPLES/WIN32/"),
     (TOOLKIT_2, "msdn/toolkit2", VCCE + "MSDN/"),
+    (TOOLKIT_2, "msdn/toolkit2-java", "WINDOWS_CE/VISUALJ11/VJCE/MSDN/"),
     (TOOLKIT_1, "msdn/toolkit1", "wcedev/MSDN/"),
 ]
 NOTICE = """Windows CE reference material, fetched by velo-toolchain's tools/fetch-reference
@@ -22,8 +24,9 @@ from the Windows CE Toolkits for Visual C++ 5.0 on archive.org (items wincetoolk
 
 include/ce100, ce101, ce200: SDK headers for Windows CE 1.0, 1.01 and 2.0.
 samples/win32: the CE 2.0 toolkit's Win32 sample programs.
-msdn/toolkit1, toolkit2: the toolkits' documentation as InfoViewer titles (.ivt, .ivi).
-toolkit1 has the Windows CE 1.0 SDK reference (wcesdk.ivt).
+msdn/toolkit1, toolkit2, toolkit2-java: the toolkits' documentation as InfoViewer titles (.ivt, .ivi),
+each extracted to HTML in a folder of the same name. toolkit1 has the Windows CE 1.0 SDK reference (wcesdk),
+toolkit2-java (from the Visual J++ toolkit) the CE 2.0 SDK reference and guide (wcesdk, wcesdkg).
 
 Microsoft's copyright. For reference only: don't copy it into velo-toolchain or other projects.
 """
@@ -74,3 +77,11 @@ if __name__ == "__main__":
                 else:
                     kept += 1
     print("fetch-reference: %d fetched, %d already present, in %s" % (fetched, kept, root))
+    extractor = os.path.join(os.path.dirname(os.path.abspath(__file__)), "extract-ivt")
+    for name in ("msdn/toolkit1", "msdn/toolkit2", "msdn/toolkit2-java"):
+        folder = os.path.join(root, *name.split("/"))
+        for title in sorted(os.listdir(folder)):
+            stem, extension = os.path.splitext(title)
+            destination = os.path.join(folder, stem.lower())
+            if extension.lower() == ".ivt" and not os.path.exists(destination):
+                subprocess.run([sys.executable, extractor, os.path.join(folder, title), destination], check=True)

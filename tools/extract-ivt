@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+import argparse
+import os
+import struct
+import sys
+import zlib
+
+DIRECTORY_MAGIC = 0x293B
+DIRECTORY_HEADER = 0x30
+PAGE_HEADER = 12
+
+
+def varint(data, position):
+    value = 0
+    shift = 0
+    while True:
+        byte = data[position]
+        position += 1
+        value |= (byte & 0x7F) << shift
+        shift += 7
+        if byte < 0x80:
+            return value, position
+
+
+def leaf_entries(data, page_start, page_size, count):
+    position = page_start + PAGE_HEADER
+    entries = []
+    for _ in range(count):
+        length = data[position]
+        name = data[position + 1:position + 1 + length]
+        if not name or any(byte < 0x20 or byte > 0x7E for byte in name):
+            return None
+        offset, position = varint(data, position + 1 + length)
+        size, position = varint(data, position)
+        _, position = varint(data, position)
+        if position > page_start + page_size:
+            return None
+        entries.append((name.decode("ascii"), offset, size))
+    return entries
+
+
+def directory(data):
+    directory_start = struct.unpack_from("<I", data, 4)[0]
+    magic, _, page_size = struct.unpack_from("<HHH", data, directory_start)
+    if magic != DIRECTORY_MAGIC:
+        raise ValueError("no directory at 0x%X" % directory_start)
+    pages_start = directory_start + DIRECTORY_HEADER
+    leaves = {}
+    page = 0
+    while pages_start + page * page_size + PAGE_HEADER <= len(data):
+        page_start = pages_start + page * page_size
+        _, count, previous, following = struct.unpack_from("<HHii", data, page_start)
+        entries = leaf_entries(data, page_start, page_size, count)
+        if entries is not None and count:
+            leaves[page] = (previous, following, entries)
+        page += 1
+    first = [page for page, (previous, _, _) in leaves.items() if previous == -1]
+    if len(first) != 1:
+        raise ValueError("can't find the first directory page")
+    found = []
+    page = first[0]
+    while page != -1:
+        _, following, entries = leaves[page]
+        found += entries
+        page = following
+    return found
+
+
+def expand(data, offset, size):
+    if data[offset:offset + 4] != b"mszp":
+        return data[offset:offset + size]
+    total = struct.unpack_from("<I", data, offset + 4)[0]
+    position = offset + 12
+    end = offset + size
+    output = bytearray()
+    dictionary = b""
+    while position < end and len(output) < total:
+        _, compressed = struct.unpack_from("<HH", data, position)
+        block = data[position + 4:position + 4 + compressed]
+        if block[:2] != b"CK":
+            raise ValueError("bad block at 0x%X" % position)
+        inflater = zlib.decompressobj(-15, zdict=dictionary) if dictionary else zlib.decompressobj(-15)
+        expanded = inflater.decompress(block[2:]) + inflater.flush()
+        output += expanded
+        dictionary = bytes(output[-32768:])
+        position += 4 + compressed
+    if len(output) != total:
+        raise ValueError("expanded %d of %d bytes" % (len(output), total))
+    return bytes(output)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Extract the topics and images of an InfoViewer 5 title (.ivt)")
+    parser.add_argument("title")
+    parser.add_argument("destination")
+    arguments = parser.parse_args()
+    data = open(arguments.title, "rb").read()
+    written = 0
+    failed = []
+    for name, offset, size in directory(data):
+        if not size:
+            continue
+        relative = os.path.normpath(name.lstrip("/").replace("\\", "/"))
+        if relative.startswith("..") or os.path.isabs(relative) or offset + size > len(data):
+            failed.append(name)
+            continue
+        try:
+            content = expand(data, offset, size)
+        except (ValueError, zlib.error):
+            failed.append(name)
+            continue
+        path = os.path.join(arguments.destination, relative)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "wb") as output:
+            output.write(content)
+        written += 1
+    print("extract-ivt: %s: %d written, %d not extracted" % (os.path.basename(arguments.title), written, len(failed)))
+    for name in failed:
+        print("extract-ivt: not extracted: %s" % name, file=sys.stderr)
