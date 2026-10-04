@@ -55,6 +55,10 @@ def check(clang, version):
         result = compile_source(clang, version, "#include <windows.h>\n#include <%s>\n" % header, ["-fsyntax-only", "-Wall", "-Wextra", "-Werror"])
         if result.returncode:
             problems.append("%s doesn't compile:\n%s" % (header, result.stderr))
+    with open(os.path.join(ROOT, "tests", "cxx-sdk.cpp")) as source:
+        result = compile_source(clang, version, source.read(), ["-fsyntax-only", "-Wall", "-Wextra", "-Werror", "-Wno-unused-parameter"])
+    if result.returncode:
+        problems.append("tests/cxx-sdk.cpp doesn't compile:\n%s" % result.stderr)
     return problems
 
 
