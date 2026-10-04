@@ -33,6 +33,35 @@ extern __typeof__(acmStreamMessage) acmStreamMessage __attribute__((unavailable(
 #ifdef VELO_EXTRAS_WINSOCK_H
 extern __typeof__(WSAIoctl) WSAIoctl __attribute__((unavailable("not in Windows CE 1.0")));
 #endif
+#ifdef VELO_TCHAR_H
+extern __typeof__(_snwprintf) _snwprintf __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(_vsnwprintf) _vsnwprintf __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(_wcsicoll) _wcsicoll __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(fgetwc) fgetwc __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(fgetwchar) fgetwchar __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(fgetws) fgetws __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(fputwc) fputwc __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(fputwchar) fputwchar __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(fputws) fputws __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(fwprintf) fwprintf __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(fwscanf) fwscanf __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(getwc) getwc __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(getws) getws __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(iswascii) iswascii __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(putwc) putwc __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(putws) putws __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(swscanf) swscanf __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(ungetwc) ungetwc __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(vfwprintf) vfwprintf __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(vwprintf) vwprintf __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(wcscoll) wcscoll __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(wcstod) wcstod __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(wcstol) wcstol __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(wcstoul) wcstoul __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(wcsxfrm) wcsxfrm __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(wprintf) wprintf __attribute__((unavailable("not in Windows CE 1.0")));
+extern __typeof__(wscanf) wscanf __attribute__((unavailable("not in Windows CE 1.0")));
+#endif
 #ifdef VELO_WCHAR_H
 extern __typeof__(towlower) towlower __attribute__((unavailable("not in Windows CE 1.0")));
 extern __typeof__(towupper) towupper __attribute__((unavailable("not in Windows CE 1.0")));
@@ -1787,6 +1816,35 @@ extern __typeof__(VerQueryValueW) VerQueryValueW __attribute__((unavailable("not
 #ifdef VELO_EXTRAS_COMMCTRL_H
 extern __typeof__(CreateColorBitmap) CreateColorBitmap __attribute__((unavailable("not in Windows CE 2.0")));
 extern __typeof__(CreateMonoBitmap) CreateMonoBitmap __attribute__((unavailable("not in Windows CE 2.0")));
+#endif
+#ifdef VELO_TCHAR_H
+extern __typeof__(_snwprintf) _snwprintf __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(_vsnwprintf) _vsnwprintf __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(_wcsicoll) _wcsicoll __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(fgetwc) fgetwc __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(fgetwchar) fgetwchar __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(fgetws) fgetws __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(fputwc) fputwc __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(fputwchar) fputwchar __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(fputws) fputws __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(fwprintf) fwprintf __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(fwscanf) fwscanf __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(getwc) getwc __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(getws) getws __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(iswascii) iswascii __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(putwc) putwc __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(putws) putws __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(swscanf) swscanf __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(ungetwc) ungetwc __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(vfwprintf) vfwprintf __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(vwprintf) vwprintf __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(wcscoll) wcscoll __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(wcstod) wcstod __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(wcstol) wcstol __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(wcstoul) wcstoul __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(wcsxfrm) wcsxfrm __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(wprintf) wprintf __attribute__((unavailable("not in Windows CE 2.0")));
+extern __typeof__(wscanf) wscanf __attribute__((unavailable("not in Windows CE 2.0")));
 #endif
 #ifdef _COMMCTRL_H
 extern __typeof__(CreateMappedBitmap) CreateMappedBitmap __attribute__((unavailable("not in Windows CE 2.0")));

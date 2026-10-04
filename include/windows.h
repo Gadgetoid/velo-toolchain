@@ -11,6 +11,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <windbase.h>
+#if VELO_CE >= 2
+#include <tchar.h>
+#endif
 #endif
 #include <velo/extras.h>
 #else
@@ -25,6 +28,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <windbase.h>
+#if VELO_CE >= 2
+#include <tchar.h>
+#endif
 #endif
 #include <velo/extras.h>
 #include <velo/end.h>

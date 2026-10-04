@@ -9,7 +9,8 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UNWRAPPED = {"pshpack1.h", "pshpack2.h", "pshpack4.h", "pshpack8.h", "poppack.h", "README.w32api", "VENDOR.md"}
 WINDOWS_EXTRAS = ["stdint.h", "mmsystem.h", "shellapi.h", "wchar.h", "stdlib.h", "string.h", "windbase.h"]
-OWN_HEADERS = ["wchar.h", "stdlib.h", "string.h", "windbase.h"]
+WINDOWS_VERSION_EXTRAS = [("VELO_CE >= 2", "tchar.h")]
+OWN_HEADERS = ["wchar.h", "stdlib.h", "string.h", "windbase.h", "tchar.h"]
 MACRO_HEADERS = {"windowsx.h"}
 VERSIONS = {1: "1.0", 2: "2.0"}
 ENTRY_POINTS = {"WinMain", "wWinMain", "DllMain", "DllEntryPoint"}
@@ -23,7 +24,9 @@ def write_wrappers():
     for header in vendored():
         guard_name = "VELO_WRAPPED_%s" % re.sub(r"\W", "_", header).upper()
         if header == "windows.h":
-            extra = "\n#ifndef RC_INVOKED\n%s\n#endif\n#include <velo/extras.h>" % "\n".join("#include <%s>" % name for name in WINDOWS_EXTRAS)
+            includes = ["#include <%s>" % name for name in WINDOWS_EXTRAS]
+            includes += ["#if %s\n#include <%s>\n#endif" % (condition, name) for condition, name in WINDOWS_VERSION_EXTRAS]
+            extra = "\n#ifndef RC_INVOKED\n%s\n#endif\n#include <velo/extras.h>" % "\n".join(includes)
         elif os.path.exists(os.path.join(ROOT, "include", "velo", "extras-" + header)):
             extra = "\n#include <velo/extras-%s>" % header
         else:
@@ -37,7 +40,7 @@ def write_wrappers():
 
 
 def declarations(clang, version):
-    source = "#include <windows.h>\n#include <winsock.h>\n" + "".join("#include <%s>\n" % header for header in vendored())
+    source = "#include <windows.h>\n#include <winsock.h>\n#include <tchar.h>\n" + "".join("#include <%s>\n" % header for header in vendored())
     command = [clang, "--target=mipsel-unknown-none-elf", "-march=mips1", "-msoft-float", "-fshort-wchar", "-ffreestanding",
                "-Wno-experimental-option", "-fsyntax-only", "-Xclang", "-ast-dump=json", "-D_WIN32_WCE=%d" % (version * 100),
                "-DVELO_ALL_DECLARATIONS", "-I", os.path.join(ROOT, "include"), "-I", os.path.join(ROOT, "include", "w32api"), "-x", "c", "-"]

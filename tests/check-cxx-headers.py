@@ -44,7 +44,7 @@ def cplusplus_linkage(tree):
 
 def check(clang, version):
     problems = []
-    source = "".join("#include <%s>\n" % name for name in ["windows.h", "winsock.h", *vendored_headers()])
+    source = "".join("#include <%s>\n" % name for name in ["windows.h", "winsock.h", "tchar.h", *vendored_headers()])
     result = compile_source(clang, version, source, ["-fsyntax-only", "-w", "-Xclang", "-ast-dump=json"])
     if result.returncode:
         problems.append("Windows headers don't compile as C++:\n" + result.stderr)

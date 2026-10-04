@@ -17,6 +17,7 @@ extern "C" {
  * @return The value, or 0 if nothing could be converted.
  */
 long _wtol(const wchar_t *string);
+#define _wtoi _wtol
 /**
  * Converts a wide-character decimal string to a long long.
  *

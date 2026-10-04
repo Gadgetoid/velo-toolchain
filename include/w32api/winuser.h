@@ -6344,8 +6344,10 @@ WINUSERAPI int WINAPIV wsprintfA(LPSTR,LPCSTR,...);
  * Formats values into a string buffer, printf style.
  *
  * Supports %[-][#][0][width][.precision]type with types c, d, i, u, x, X,
- * s and S, but not floating point. There's no buffer size check, so make
- * lpOut large enough. Only the Unicode version exists on Windows CE.
+ * s and S, but not floating point: %f prints f and misreads the values
+ * after it. Output stops at 1023 characters plus the terminating null, and
+ * the return value is then 1024. There's no other buffer size check, so
+ * make lpOut large enough. Only the Unicode version exists on Windows CE.
  *
  * @param lpOut Buffer that receives the output.
  * @param lpFmt Format string, followed by the values to format.
@@ -6357,8 +6359,8 @@ WINUSERAPI int WINAPI wvsprintfA(LPSTR,LPCSTR,va_list arglist);
 /**
  * Formats values from a va_list into a string buffer, printf style.
  *
- * Same formats as wsprintfW. There's no buffer size check. Only the
- * Unicode version exists on Windows CE.
+ * Same formats and 1023-character limit as wsprintfW. There's no other
+ * buffer size check. Only the Unicode version exists on Windows CE.
  *
  * @param lpOut Buffer that receives the output.
  * @param lpFmt Format string.
@@ -7279,8 +7281,10 @@ typedef MONITORINFOEXW MONITORINFOEX, *LPMONITORINFOEX;
  * Formats values into a string buffer, printf style.
  *
  * Supports %[-][#][0][width][.precision]type with types c, d, i, u, x, X,
- * s and S, but not floating point. There's no buffer size check, so make
- * lpOut large enough. Only the Unicode version exists on Windows CE.
+ * s and S, but not floating point: %f prints f and misreads the values
+ * after it. Output stops at 1023 characters plus the terminating null, and
+ * the return value is then 1024. There's no other buffer size check, so
+ * make lpOut large enough. Only the Unicode version exists on Windows CE.
  *
  * @param lpOut Buffer that receives the output.
  * @param lpFmt Format string, followed by the values to format.
@@ -7291,8 +7295,8 @@ typedef MONITORINFOEXW MONITORINFOEX, *LPMONITORINFOEX;
 /**
  * Formats values from a va_list into a string buffer, printf style.
  *
- * Same formats as wsprintfW. There's no buffer size check. Only the
- * Unicode version exists on Windows CE.
+ * Same formats and 1023-character limit as wsprintfW. There's no other
+ * buffer size check. Only the Unicode version exists on Windows CE.
  *
  * @param lpOut Buffer that receives the output.
  * @param lpFmt Format string.

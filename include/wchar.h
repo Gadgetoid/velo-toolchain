@@ -1,6 +1,7 @@
 #ifndef VELO_WCHAR_H
 #define VELO_WCHAR_H
 
+#include <stdarg.h>
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -253,6 +254,31 @@ wchar_t towlower(wchar_t character);
  * @note Windows CE 2.0 only.
  */
 wchar_t towupper(wchar_t character);
+/**
+ * Formats values into a string buffer, printf style.
+ *
+ * A wrapper over wsprintfW in velo::runtime: coredll has no swprintf, and
+ * the SDK links it from its static C library. Same formats and limits as
+ * wsprintfW: no floating point, and at most 1023 characters plus the
+ * terminating null.
+ *
+ * @param buffer Buffer that receives the output. Must be large enough.
+ * @param format Format string, followed by the values to format.
+ * @return Characters written, not counting the terminating null.
+ */
+int swprintf(wchar_t *buffer, const wchar_t *format, ...);
+/**
+ * Formats values from a va_list into a string buffer, printf style.
+ *
+ * A wrapper over wvsprintfW in velo::runtime, with the same formats and
+ * limits as swprintf.
+ *
+ * @param buffer Buffer that receives the output. Must be large enough.
+ * @param format Format string.
+ * @param arguments Values to format, from va_start.
+ * @return Characters written, not counting the terminating null.
+ */
+int vswprintf(wchar_t *buffer, const wchar_t *format, va_list arguments);
 
 #define iswalpha(character) iswctype(character, _ALPHA)
 #define iswupper(character) iswctype(character, _UPPER)
