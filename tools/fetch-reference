@@ -18,11 +18,18 @@ SETS = [
     (TOOLKIT_2, "msdn/toolkit2", VCCE + "MSDN/"),
     (TOOLKIT_2, "msdn/toolkit2-java", "WINDOWS_CE/VISUALJ11/VJCE/MSDN/"),
     (TOOLKIT_1, "msdn/toolkit1", "wcedev/MSDN/"),
+    (TOOLKIT_1, "lib/ce100/mips", "wcedev/WCE/LIB/WCE100/WCEMIPS/"),
+    (TOOLKIT_1, "lib/ce100/sh3", "wcedev/WCE/LIB/WCE100/WCESH/"),
+    (TOOLKIT_2, "lib/ce101/sh3", VCCE + "WCE/LIB/WCE101/WCESH/"),
+    (TOOLKIT_2, "lib/ce200/mips", VCCE + "WCE/LIB/WCE200/WCEMIPS/"),
+    (TOOLKIT_2, "lib/ce200/sh3", VCCE + "WCE/LIB/WCE200/WCESH/"),
 ]
+LIBRARY_EXTENSION = ".lib"
 NOTICE = """Windows CE reference material, fetched by velo-toolchain's tools/fetch-reference
 from the Windows CE Toolkits for Visual C++ 5.0 on archive.org (items wincetoolkits and msvcceu.100).
 
 include/ce100, ce101, ce200: SDK headers for Windows CE 1.0, 1.01 and 2.0.
+lib/ce100, ce101, ce200: the SDK's MIPS and SH3 libraries (.lib), import libraries for the system DLLs among them.
 samples/win32: the CE 2.0 toolkit's Win32 sample programs.
 msdn/toolkit1, toolkit2, toolkit2-java: the toolkits' documentation as InfoViewer titles (.ivt, .ivi),
 each extracted to HTML in a folder of the same name. toolkit1 has the Windows CE 1.0 SDK reference (wcesdk),
@@ -70,6 +77,8 @@ if __name__ == "__main__":
         if item not in listings:
             listings[item] = listing(item)
         for path in listings[item]:
+            if name.startswith("lib/") and not path.lower().endswith(LIBRARY_EXTENSION):
+                continue
             if path.upper().startswith(prefix.upper()) and not path.endswith("/"):
                 relative = path[len(prefix):]
                 if fetch(item, path, os.path.join(root, name, *relative.split("/"))):
