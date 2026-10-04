@@ -62,6 +62,37 @@
                 }
             ],
             "launchCompleteCommand": "exec-run"
+        },
+        {
+            "name": "Odo SH3 CE 2.11",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "targetArchitecture": "mips",
+            "miDebuggerPath": "gdb",
+            "linux": {
+                "miDebuggerPath": "gdb-multiarch"
+            },
+            "preLaunchTask": "velo: emulator SH3",
+            "miDebuggerServerAddress": "localhost:2003",
+            "useExtendedRemote": true,
+            "customLaunchSetupCommands": [
+                {
+                    "text": "source ${command:cmake.launchTargetPath}.gdb"
+                },
+                {
+                    "text": "target extended-remote localhost:2003"
+                },
+                {
+                    "text": "-gdb-set target-wide-charset UTF-16LE"
+                },
+                {
+                    "text": "velo-load"
+                }
+            ],
+            "launchCompleteCommand": "exec-run"
         }
     ]
 }

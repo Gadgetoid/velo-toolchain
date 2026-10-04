@@ -44,6 +44,28 @@
                     "endsPattern": "^gdb: listening on "
                 }
             }
+        },
+        {
+            "label": "velo: emulator SH3",
+            "type": "process",
+            "command": "${env:VELO_TOOLCHAIN}/tools/velo-emulator",
+            "args": [
+                "--arch",
+                "sh3"
+            ],
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "velo",
+                "pattern": {
+                    "regexp": "^velo-emulator: error: (.*)$",
+                    "message": 1
+                },
+                "background": {
+                    "activelyMatching": true,
+                    "beginsPattern": "^velo-emulator: starting",
+                    "endsPattern": "^gdb: listening on "
+                }
+            }
         }
     ]
 }
