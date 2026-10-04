@@ -11,6 +11,8 @@ extern array_function __fini_array_start[];
 extern array_function __fini_array_end[];
 }
 
+void (*velo_run_exit_handlers)();
+
 static void run_constructors() {
     for (array_function *entry = __init_array_start; entry < __init_array_end; entry++) {
         (*entry)();
@@ -18,7 +20,9 @@ static void run_constructors() {
 }
 
 static void run_destructors() {
-    velo_run_exit_handlers();
+    if (velo_run_exit_handlers) {
+        velo_run_exit_handlers();
+    }
     for (array_function *entry = __fini_array_end; entry > __fini_array_start;) {
         (*--entry)();
     }

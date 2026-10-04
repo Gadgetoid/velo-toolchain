@@ -28,7 +28,7 @@ TARGETS = {
 }
 CARD_FOLDER = "EXAMPLES"
 SETTLE_SECONDS = 10
-EXTRA_EVENTS = {"window.exe": ["--tap={at}:200:120"]}
+EXTRA_EVENTS = {"window.exe": ["--tap={at}:200:120"], "window-cxx.exe": ["--tap={at}:200:120"]}
 ARGUMENTS = {"greeter.exe": "{folder}\\greet.dll", "cxx-basics.exe": "{folder}\\cxx-counter.dll"}
 NETWORK_SETTLE_SECONDS = {}
 RAPI_WAIT_SECONDS = 60

@@ -2,6 +2,8 @@
 
 #include "runtime.h"
 
+static void run_exit_handlers();
+
 struct exit_handler {
     void (*function)(void *);
     void *argument;
@@ -23,6 +25,7 @@ int __cxa_atexit(void (*function)(void *), void *argument, void *) {
     handler->argument = argument;
     handler->next = exit_handlers;
     exit_handlers = handler;
+    velo_run_exit_handlers = run_exit_handlers;
     return 0;
 }
 
@@ -36,7 +39,7 @@ int __cxa_atexit(void (*function)(void *), void *argument, void *) {
 
 }
 
-void velo_run_exit_handlers() {
+static void run_exit_handlers() {
     while (exit_handler *handler = exit_handlers) {
         exit_handlers = handler->next;
         handler->function(handler->argument);
