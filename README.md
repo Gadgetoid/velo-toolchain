@@ -300,7 +300,7 @@ Each run calibrates the touch panel from a cold boot first, unless `VELO_SH3_STA
 
 On SH3, debugmgr is `velo-debugmgr.exe`: the emulator's image has its own `debugmgr.exe` in ROM, which CE would start instead of one with the same name in a `--folder`.
 
-The SH3 compiler doesn't emit DWARF yet, so GDB has symbols but no source lines or locals: breakpoints on functions, `stepi`, `x/i`, registers, `kill` and `velo-load` work. `velo-symbolize` works on SH3 builds, by symbol.
+With `CMAKE_BUILD_TYPE=Debug`, GDB has source lines, arguments, locals and backtraces on SH3, and VS Code stops at source breakpoints. GDB's SH3 calling convention isn't CE's, so `finish` shows the wrong value for functions returning 64-bit values or structures, which CE returns through a hidden pointer. `velo-symbolize` works on SH3 builds.
 
 ## Reference material
 
