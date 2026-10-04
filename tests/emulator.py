@@ -112,7 +112,7 @@ def make_card(build, target, work):
 
 def headless(target, card, seconds, events, screenshot, cell):
     return [os.path.join(target["emulator"], "headless"), target["rom"], "--seconds=%d" % seconds, "--load=%s" % target["state"],
-            "--card=%s" % card, *events, "--png=%s" % screenshot, "--png-cell=%d" % cell]
+            "--card=%s" % card, *events, "--png=%s" % screenshot, "--png-cell=%d" % cell, "--png-backlight=off"]
 
 
 def launch_events(target, program, arguments):
