@@ -1,0 +1,34 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install LLVM and CMake
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld llvm cmake
+
+      - name: Check the docstrings are applied
+        run: |
+          python3 tools/mkdocs.py
+          git diff --exit-code -- include
+
+      - name: Build the examples and debugmgr, with no warnings
+        run: |
+          make examples debugmgr 2>&1 | tee build.log
+          ! grep -i "warning" build.log
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: examples
+          path: |
+            build/ce*/**/*.exe
+            build/ce*/**/*.dll
+            build/debugmgr/ce*/*.exe
