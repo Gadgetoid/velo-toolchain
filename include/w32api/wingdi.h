@@ -3554,7 +3554,7 @@ WINGDIAPI BOOL WINAPI GetTextExtentExPointI(HDC, LPWORD, int, int, LPINT, LPINT,
 #if !defined (_WIN32_WCE)
 WINGDIAPI BOOL WINAPI GetTextExtentPoint32A(HDC,LPCSTR,int,LPSIZE);
 WINGDIAPI BOOL WINAPI GetTextExtentPoint32W( HDC,LPCWSTR,int,LPSIZE);
-#elif (_WIN32_WCE >= 0x200)
+#else
 #define GetTextExtentPointW(hdc,cstr,len,size) GetTextExtentExPointW(hdc,cstr,len,0,NULL,NULL,size)
 #define GetTextExtentPoint32W GetTextExtentPointW
 #endif

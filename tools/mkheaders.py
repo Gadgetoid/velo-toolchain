@@ -10,6 +10,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UNWRAPPED = {"pshpack1.h", "pshpack2.h", "pshpack4.h", "pshpack8.h", "poppack.h", "README.w32api", "VENDOR.md"}
 WINDOWS_EXTRAS = ["stdint.h", "mmsystem.h", "shellapi.h", "wchar.h", "stdlib.h", "string.h", "windbase.h"]
 OWN_HEADERS = ["wchar.h", "stdlib.h", "string.h", "windbase.h"]
+MACRO_HEADERS = {"windowsx.h"}
 VERSIONS = {1: "1.0", 2: "2.0"}
 ENTRY_POINTS = {"WinMain", "wWinMain", "DllMain", "DllEntryPoint"}
 
@@ -55,7 +56,7 @@ def declarations(clang, version):
 
 
 def header_paths():
-    paths = sorted(glob.glob(os.path.join(ROOT, "include", "w32api", "*.h")))
+    paths = sorted(path for path in glob.glob(os.path.join(ROOT, "include", "w32api", "*.h")) if os.path.basename(path) not in MACRO_HEADERS)
     paths += [os.path.join(ROOT, "include", name) for name in OWN_HEADERS]
     paths += sorted(glob.glob(os.path.join(ROOT, "include", "velo", "extras*.h")))
     return paths

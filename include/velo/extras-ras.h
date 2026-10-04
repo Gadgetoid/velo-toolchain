@@ -61,6 +61,8 @@ DWORD WINAPI RasSetEntryDevConfig(LPCWSTR szPhonebook, LPCWSTR szEntry, DWORD dw
  */
 DWORD WINAPI RasHangup(HRASCONN Session);
 
+#define RASDT_Direct TEXT("direct")
+
 #ifdef __cplusplus
 }
 #endif

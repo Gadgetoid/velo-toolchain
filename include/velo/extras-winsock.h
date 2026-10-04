@@ -35,6 +35,8 @@ extern "C" {
 int WINAPI WSAIoctl(SOCKET s, DWORD dwIoControlCode, LPVOID lpvInBuffer, DWORD cbInBuffer, LPVOID lpvOutBuffer, DWORD cbOutBuffer,
                     LPDWORD lpcbBytesReturned, LPVOID lpOverlapped, LPVOID lpCompletionRoutine);
 
+#define IOCGROUP(x) (((x) >> 8) & 0xff)
+
 #ifdef __cplusplus
 }
 #endif

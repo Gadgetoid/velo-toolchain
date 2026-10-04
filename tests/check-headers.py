@@ -8,7 +8,7 @@ import sys
 import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-HEADERS = ["windows.h", "commctrl.h", "commdlg.h", "winsock.h", "notify.h", "tlhelp32.h", "mmreg.h", "msacm.h", "imm.h", "ras.h"]
+HEADERS = ["windows.h", "commctrl.h", "commdlg.h", "winsock.h", "notify.h", "tlhelp32.h", "mmreg.h", "msacm.h", "imm.h", "ras.h", "af_irda.h", "windowsx.h"]
 TARGET = ["--target=mipsel-unknown-none-elf", "-march=mips1", "-msoft-float", "-fshort-wchar", "-ffreestanding", "-Wno-experimental-option",
           "-w", "-ferror-limit=0"]
 KNOWN_DIFFERENCES = re.compile(r"^(size|offset)_(struct_)?_?(WIN32_FIND_DATAA|tagREBARBANDINFOA|REBARBANDINFOA)(_|$)")
@@ -21,6 +21,9 @@ EXCLUDED_HEADERS = {"tapi.h", "mmreg.h", "mmddk.h", "oleauto.h", "oaidl.h", "obj
                     "unknwn.h", "rpc.h", "rpcdce.h", "rpcndr.h", "rpcnsip.h", "rpcnterr.h", "olectl.h", "ocidl.h", "cguid.h", "coguid.h"}
 EXCLUDED_TYPES = re.compile(r"^(P?U?INT128|RNAAPP_INFO|PRNAAPP_INFO|RASPPPADDR|RasCntlEnum_t|RUNQ_t|PRUNQ_t|PTHREAD|P?EXCEPTION_ROUTINE|"
                             r"_onexit_t|l?div_t|P?SOCKHAND|LPHICON)$|^(LP)?(LINE|PHONE|HLINE|HPHONE|HCALL|P?ACMFILTER|P?ACMFORMATCHOOSE|ACMDRIVERPROC|LPACMDRIVERPROC|I[A-Z]\w*Vtbl$|I[A-Z][a-z]\w*$|LP[A-Z]*VTBL$|PFN(CANUNLOADNOW|GETCLASSOBJECT)$)")
+EXCLUDED_MACROS = re.compile(r"^(\w+[a-z0-9]A|\w+API|DEBUGMSG|ERRORMSG|RETAILMSG|DBGCHK|WSAStartup|WSACleanup|BASETYPES|cdecl|NETCONS_INCLUDED|"
+                             r"SOCKHAND_DEFINED|BACKUP_MSG_FILENAME|IS_DISPATCHING|IS_UNWINDING|IS_TARGET_UNWIND|isleadbyte|iswascii|MB_CUR_MAX|"
+                             r"ACMHELPMSG\w+|DEFINE_GUID|DIALOGEX|LPTBSAVEPARAMS)$")
 EXCLUDED_CONSTANTS = re.compile(r"^(CERT_E_|CRYPT_E_|TRUST_E_|DIGSIG_E_|SPAPI_E_)")
 SDK_DEFINES = ["-fms-extensions", "-D_WIN32", "-DUNDER_CE", "-DMIPS", "-D_MIPS_=1", "-D_M_MRX000=4000", "-DUNICODE", "-D_UNICODE", "-DWIN32_LEAN_AND_MEAN",
                "-D__asm=velo_sdk_asm", "-D__export=", "-DHUGEP="]
@@ -105,6 +108,20 @@ def sdk_folder(reference, version, work):
     for name in os.listdir(source):
         shutil.copyfile(os.path.join(source, name), os.path.join(folder, name.lower()))
     return folder
+
+
+def macro_names(side):
+    return set(re.findall(r"^#define (\w+)", side.run(["-E", "-dM"], "", check=True).stdout, re.M))
+
+
+def declared_names(tree):
+    found = set()
+    for node in tree["inner"]:
+        if node.get("name"):
+            found.add(node["name"])
+        if node.get("kind") == "EnumDecl":
+            found.update(child["name"] for child in node.get("inner", []) if child.get("kind") == "EnumConstantDecl")
+    return found
 
 
 def records(tree):
@@ -207,6 +224,15 @@ def check(clang, reference, version, work):
     for name in sorted(unusable):
         report.append("  missing %s" % name)
     problems += len(different) + len(unusable)
+
+    our_names = macro_names(ours) | declared_names(ours.tree())
+    unchecked = sorted(name for name in macro_names(sdk) - set(sdk_values) - our_names
+                       if not name.startswith("_") and where.get(name) not in EXCLUDED_HEADERS and where.get(name) is not None
+                       and not EXCLUDED_MACROS.match(name))
+    report.append("other macros: %d missing" % len(unchecked))
+    for name in unchecked:
+        report.append("  missing %s" % name)
+    problems += len(unchecked)
     return problems, report
 
 

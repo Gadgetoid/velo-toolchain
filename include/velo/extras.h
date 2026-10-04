@@ -316,6 +316,44 @@ void WINAPI SignalStarted(DWORD dw);
 BOOL WINAPI TransparentImage(HDC hdcDest, int nXDest, int nYDest, int nWidthDest, int nHeightDest, HANDLE hImgSrc, int nXSrc, int nYSrc,
                              int nWidthSrc, int nHeightSrc, COLORREF crTransparentColor);
 
+#ifndef NPLOGFONT
+#define NPLOGFONT NPLOGFONTW
+#endif
+#ifndef EnumDateFormats
+#define EnumDateFormats EnumDateFormatsW
+#endif
+#ifndef GetStringType
+#define GetStringType GetStringTypeW
+#endif
+#ifndef MapUncompressedFile
+/**
+ * Maps a file into memory uncompressed and returns its address.
+ *
+ * Undocumented in the Windows CE SDK.
+ *
+ * @param pwszFileName Path of the file.
+ * @param pLen Receives the length of the mapping.
+ * @return The address of the mapping, or NULL on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+#define MapUncompressedFile MapUncompressedFileW
+#endif
+#ifndef EIRESID
+#define EIRESID(x) (-1 * (int)(x))
+#endif
+
+#if VELO_CE == 1
+#define lstrcmpW wcscmp
+#define lstrcmpiW _wcsicmp
+#define IsCharAlphaW iswalpha
+#define IsCharAlphaNumericW iswalnum
+#define IsCharLowerW iswlower
+#define IsCharUpperW iswupper
+#else
+#define PALETTEINDEX2BPP(i) (((i) == 0) ? 0x00000000 : (((i) == 1) ? 0x00808080 : (((i) == 2) ? 0x00C0C0C0 : 0x00FFFFFF)))
+#endif
+
 #ifdef __cplusplus
 }
 #endif

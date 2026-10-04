@@ -139,6 +139,37 @@ typedef struct tagNMDATETIMEFORMATQUERYA {
 
 #endif
 
+#define CommandBar_AddToolTips(hwndCB, cbToolTips, lpToolTipsStrings) \
+    SendMessage((hwndCB), TB_SETTOOLTIPS, (WPARAM)(cbToolTips), (LPARAM)(lpToolTipsStrings))
+#define LPHDITEM LPHDITEMW
+#define LPLVCOLUMN LPLVCOLUMNW
+#define NM_FINDITEM NMLVFINDITEM
+#define PNM_FINDITEM LPNMLVFINDITEM
+#define LPNM_FINDITEM LPNMLVFINDITEM
+
+#if VELO_CE == 1
+#define OVERLAYMASKTOINDEX(i) ((((i) >> 8) & (ILD_OVERLAYMASK >> 8)) - 1)
+#define STATEIMAGEMASKTOINDEX(i) (((i) & LVIS_STATEIMAGEMASK) >> 12)
+#define TabCtrl_GetBkColor(hwnd) (COLORREF)SendMessage((hwnd), TCM_GETBKCOLOR, 0, 0L)
+#define TabCtrl_SetBkColor(hwnd, clrBk) (BOOL)SendMessage((hwnd), TCM_SETBKCOLOR, 0, (LPARAM)(COLORREF)(clrBk))
+#define PropSheet_SetWizButtonsNow(hDlg, dwFlags) PropSheet_SetWizButtons(hDlg, dwFlags)
+#else
+#define CommandBands_IsVisible(hwndCmdBands) IsWindowVisible((hwndCmdBands))
+#define Header_SetHotDivider(hwnd, fPos, dw) (int)SendMessage((hwnd), HDM_SETHOTDIVIDER, (WPARAM)(fPos), (LPARAM)(dw))
+#define LPLVITEM LPLVITEMW
+#define NMDATETIMESTRING NMDATETIMESTRINGW
+#define LPNMDATETIMESTRING LPNMDATETIMESTRINGW
+#define NMDATETIMEWMKEYDOWN NMDATETIMEWMKEYDOWNW
+#define LPNMDATETIMEWMKEYDOWN LPNMDATETIMEWMKEYDOWNW
+#define NMDATETIMEFORMAT NMDATETIMEFORMATW
+#define LPNMDATETIMEFORMAT LPNMDATETIMEFORMATW
+#define NMDATETIMEFORMATQUERY NMDATETIMEFORMATQUERYW
+#define LPNMDATETIMEFORMATQUERY LPNMDATETIMEFORMATQUERYW
+#define NM_ODSTATECHANGE NMLVODSTATECHANGE
+#define PNM_ODSTATECHANGE LPNMLVODSTATECHANGE
+#define LPNM_ODSTATECHANGE LPNMLVODSTATECHANGE
+#endif
+
 #ifdef __cplusplus
 }
 #endif

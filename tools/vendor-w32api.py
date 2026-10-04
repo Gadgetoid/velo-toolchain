@@ -10,7 +10,7 @@ HEADERS = [
     "basetsd.h", "commctrl.h", "commdlg.h", "dbgapi.h", "dde.h", "dlgs.h", "excpt.h", "imm.h", "kfuncs.h", "lmcons.h", "mmsystem.h",
     "msacm.h", "mswsock.h", "notify.h", "poppack.h", "prsht.h", "pshpack2.h", "pshpack4.h", "ras.h", "shellapi.h", "tlhelp32.h", "winbase.h",
     "wincon.h", "windef.h", "windows.h", "winerror.h", "wingdi.h", "winnetwk.h", "winnls.h", "winnt.h", "winreg.h", "winresrc.h",
-    "winsock.h", "winsvc.h", "winuser.h", "winver.h",
+    "winsock.h", "winsvc.h", "winuser.h", "winver.h", "windowsx.h",
 ]
 CE_PRINT_DIALOG_FLAGS = """#define PD_SELECTALLPAGES 0x00000001
 #define PD_SELECTSELECTION 0x00000002
@@ -127,6 +127,10 @@ def patch(vendor):
     vendor.ce("winuser.h", "HARDWAREINPUT has dwExtraInfo on CE", "  WORD wParamH;\n} HARDWAREINPUT,*PHARDWAREINPUT;",
               "  WORD wParamH;\n  DWORD dwExtraInfo;\n} HARDWAREINPUT,*PHARDWAREINPUT;")
     vendor.ce("mmsystem.h", "MAXERRORLENGTH is 128 on CE", "#define MAXERRORLENGTH 256", "#define MAXERRORLENGTH 128")
+    vendor.edit("mmsystem.h", "PATCHARRAY and KEYARRAY aren't declared on CE", "typedef WORD PATCHARRAY[MIDIPATCHSIZE];\ntypedef WORD *LPPATCHARRAY;\ntypedef WORD KEYARRAY[MIDIPATCHSIZE];\ntypedef WORD *LPKEYARRAY;",
+                "#ifndef _WIN32_WCE\ntypedef WORD PATCHARRAY[MIDIPATCHSIZE];\ntypedef WORD *LPPATCHARRAY;\ntypedef WORD KEYARRAY[MIDIPATCHSIZE];\ntypedef WORD *LPKEYARRAY;\n#endif")
+    vendor.edit("wingdi.h", "GetTextExtentPointW and GetTextExtentPoint32W are macros on CE 1.0 too",
+                "#elif (_WIN32_WCE >= 0x200)\n#define GetTextExtentPointW(hdc,cstr,len,size)", "#else\n#define GetTextExtentPointW(hdc,cstr,len,size)")
     vendor.ce("winnt.h", "REG_LEGAL_OPTION is 7 on CE", "#define REG_LEGAL_OPTION\t15", "#define REG_LEGAL_OPTION\t7")
     vendor.edit("wingdi.h", "DEVMODEW has no dmDisplayOrientation on CE 1.0 and 2.0", "  DWORD  dmDisplayFrequency; \n  DWORD  dmDisplayOrientation;\n} DEVMODEW",
                 "  DWORD  dmDisplayFrequency; \n#ifndef _WIN32_WCE\n  DWORD  dmDisplayOrientation;\n#endif\n} DEVMODEW")

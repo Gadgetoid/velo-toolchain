@@ -108,6 +108,12 @@ HANDLE PegSetUserNotification(HANDLE hNotification, WCHAR *pwszAppName, SYSTEMTI
 #define CeSetUserNotification PegSetUserNotification
 #endif
 
+#define APP_RUN_AFTER_TIME_CHANGE TEXT("AppRunAfterTimeChange")
+#define APP_RUN_AT_TIME TEXT("AppRunAtTime")
+#define APP_RUN_TO_HANDLE_NOTIFICATION TEXT("AppRunToHandleNotification")
+#define NOTIFY_DEVICE_ADD TEXT("/ADD")
+#define NOTIFY_DEVICE_REMOVE TEXT("/REMOVE")
+
 #ifdef __cplusplus
 }
 #endif
