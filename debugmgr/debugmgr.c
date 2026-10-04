@@ -59,6 +59,23 @@ static BYTE *request;
 static BYTE *reply;
 static int capacity;
 
+#ifdef SH3
+static int __attribute__((noinline)) host_call(int operation, void *buffer, int length, int *extra) {
+    register int r4 asm("r4") = operation;
+    register void *r5 asm("r5") = buffer;
+    register int r6 asm("r6") = length;
+    register int r0 asm("r0");
+    register int r1 asm("r1");
+    asm volatile("trapa #0xCE"
+                 : "=r"(r0), "=r"(r1)
+                 : "r"(r4), "r"(r5), "r"(r6)
+                 : "memory");
+    if (extra) {
+        *extra = r1;
+    }
+    return r0;
+}
+#else
 static int __attribute__((noinline)) host_call(int operation, void *buffer, int length, int *extra) {
     register int a0 asm("$4") = operation;
     register void *a1 asm("$5") = buffer;
@@ -74,6 +91,7 @@ static int __attribute__((noinline)) host_call(int operation, void *buffer, int 
     }
     return v0;
 }
+#endif
 
 static DWORD read_u32(Reader *reader) {
     DWORD value;
