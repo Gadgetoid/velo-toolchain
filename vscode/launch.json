@@ -14,6 +14,8 @@
                 "miDebuggerPath": "gdb-multiarch"
             },
             "preLaunchTask": "velo: emulator CE 1.0",
+            "miDebuggerServerAddress": "localhost:2001",
+            "useExtendedRemote": true,
             "customLaunchSetupCommands": [
                 {
                     "text": "source ${command:cmake.launchTargetPath}.gdb"
@@ -43,6 +45,8 @@
                 "miDebuggerPath": "gdb-multiarch"
             },
             "preLaunchTask": "velo: emulator CE 2.0",
+            "miDebuggerServerAddress": "localhost:2002",
+            "useExtendedRemote": true,
             "customLaunchSetupCommands": [
                 {
                     "text": "source ${command:cmake.launchTargetPath}.gdb"
