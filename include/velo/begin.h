@@ -1,11 +1,30 @@
 #ifndef UNDER_CE
 #define UNDER_CE
 #endif
+#ifndef VELO_SH3
+#if defined(__SH__) || defined(__sh__) || defined(SHx) || defined(SH3) || defined(_SH3_)
+#define VELO_SH3 1
+#else
+#define VELO_SH3 0
+#endif
+#endif
+#if VELO_SH3
+#ifndef SHx
+#define SHx
+#endif
+#ifndef SH3
+#define SH3
+#endif
+#ifndef _SH3_
+#define _SH3_
+#endif
+#else
 #ifndef _MIPS_
 #define _MIPS_
 #endif
 #ifndef MIPS
 #define MIPS
+#endif
 #endif
 #ifndef UNICODE
 #define UNICODE

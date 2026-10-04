@@ -48,6 +48,41 @@ CE_PRINT_DIALOG = """typedef struct tagPDW {
 	HGLOBAL hglbPrintTemplateResource;
 } PRINTDLGW,*LPPRINTDLGW;"""
 
+SH3_CONTEXT_TAIL = """	ULONG Fir;
+	ULONG Psr;
+
+#if !defined(SH3e) && !defined(SH4)
+	ULONG	OldStuff[2];
+	DEBUG_REGISTERS DebugRegisters;
+#else
+	ULONG	Fpscr;
+	ULONG	Fpul;
+	ULONG	FRegs[16];
+#if defined(SH4)
+	ULONG	xFRegs[16];
+#endif
+#endif
+} CONTEXT;"""
+CE_SH3_CONTEXT_TAIL = """	ULONG Fir;
+	ULONG Psr;
+	ULONG TEA;
+	USHORT Expevt;
+	USHORT Trapa;
+	union {
+		DEBUG_REGISTERS DebugRegisters;
+		struct {
+#if VELO_CE == 1
+			HANDLE hProc;
+			DWORD akyCur;
+			ULONG oldR15;
+#else
+			DWORD fill[2];
+			ULONG oldR15;
+			PULONG pFpuData;
+#endif
+		};
+	};
+} CONTEXT;"""
 
 class Vendor:
     def __init__(self):
@@ -135,6 +170,11 @@ def patch(vendor):
               "#define RESOURCEUSAGE_ALL           (RESOURCEUSAGE_CONNECTABLE | RESOURCEUSAGE_CONTAINER | RESOURCEUSAGE_ATTACHED)",
               "#define RESOURCEUSAGE_ALL           (RESOURCEUSAGE_CONNECTABLE | RESOURCEUSAGE_CONTAINER)")
     vendor.ce("winnt.h", "REG_LEGAL_OPTION is 7 on CE", "#define REG_LEGAL_OPTION\t15", "#define REG_LEGAL_OPTION\t7")
+    vendor.ce("tlhelp32.h", "Heap32First takes the snapshot handle on CE", "BOOL WINAPI Heap32First(LPHEAPENTRY32,DWORD,DWORD);",
+              "BOOL WINAPI Heap32First(HANDLE,LPHEAPENTRY32,DWORD,DWORD);")
+    vendor.ce("tlhelp32.h", "Heap32Next takes the snapshot handle on CE", "BOOL WINAPI Heap32Next(LPHEAPENTRY32);",
+              "BOOL WINAPI Heap32Next(HANDLE,LPHEAPENTRY32);")
+    vendor.ce("winnt.h", "SH3 CONTEXT has CE's exception fields and the CE 1.0 or 2.0 union after Psr", SH3_CONTEXT_TAIL, CE_SH3_CONTEXT_TAIL)
     vendor.edit("wingdi.h", "DEVMODEW has no dmDisplayOrientation on CE 1.0 and 2.0", "  DWORD  dmDisplayFrequency; \n  DWORD  dmDisplayOrientation;\n} DEVMODEW",
                 "  DWORD  dmDisplayFrequency; \n#ifndef _WIN32_WCE\n  DWORD  dmDisplayOrientation;\n#endif\n} DEVMODEW")
     vendor.ce("commctrl.h", "TB_SETTOOLTIPS is WM_USER+81 on CE", "#define TB_SETTOOLTIPS\t(WM_USER+36)", "#define TB_SETTOOLTIPS\t(WM_USER+81)")

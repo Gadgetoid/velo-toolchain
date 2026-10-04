@@ -7,6 +7,7 @@ from importlib.machinery import SourceFileLoader
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 check = SourceFileLoader("check_headers", os.path.join(ROOT, "tests", "check-headers.py")).load_module()
+MIPS = check.ARCHITECTURES["mips"]
 
 
 SDK_HEADER_HOMES = {"types.h": "windef.h", "tchar.h": "winnt.h"}
@@ -36,8 +37,8 @@ def missing_constants(clang, reference, version, work):
     sdk_include = check.sdk_folder(reference, version, work)
     headers = [header for header in check.HEADERS if os.path.exists(os.path.join(sdk_include, header))]
     our_headers = [header for header in headers if os.path.exists(os.path.join(ROOT, "include", header))]
-    sdk = check.Side(clang, version * 100, [sdk_include], check.SDK_DEFINES, headers)
-    ours = check.Side(clang, version * 100, [os.path.join(ROOT, "include"), os.path.join(ROOT, "include", "w32api")], ["-DVELO_NO_CONSTANTS"],
+    sdk = check.Side(clang, MIPS["target"], version * 100, [sdk_include], check.SDK_DEFINES + MIPS["sdk_defines"], headers)
+    ours = check.Side(clang, MIPS["target"], version * 100, [os.path.join(ROOT, "include"), os.path.join(ROOT, "include", "w32api")], ["-DVELO_NO_CONSTANTS"],
                       our_headers)
     candidates = {name: name for name in sdk.macros() if not name.startswith("_")}
     sdk_values = sdk.evaluate(candidates)
@@ -60,8 +61,8 @@ def missing_types(clang, reference, version, work):
     sdk_include = os.path.join(work, "ce%d" % version)
     headers = [header for header in check.HEADERS if os.path.exists(os.path.join(sdk_include, header))]
     our_headers = [header for header in headers if os.path.exists(os.path.join(ROOT, "include", header))]
-    sdk = check.Side(clang, version * 100, [sdk_include], check.SDK_DEFINES, headers)
-    ours = check.Side(clang, version * 100, [os.path.join(ROOT, "include"), os.path.join(ROOT, "include", "w32api")], ["-DVELO_NO_TYPES"],
+    sdk = check.Side(clang, MIPS["target"], version * 100, [sdk_include], check.SDK_DEFINES + MIPS["sdk_defines"], headers)
+    ours = check.Side(clang, MIPS["target"], version * 100, [os.path.join(ROOT, "include"), os.path.join(ROOT, "include", "w32api")], ["-DVELO_NO_TYPES"],
                       our_headers)
     sdk_tree = sdk.tree()
     where = check.type_headers(sdk_tree)

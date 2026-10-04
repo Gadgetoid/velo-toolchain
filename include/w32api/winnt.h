@@ -2192,6 +2192,28 @@ typedef struct _CONTEXT {
 	/*   but are considered part of the control context rather than part of */
 	/*   the integer context. */
 
+#ifdef _WIN32_WCE
+	ULONG Fir;
+	ULONG Psr;
+	ULONG TEA;
+	USHORT Expevt;
+	USHORT Trapa;
+	union {
+		DEBUG_REGISTERS DebugRegisters;
+		struct {
+#if VELO_CE == 1
+			HANDLE hProc;
+			DWORD akyCur;
+			ULONG oldR15;
+#else
+			DWORD fill[2];
+			ULONG oldR15;
+			PULONG pFpuData;
+#endif
+		};
+	};
+} CONTEXT;
+#else
 	ULONG Fir;
 	ULONG Psr;
 
@@ -2207,6 +2229,7 @@ typedef struct _CONTEXT {
 #endif
 #endif
 } CONTEXT;
+#endif
 
 #elif defined(MIPS)
 

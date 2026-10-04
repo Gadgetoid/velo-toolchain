@@ -9,10 +9,15 @@ import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HEADERS = ["windows.h", "commctrl.h", "commdlg.h", "winsock.h", "notify.h", "tlhelp32.h", "mmreg.h", "msacm.h", "imm.h", "ras.h", "af_irda.h", "windowsx.h", "winnetwk.h", "mmsystem.h", "lmcons.h", "tchar.h"]
-TARGET = ["--target=mipsel-unknown-none-elf", "-march=mips1", "-msoft-float", "-fshort-wchar", "-ffreestanding", "-Wno-experimental-option",
-          "-w", "-ferror-limit=0"]
+COMMON_FLAGS = ["-fshort-wchar", "-ffreestanding", "-w", "-ferror-limit=0"]
+ARCHITECTURES = {
+    "mips": {"target": ["--target=mipsel-unknown-none-elf", "-march=mips1", "-msoft-float", "-Wno-experimental-option"],
+             "sdk_defines": ["-DMIPS", "-D_MIPS_=1", "-D_M_MRX000=4000"], "defines": [], "exports": "ce%d"},
+    "sh3": {"target": ["--target=sh3el-unknown-none-elf"],
+            "sdk_defines": ["-DSHx", "-DSH3", "-D_SH3_", "-D_M_SH=3"], "defines": ["-DSHx", "-DSH3", "-D_SH3_"], "exports": "ce%d-sh3"},
+}
 KNOWN_DIFFERENCES = re.compile(r"^(size|offset)_(struct_)?_?(WIN32_FIND_DATAA|tagREBARBANDINFOA|REBARBANDINFOA)(_|$)")
-KNOWN_SIGNATURES = re.compile(r"^(ImageList_EndDrag|waveOutGetVolume|waveOutSetVolume|Random)$")
+KNOWN_SIGNATURES = re.compile(r"^(ImageList_EndDrag|waveOutGetVolume|waveOutSetVolume|Random|DebugBreak)$")
 EXCLUDED_FUNCTIONS = re.compile(r"^(Co[A-Z]\w*|Ole\w+|Stg\w+|Var[A-Z]\w*|Variant\w+|SafeArray\w+|Sys[A-Z]\w*|Disp\w+|CLSIDFromString|"
                                 r"StringFrom\w+|ReadClass\w+|WriteClass\w+|\w*TypeLib\w*|CreateErrorInfo|SetErrorInfo|CreateOleAdviseHolder|BstrFromVector|"
                                 r"VectorFromBstr|SystemTimeToVariantTime|VariantTimeToSystemTime|line[A-Z]\w*|Dll[A-Z]\w*|ThisIsGwes|__C_specific_handler|"
@@ -26,14 +31,14 @@ EXCLUDED_MACROS = re.compile(r"^(\w+[a-z0-9]A|\w+API|DEBUGMSG|ERRORMSG|RETAILMSG
                              r"ACMHELPMSG\w+|DEFINE_GUID|DIALOGEX|LPTBSAVEPARAMS)$")
 EXCLUDED_CONSTANTS = re.compile(r"^(CERT_E_|CRYPT_E_|TRUST_E_|DIGSIG_E_|SPAPI_E_)")
 UNDERSCORE_MACRO_HEADERS = {"tchar.h"}
-SDK_DEFINES = ["-fms-extensions", "-D_WIN32", "-DUNDER_CE", "-DMIPS", "-D_MIPS_=1", "-D_M_MRX000=4000", "-DUNICODE", "-D_UNICODE", "-DWIN32_LEAN_AND_MEAN",
-               "-D__asm=velo_sdk_asm", "-D__export=", "-DHUGEP="]
+SDK_DEFINES = ["-fms-extensions", "-D_WIN32", "-DUNDER_CE", "-DUNICODE", "-D_UNICODE", "-DWIN32_LEAN_AND_MEAN", "-D__asm=velo_sdk_asm", "-D__export=",
+               "-DHUGEP="]
 
 
 class Side:
-    def __init__(self, clang, version, include, defines, headers):
+    def __init__(self, clang, target, version, include, defines, headers):
         self.clang = clang
-        self.flags = TARGET + ["-D_WIN32_WCE=%d" % version] + defines + ["-I%s" % folder for folder in include]
+        self.flags = target + COMMON_FLAGS + ["-D_WIN32_WCE=%d" % version] + defines + ["-I%s" % folder for folder in include]
         self.prelude = "".join("#include <%s>\n" % header for header in headers)
 
     def run(self, extra, body, check=False):
@@ -94,9 +99,9 @@ class Side:
         return found, unusable
 
 
-def exports(version):
+def exports(version, arch):
     names = set()
-    folder = os.path.join(ROOT, "exports", "ce%d" % version)
+    folder = os.path.join(ROOT, "exports", ARCHITECTURES[arch]["exports"] % version)
     for name in os.listdir(folder):
         names.update(line.strip() for line in open(os.path.join(folder, name)) if line.strip())
     return names
@@ -190,13 +195,18 @@ def compare_values(label, sdk_values, our_values, sdk_names, report, excluded=fr
     return len(missing) + len(different)
 
 
-def check(clang, reference, version, work):
+def check(clang, reference, version, work, arch, target_arch):
     sdk_include = sdk_folder(reference, version, work)
+    target = ARCHITECTURES[target_arch]["target"]
     headers = [header for header in HEADERS if os.path.exists(os.path.join(sdk_include, header))]
     our_headers = [header for header in headers if os.path.exists(os.path.join(ROOT, "include", header))]
-    sdk = Side(clang, version * 100, [sdk_include], SDK_DEFINES, headers)
-    ours = Side(clang, version * 100, [os.path.join(ROOT, "include"), os.path.join(ROOT, "include", "w32api")], [], our_headers)
-    report = ["CE %d.0, headers: %s" % (version, " ".join(headers))]
+    sdk = Side(clang, target, version * 100, [sdk_include], SDK_DEFINES + ARCHITECTURES[arch]["sdk_defines"], headers)
+    ours = Side(clang, target, version * 100, [os.path.join(ROOT, "include"), os.path.join(ROOT, "include", "w32api")], ARCHITECTURES[arch]["defines"],
+                our_headers)
+    label = "" if arch == "mips" else " %s" % arch.upper()
+    if target_arch != arch:
+        label += " (%s target)" % target_arch
+    report = ["CE %d.0%s, headers: %s" % (version, label, " ".join(headers))]
 
     sdk_macros = sdk.macros()
     our_macros = ours.macros()
@@ -226,7 +236,7 @@ def check(clang, reference, version, work):
     report.append("types: %d checked by name, %d excluded (tags and excluded areas)" % (len(sdk_records) - len(excluded_types), len(excluded_types)))
     problems += compare_values("layouts", sdk_sizes, our_sizes, sdk_sizes, report)
 
-    exported = exports(version)
+    exported = exports(version, arch)
     sdk_functions = sorted(node["name"] for node in sdk.tree()["inner"] if node.get("kind") == "FunctionDecl" and node["name"] in exported)
     sdk_signatures, _ = sdk.signatures(sdk_functions)
     excluded = sorted(name for name in sdk_signatures if EXCLUDED_FUNCTIONS.match(name))
@@ -241,7 +251,8 @@ def check(clang, reference, version, work):
     problems += len(different) + len(unusable)
 
     sdk_typedefs = typedef_types(sdk_tree)
-    loose = Side(clang, version * 100, [os.path.join(ROOT, "include"), os.path.join(ROOT, "include", "w32api")], ["-DNO_STRICT"], our_headers)
+    loose = Side(clang, target, version * 100, [os.path.join(ROOT, "include"), os.path.join(ROOT, "include", "w32api")],
+                 ARCHITECTURES[arch]["defines"] + ["-DNO_STRICT"], our_headers)
     loose_typedefs = typedef_types(loose.tree())
     handles = sorted(name for name, kind in sdk_typedefs.items() if kind == "void *" and name.startswith("H") and name in loose_typedefs and not EXCLUDED_TYPES.match(name))
     different = [name for name in handles if loose_typedefs[name] != "void *"]
@@ -266,6 +277,9 @@ if __name__ == "__main__":
     parser.add_argument("--reference", default=os.environ.get("VELO_REFERENCE"), help="tools/fetch-reference folder, default $VELO_REFERENCE")
     parser.add_argument("--clang", default=os.environ.get("CLANG", "clang"))
     parser.add_argument("--ce", choices=["1", "2"], action="append")
+    parser.add_argument("--arch", choices=sorted(ARCHITECTURES), default="mips", help="SDK defines and export lists to check against")
+    parser.add_argument("--target-arch", choices=sorted(ARCHITECTURES), help="compile for this architecture's clang target instead, "
+                        "to check the headers with a clang that lacks --arch's backend")
     parser.add_argument("--report", help="write the full report here")
     arguments = parser.parse_args()
     if not arguments.reference:
@@ -274,7 +288,8 @@ if __name__ == "__main__":
     lines = []
     with tempfile.TemporaryDirectory() as work:
         for version in sorted(int(ce) for ce in (arguments.ce or ["1", "2"])):
-            problems, report = check(arguments.clang, os.path.expanduser(arguments.reference), version, work)
+            problems, report = check(arguments.clang, os.path.expanduser(arguments.reference), version, work, arguments.arch,
+                                     arguments.target_arch or arguments.arch)
             total += problems
             lines += report
     if arguments.report:

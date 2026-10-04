@@ -13,6 +13,8 @@ WINDOWS_VERSION_EXTRAS = [("VELO_CE >= 2", "tchar.h")]
 OWN_HEADERS = ["wchar.h", "stdlib.h", "string.h", "windbase.h", "tchar.h"]
 MACRO_HEADERS = {"windowsx.h"}
 VERSIONS = {1: "1.0", 2: "2.0"}
+ARCHITECTURES = {"mips": {"label": "", "condition": "!VELO_SH3", "defines": []},
+                 "sh3": {"label": " SH3", "condition": "VELO_SH3", "defines": ["-DSH3"]}}
 ENTRY_POINTS = {"WinMain", "wWinMain", "DllMain", "DllEntryPoint"}
 
 
@@ -39,11 +41,11 @@ def write_wrappers():
             wrapper.write(text)
 
 
-def declarations(clang, version):
+def declarations(clang, version, arch="mips"):
     source = "#include <windows.h>\n#include <winsock.h>\n#include <tchar.h>\n" + "".join("#include <%s>\n" % header for header in vendored())
     command = [clang, "--target=mipsel-unknown-none-elf", "-march=mips1", "-msoft-float", "-fshort-wchar", "-ffreestanding",
                "-Wno-experimental-option", "-fsyntax-only", "-Xclang", "-ast-dump=json", "-D_WIN32_WCE=%d" % (version * 100),
-               "-DVELO_ALL_DECLARATIONS", "-I", os.path.join(ROOT, "include"), "-I", os.path.join(ROOT, "include", "w32api"), "-x", "c", "-"]
+               "-DVELO_ALL_DECLARATIONS"] + ARCHITECTURES[arch]["defines"] + ["-I", os.path.join(ROOT, "include"), "-I", os.path.join(ROOT, "include", "w32api"), "-x", "c", "-"]
     tree = json.loads(subprocess.run(command, input=source, capture_output=True, text=True, check=True).stdout)
     macro_command = [argument for argument in command if argument not in ("-fsyntax-only", "-Xclang", "-ast-dump=json")] + ["-E", "-dM"]
     macros = set(re.findall(r"^#define (\w+)", subprocess.run(macro_command, input=source, capture_output=True, text=True, check=True).stdout, re.M))
@@ -86,9 +88,13 @@ def runtime_functions():
     return names
 
 
-def exports(version):
+def exports_folder(version, arch="mips"):
+    return os.path.join(ROOT, "exports", "ce%d" % version if arch == "mips" else "ce%d-%s" % (version, arch))
+
+
+def exports(version, arch="mips"):
     names = set(runtime_functions())
-    for path in glob.glob(os.path.join(ROOT, "exports", "ce%d" % version, "*.txt")):
+    for path in glob.glob(os.path.join(exports_folder(version, arch), "*.txt")):
         names.update(line.strip() for line in open(path) if line.strip())
     return names
 
@@ -109,12 +115,14 @@ if __name__ == "__main__":
     lines = ["#if !defined(VELO_CE)", "#error \"include windows.h first\"", "#endif", ""]
     alias_lines = lines + ["#ifdef __cplusplus", "extern \"C\" {", "#endif", ""]
     report = []
-    for version, name in VERSIONS.items():
-        declared = declarations(arguments.clang, version)
-        exported = exports(version)
+    for arch, version in [(arch, version) for arch in ARCHITECTURES for version in VERSIONS]:
+        name = VERSIONS[version]
+        condition = "#if VELO_CE == %d && %s" % (version, ARCHITECTURES[arch]["condition"])
+        declared = declarations(arguments.clang, version, arch)
+        exported = exports(version, arch)
         aliases = sorted(function[:-1] for function in declared
                          if function.endswith("W") and function not in exported and function[:-1] in exported and function[:-1] not in declared)
-        alias_lines.append("#if VELO_CE == %d" % version)
+        alias_lines.append(condition)
         aliases_by_guard = {}
         for function in aliases:
             aliases_by_guard.setdefault(guard(find_header(function + "W")), []).append(function)
@@ -129,7 +137,7 @@ if __name__ == "__main__":
         by_guard = {}
         for function in missing:
             by_guard.setdefault(guard(find_header(function)), []).append(function)
-        lines.append("#if VELO_CE == %d" % version)
+        lines.append(condition)
         for header_guard in sorted(by_guard):
             lines.append("#ifdef %s" % header_guard)
             for function in by_guard[header_guard]:
@@ -138,8 +146,8 @@ if __name__ == "__main__":
         lines.append("#endif")
         lines.append("")
         undeclared = sorted(exported - set(declared))
-        report.append("CE %s: %d declared, %d exported, %d declared but not exported, %d exported but not declared" %
-                      (name, len(declared), len(exported), len(missing), len(undeclared)))
+        report.append("CE %s%s: %d declared, %d exported, %d declared but not exported, %d exported but not declared" %
+                      (name, ARCHITECTURES[arch]["label"], len(declared), len(exported), len(missing), len(undeclared)))
         report.extend("  %s" % function for function in undeclared)
     with open(os.path.join(ROOT, "include", "velo", "unavailable.h"), "w") as output:
         output.write("\n".join(lines))
