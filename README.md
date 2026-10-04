@@ -69,6 +69,7 @@ The Win32 headers are CeGCC's w32api (public domain) in `include/w32api`, patche
 - CE exports some wide functions without the `W` (`FindResource`, `GetVersionEx`, `GetClassLong`, the `Ras` and `acm` functions): either name works.
 - Every function the ROMs export has a docstring and named parameters, for editor hover and signature help. They're written from the CE 1.0 and 2.0 SDK references, with CE restrictions and the version that has the function.
 - `velo::runtime`, always linked: compiler-rt builtins (soft float, 64-bit division), `memcpy`, `memmove`, `memset`, `memcmp`, and `swprintf` and `vswprintf` over coredll's `wsprintfW`. That has no floating point (`%f` prints `f` and misreads the values after it) and writes at most 1023 characters plus the terminating null. Beyond coredll's wide-string functions there is no C library: use `LocalAlloc`, `wsprintfW` and your own maths.
+- `windowsx.h` has the SDK's message crackers and control macros. Include it yourself: the CE 1.0 and 2.0 SDKs' `windows.h` don't (CE 1.01's does).
 - `tchar.h` has the SDK's generic-text names: `_T`, `_TEXT`, `_tWinMain`, the `_tcs*`, `_ist*` and `_tto*` names on the wide functions coredll exports, and `_stprintf` and `_vstprintf` on `swprintf` and `vswprintf`. `windows.h` includes it on CE 2.0, as the SDK's does. The rest of the SDK's mapping goes to its static C library (`wprintf`, `_snwprintf`, `swscanf`, the stdio functions, `wcstol`, `wcstoul`, `wcstod`), so those are unavailable.
 
 Not covered, so declare them yourself if you need them:
