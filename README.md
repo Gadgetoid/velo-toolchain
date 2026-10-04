@@ -87,11 +87,79 @@ Not covered, so declare them yourself if you need them:
 
 Both need a clang with the MIPS backend (`CLANG`, default Homebrew's).
 
+## C++
+
+`velo_add_executable` and `velo_add_library` take `.cpp` files too. C++ is compiled as C++20 with the C flags plus `-fno-exceptions -fno-rtti -fno-threadsafe-statics`. `project(myapp C)` is enough: `VeloCE` enables C++ itself.
+
+```cpp
+#include <windows.h>
+
+class counter {
+public:
+    counter() : count(1) {}
+    int count;
+};
+
+counter global_counter;
+
+int WINAPI WinMain(HINSTANCE instance, HINSTANCE previous, LPWSTR command_line, int show) {
+    auto *numbers = new int[4];
+    delete[] numbers;
+    return global_counter.count;
+}
+```
+
+- A target that CMake links as C++ (it has a C++ source, or links a C++ static library) gets `velo::cxx_runtime`, and its entry point is `__velo_exe_start` or `__velo_dll_start` instead of `WinMain` or `DllMain`. That runs the global constructors (`.init_array`), calls `WinMain`, then runs the destructors of globals and static locals (`__cxa_atexit`) and `.fini_array`. A DLL runs its constructors on `DLL_PROCESS_ATTACH` before `DllMain`, and its destructors on `DLL_PROCESS_DETACH` after it. C targets don't change.
+- Destructors run when `WinMain` returns, not if the program ends some other way.
+- The startup costs about 250 bytes, and the exit handlers about 250 more if anything registers one.
+- `velo::cxx_runtime` (`runtime/cxx`): `operator new` and `delete` in every form (sized, aligned, `nothrow`, arrays) on `LocalAlloc` and `LocalFree`, `__cxa_atexit`, `__dso_handle`, and `__cxa_pure_virtual`. `new` traps if there's no memory (the `nothrow` forms return NULL), as does calling a pure virtual function.
+- The headers' functions have C linkage in C++, and `windows.h` declares `WinMain` and `DllMain`, so define them as in C. Functions a DLL exports need `extern "C"`.
+- `include/new` (placement `new`, `std::nothrow`, `std::align_val_t`, `std::launder`) and `include/initializer_list` are the only standard library headers, plus clang's own (`stdint.h`, `stddef.h`, `stdarg.h`, `limits.h`). libc++'s headers aren't usable here: Debian's clang doesn't come with them, and Homebrew's are set up for macOS.
+- Not supported: exceptions, RTTI (`dynamic_cast`, `typeid`), `thread_local`, the rest of the standard library, and thread-safe static locals: a static local is initialised by the first thread to reach it, unguarded.
+- `make check-cxx-headers` checks every function the headers declare has C linkage in C++, and that the C++ layer compiles for CE 1.0 and 2.0.
+
+### C++ layer
+
+`include/velo/cxx` is a small header-only C++ layer over the API, in namespace `velo`. It aims to cost nothing over the C it replaces, reports errors as values rather than exceptions, and only offers what the target CE version has. See [include/velo/cxx/README.md](include/velo/cxx/README.md).
+
+```cpp
+#include <velo/cxx/format.h>
+#include <velo/cxx/window.h>
+
+namespace {
+
+class tap_window : public velo::window<tap_window> {
+public:
+    static constexpr const wchar_t *class_name = L"TapWindow";
+
+    void on_paint(velo::paint_dc &dc) {
+        auto text = velo::format<64>(L"Taps: %d", tap_count);
+        dc.draw_text(text, client_rect(), DT_CENTER);
+    }
+
+    void on_tap(velo::point) {
+        tap_count++;
+        invalidate();
+    }
+
+    void on_destroy() {
+        PostQuitMessage(0);
+    }
+
+private:
+    int tap_count = 0;
+};
+
+}
+```
+
+`examples/window-cxx` is `examples/window` written with it. Its window looks the same, its source is 51 lines to the C version's 62, and its `.text` is 1,776 bytes to 1,108 (a 7,168 byte `.exe` to 6,656). Of the 668 bytes, about 250 are the C++ startup, 220 come from finding the window's object for each message (the C version uses globals), 130 from checking errors and destroying the window in a destructor, and 60 are three more imports.
+
 ## Notes
 
 - CE 1.0 has no `GetModuleFileNameW`, and `LoadLibraryW` doesn't search the program's folder. DLLs normally go in `\Windows`, or pass a full path (see `examples/dll`).
 - A DLL's import tables go in a 0x200 byte space before its IAT. `mkpe.py` says if a DLL needs more: `target_link_options(mylib PRIVATE --defsym=VELO_IMPORT_RESERVE=0x400)`.
-- `tools/velo-cc` filters clang's "MIPS-I support is experimental" warning. Set `CMAKE_C_COMPILER_LAUNCHER` to replace it.
+- `tools/velo-cc` filters clang's "MIPS-I support is experimental" warning. Set `CMAKE_C_COMPILER_LAUNCHER` and `CMAKE_CXX_COMPILER_LAUNCHER` to replace it.
 
 ## Debugging
 
@@ -155,7 +223,7 @@ F5 starts the emulator if it isn't running, uploads the selected target's `.exe`
 
 ## Examples and tests
 
-`examples/` has `hello` (message box), `window` (window, painting, taps, icon), `maths` (soft float and 64-bit integers) and `dll` (a DLL and a program that loads it).
+`examples/` has `hello` (message box), `window` (window, painting, taps, icon), `maths` (soft float and 64-bit integers), `dll` (a DLL and a program that loads it), `cxx-basics` (C++: constructors, destructors, virtual functions, `new`, templates and lambdas, and a C++ DLL) and `window-cxx` (`window` with the C++ layer).
 
 `docs/primer/index.html` is a beginner's guide to writing Velo programs with this toolchain. Its examples are in `docs/primer/examples`: `make primer` builds them, and `make primer-screenshots` updates its screenshots, with the same settings as `make test`. Its pages are built from `docs/primer/src` with `python3 docs/primer/src/build.py`, which copies code listings from the examples, the headers' types and the export lists into the HTML, and needs a velo-bluesky checkout beside this one. `--og` also renders the link preview image, `og.png`, with Chrome. Link metadata uses `PRIMER_URL` (default `https://gadgetoid.github.io/velo-toolchain/`), where the primer is published.
 
