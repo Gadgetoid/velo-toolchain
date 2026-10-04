@@ -109,6 +109,37 @@ def library_imports(path):
     return found
 
 
+def dll_exports(path):
+    data = open(path, "rb").read()
+    header = struct.unpack_from("<I", data, 0x3C)[0]
+    section_count, optional_size = struct.unpack_from("<H", data, header + 6)[0], struct.unpack_from("<H", data, header + 20)[0]
+    export_rva = struct.unpack_from("<I", data, header + 24 + 96)[0]
+    sections = [struct.unpack_from("<IIII", data, header + 24 + optional_size + SECTION_HEADER_SIZE * index + 8)
+                for index in range(section_count)]
+
+    def offset(rva):
+        for size, address, raw_size, raw_offset in sections:
+            if address <= rva < address + max(size, raw_size):
+                return raw_offset + rva - address
+        raise ValueError("RVA %x is in no section" % rva)
+
+    names = {}
+    if export_rva:
+        directory = offset(export_rva)
+        ordinal_base, _, name_count, _, names_rva, ordinals_rva = struct.unpack_from("<IIIIII", data, directory + 16)
+        for index in range(name_count):
+            name_offset = offset(struct.unpack_from("<I", data, offset(names_rva) + 4 * index)[0])
+            name = data[name_offset:data.index(b"\0", name_offset)].decode("latin-1")
+            names[name] = ordinal_base + struct.unpack_from("<H", data, offset(ordinals_rva) + 2 * index)[0]
+    return {os.path.basename(path): names}
+
+
+def read_exports(path):
+    if open(path, "rb").read(2) == b"MZ":
+        return dll_exports(path)
+    return library_imports(path)
+
+
 def write_lists(imports, folder):
     os.makedirs(folder, exist_ok=True)
     for dll, names in sorted(imports.items()):
@@ -119,15 +150,15 @@ def write_lists(imports, folder):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="List the functions COFF import libraries import, by DLL")
-    parser.add_argument("libraries", nargs="+", help="import libraries (.lib); others are skipped")
+    parser = argparse.ArgumentParser(description="List the functions COFF import libraries import, or DLLs export, by DLL")
+    parser.add_argument("libraries", nargs="+", help="import libraries (.lib; others are skipped) or DLLs")
     parser.add_argument("--output", help="write <dll>.txt export lists into this folder instead of printing")
     parser.add_argument("--ordinals", action="store_true", help="show ordinal imports' ordinals")
     arguments = parser.parse_args()
     imports = {}
     for path in arguments.libraries:
         try:
-            for dll, names in library_imports(path).items():
+            for dll, names in read_exports(path).items():
                 imports.setdefault(dll, {}).update(names)
         except ValueError as error:
             sys.exit("mkexports: %s: %s" % (path, error))
