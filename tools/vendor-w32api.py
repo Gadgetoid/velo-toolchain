@@ -75,6 +75,9 @@ CE_SH3_CONTEXT_TAIL = """	ULONG Fir;
 			HANDLE hProc;
 			DWORD akyCur;
 			ULONG oldR15;
+#if VELO_WCE >= 101
+			PULONG pFpuData;
+#endif
 #else
 			DWORD fill[2];
 			ULONG oldR15;
@@ -174,7 +177,7 @@ def patch(vendor):
               "BOOL WINAPI Heap32First(HANDLE,LPHEAPENTRY32,DWORD,DWORD);")
     vendor.ce("tlhelp32.h", "Heap32Next takes the snapshot handle on CE", "BOOL WINAPI Heap32Next(LPHEAPENTRY32);",
               "BOOL WINAPI Heap32Next(HANDLE,LPHEAPENTRY32);")
-    vendor.ce("winnt.h", "SH3 CONTEXT has CE's exception fields and the CE 1.0 or 2.0 union after Psr", SH3_CONTEXT_TAIL, CE_SH3_CONTEXT_TAIL)
+    vendor.ce("winnt.h", "SH3 CONTEXT has CE's exception fields and the CE 1.0, 1.01 or 2.0 union after Psr", SH3_CONTEXT_TAIL, CE_SH3_CONTEXT_TAIL)
     vendor.edit("wingdi.h", "DEVMODEW has no dmDisplayOrientation on CE 1.0 and 2.0", "  DWORD  dmDisplayFrequency; \n  DWORD  dmDisplayOrientation;\n} DEVMODEW",
                 "  DWORD  dmDisplayFrequency; \n#ifndef _WIN32_WCE\n  DWORD  dmDisplayOrientation;\n#endif\n} DEVMODEW")
     vendor.ce("commctrl.h", "TB_SETTOOLTIPS is WM_USER+81 on CE", "#define TB_SETTOOLTIPS\t(WM_USER+36)", "#define TB_SETTOOLTIPS\t(WM_USER+81)")
@@ -205,6 +208,11 @@ def patch(vendor):
               "\tPOINT pt;\n} NMMOUSE, *LPNMMOUSE;")
     vendor.ce("commctrl.h", "NMREBAR is CE's layout", "typedef struct tagNMREBAR {\n\tNMHDR hdr;\n\tDWORD dwMask;\n\tUINT uBand;\n\tUINT fStyle;\n\tUINT wID;\n\tLPARAM lParam;\n} NMREBAR,*LPNMREBAR;",
               "typedef struct tagNMREBAR {\n\tNMHDR hdr;\n\tUINT uBand;\n\tUINT wID;\n\tUINT cyChild;\n\tUINT cyBand;\n} NMREBAR,*LPNMREBAR;")
+    for note, start, end in (("TB_SETBUTTONWIDTH is WM_USER+52 on CE 1.01", "#define TB_GETBUTTONTEXTW", "#if (_WIN32_IE >= 0x0300)"),
+                             ("TB_SETBUTTONWIDTH's IE 3.0 definition too", "#define TB_GETSTYLE", "#define TB_SETMAXTEXTROWS")):
+        vendor.within("commctrl.h", note, start, end, "#define TB_SETBUTTONWIDTH\t(WM_USER+59)\n",
+                      "#if defined(_WIN32_WCE) && VELO_WCE == 101\n#define TB_SETBUTTONWIDTH\t(WM_USER+52)\n#else\n"
+                      "#define TB_SETBUTTONWIDTH\t(WM_USER+59)\n#endif\n")
     vendor.ce("commctrl.h", "SBN_LAST is -900 on CE", "#define SBN_LAST\t((UINT)-899U)", "#define SBN_LAST\t((UINT)-900U)")
     path = os.path.join(DESTINATION, "commdlg.h")
     text = open(path).read()

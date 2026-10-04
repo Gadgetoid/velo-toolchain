@@ -2205,6 +2205,9 @@ typedef struct _CONTEXT {
 			HANDLE hProc;
 			DWORD akyCur;
 			ULONG oldR15;
+#if VELO_WCE >= 101
+			PULONG pFpuData;
+#endif
 #else
 			DWORD fill[2];
 			ULONG oldR15;

@@ -426,3 +426,9 @@ typedef ACMSTREAMHEADER * PACMSTREAMHEADER;
 typedef RASAMB * LPRASAMB;
 #endif
 #endif
+
+#if VELO_WCE == 101
+#ifdef EXCPT_H
+typedef EXCEPTION_POINTERS * Exception_info_ptr;
+#endif
+#endif

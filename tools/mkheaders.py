@@ -12,9 +12,11 @@ WINDOWS_EXTRAS = ["stdint.h", "mmsystem.h", "shellapi.h", "wchar.h", "stdlib.h",
 WINDOWS_VERSION_EXTRAS = [("VELO_CE >= 2", "tchar.h")]
 OWN_HEADERS = ["wchar.h", "stdlib.h", "string.h", "windbase.h", "tchar.h"]
 MACRO_HEADERS = {"windowsx.h"}
-VERSIONS = {1: "1.0", 2: "2.0"}
-ARCHITECTURES = {"mips": {"label": "", "condition": "!VELO_SH3", "defines": []},
-                 "sh3": {"label": " SH3", "condition": "VELO_SH3", "defines": ["-DSH3"]}}
+VERSIONS = {1: "1.0", 101: "1.01", 2: "2.0"}
+WIN32_WCE = {1: 100, 101: 101, 2: 200}
+ARCHITECTURES = {"mips": {"label": "", "defines": [], "versions": {1: "VELO_CE == 1 && !VELO_SH3", 2: "VELO_CE == 2 && !VELO_SH3"}},
+                 "sh3": {"label": " SH3", "defines": ["-DSH3"],
+                         "versions": {1: "VELO_WCE == 100 && VELO_SH3", 101: "VELO_WCE == 101 && VELO_SH3", 2: "VELO_CE == 2 && VELO_SH3"}}}
 ENTRY_POINTS = {"WinMain", "wWinMain", "DllMain", "DllEntryPoint"}
 
 
@@ -44,7 +46,7 @@ def write_wrappers():
 def declarations(clang, version, arch="mips"):
     source = "#include <windows.h>\n#include <winsock.h>\n#include <tchar.h>\n" + "".join("#include <%s>\n" % header for header in vendored())
     command = [clang, "--target=mipsel-unknown-none-elf", "-march=mips1", "-msoft-float", "-fshort-wchar", "-ffreestanding",
-               "-Wno-experimental-option", "-fsyntax-only", "-Xclang", "-ast-dump=json", "-D_WIN32_WCE=%d" % (version * 100),
+               "-Wno-experimental-option", "-fsyntax-only", "-Xclang", "-ast-dump=json", "-D_WIN32_WCE=%d" % WIN32_WCE[version],
                "-DVELO_ALL_DECLARATIONS"] + ARCHITECTURES[arch]["defines"] + ["-I", os.path.join(ROOT, "include"), "-I", os.path.join(ROOT, "include", "w32api"), "-x", "c", "-"]
     tree = json.loads(subprocess.run(command, input=source, capture_output=True, text=True, check=True).stdout)
     macro_command = [argument for argument in command if argument not in ("-fsyntax-only", "-Xclang", "-ast-dump=json")] + ["-E", "-dM"]
@@ -115,9 +117,9 @@ if __name__ == "__main__":
     lines = ["#if !defined(VELO_CE)", "#error \"include windows.h first\"", "#endif", ""]
     alias_lines = lines + ["#ifdef __cplusplus", "extern \"C\" {", "#endif", ""]
     report = []
-    for arch, version in [(arch, version) for arch in ARCHITECTURES for version in VERSIONS]:
+    for arch, version in [(arch, version) for arch in ARCHITECTURES for version in ARCHITECTURES[arch]["versions"]]:
         name = VERSIONS[version]
-        condition = "#if VELO_CE == %d && %s" % (version, ARCHITECTURES[arch]["condition"])
+        condition = "#if %s" % ARCHITECTURES[arch]["versions"][version]
         declared = declarations(arguments.clang, version, arch)
         exported = exports(version, arch)
         aliases = sorted(function[:-1] for function in declared

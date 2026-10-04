@@ -46,7 +46,7 @@ This gives `build/myapp.exe` and `build/mylib.dll`, with the linked `.elf` besid
 - `velo_add_library(target [EXCLUDE_FROM_ALL] [OUTPUT file.dll] [RESOURCES files...] EXPORTS name[=symbol]... | EXPORTS_FILE file sources...)`: entry point `DllMain`. `EXPORTS_FILE` has one export per line.
 - `RESOURCES`: `.rc` files are compiled with `llvm-rc` and linked into `.rsrc` with the icon. Other files listed (headers, bitmaps) are dependencies. The `.rc` can include `windows.h` and `commctrl.h`. CE has no `DialogBoxParamW`: use `FindResource`, `LoadResource` and `DialogBoxIndirectParamW`.
 - `llvm-rc` differs from Microsoft's rc in two ways that matter for SDK samples. It needs the comma after a control's text or name: `LTEXT "Text", -1, 5, 5, 50, 12` and `ICON IDI_APP, IDC_ICON, 5, 5, 32, 32`, where Microsoft's also takes them without. And in a string continued onto the next line with `\`, it keeps the next line's leading spaces, which Microsoft's drops.
-- `VELO_CE_VERSION`: `1` (default) or `2`. Sets `_WIN32_WCE` to `100` or `200` and picks the import libraries.
+- `VELO_CE_VERSION`: `1` (default) or `2`. Sets `_WIN32_WCE` to `100` or `200` and picks the import libraries. SH3 also has `1.01`, see [SH3](#sh3).
 - The PE says subsystem 9 (Windows CE GUI) with the CE version, 1.0 or 2.0, as Microsoft's CE 2.0 toolkit writes. CE 2.0 treats a program marked 1.0 as a CE 1.0 program, with another system font for client-area text and other font enumeration results. CE 1.0 runs both the same.
 - `VELO_ARCH`: `mips` (default) or `sh3`.
 - `CMAKE_BUILD_TYPE` defaults to `MinSizeRel` (`-Os`). `Debug` gives `-O0 -g`.
@@ -80,6 +80,7 @@ Not covered, so declare them yourself if you need them:
 
 - COM and OLE (`ole32`, `oleaut32` on CE 2.0)
 - telephony (`line` and `phone` functions)
+- `windowsx.h`'s message crackers, which CE 1.01's `windows.h` includes
 - audio codec format IDs (`mmreg.h`), and the ACM filter and format chooser functions
 - drivers and kernel internals: PC Card services, device loading, `kfuncs.h` handles
 - the address book, mail store and transport APIs
@@ -272,9 +273,9 @@ The C runtime DLL's libraries (`msvcrt.lib`, `msvcrtd.lib`) are left out: that D
 
 - coredll is the same as the MIPS SDK's, plus `DebugBreak`. The MIPS SDK lists match the Velo's `exports/ce1` and `exports/ce2` coredll, commctrl and winsock exactly.
 - There are lists for the SDK's other DLLs: on CE 1.0 addrstor, htmlview, msgstore, pcmcia and pmemtool, and on CE 2.0 also atlce, hwxusa, inkx, ndis, toolhelp and wininet. The Velo's ROM-only DLLs aren't there.
-- CE 1.01's SH3 coredll adds 276 functions to CE 1.0's and drops 5. `VELO_CE_VERSION=1` uses CE 1.0's.
+- `VELO_CE_VERSION=1.01` targets CE 1.01, the Handheld PC update with localisation support: `_WIN32_WCE` is `101`, `INTERNATIONAL` is defined as the SDK's `windows.h` does, and the import libraries are CE 1.01's (`exports/ce101-sh3`), whose coredll adds 276 functions to CE 1.0's and drops 5. The headers add CE 1.01's constants and `CONTEXT`'s `pFpuData`.
 
-`make examples-sh3` builds the examples into `build/ce1-sh3` and `build/ce2-sh3`, with `VELO_SH3_LLVM` as the LLVM. `make check-headers-sh3` compares the headers with the SDK headers using its SH3 defines. Without `VELO_SH3_LLVM` it compiles for MIPS instead (`--target-arch mips`), which checks the SH3 declarations but not the SuperH ABI's layouts. `long long` and `double` are 8-byte aligned in structures, as the SH compiler's default `/Zp8` gives.
+`make examples-sh3` builds the examples into `build/ce1-sh3`, `build/ce101-sh3` and `build/ce2-sh3`, with `VELO_SH3_LLVM` as the LLVM. `make check-headers-sh3` compares the headers with the SDK headers using its SH3 defines. Without `VELO_SH3_LLVM` it compiles for MIPS instead (`--target-arch mips`), which checks the SH3 declarations but not the SuperH ABI's layouts. `long long` and `double` are 8-byte aligned in structures, as the SH compiler's default `/Zp8` gives.
 
 `make debugmgr-sh3` builds debugmgr for SH3. It calls the host through `trapa #0xCE`, which the SH3 emulator (a velo-emu fork for Microsoft's Odo SH3 reference board, running a Platform Builder 2.11 CE image) answers like velo-emu's mailbox, so `velo-debug` works with it. The examples run there, from a folder served with its `--folder` or copied over with `velo-debug`; the CE 1.0 and CE 2.0 builds look the same:
 
@@ -326,7 +327,7 @@ Other projects can use `tests/emulator.py` for their own programs: import it, se
 - `include/velo/constants.h` and `types.h`: values and types from the Windows CE 1.0 and 2.0 SDK headers (`tools/fetch-reference`).
 - `docs/api`: docstrings written in our own words from the Windows CE 1.0 and 2.0 SDK references.
 - `exports/ce1`, `exports/ce2`: from velo-apps' ROM export tables (`tools/velo1_rom_exports.json`, `tools/velo1_ce2_*_exports.tsv`).
-- `exports/ce1-sh3`, `exports/ce2-sh3`: function names from the CE 1.0 and 2.0 SDKs' SH3 import libraries (`tools/mkexports.py`).
+- `exports/ce1-sh3`, `exports/ce101-sh3`, `exports/ce2-sh3`: function names from the CE 1.0, 1.01 and 2.0 SDKs' SH3 import libraries (`tools/mkexports.py`).
 - `runtime/compiler-rt/`: LLVM compiler-rt builtins, Apache 2.0 with LLVM exceptions, see `runtime/compiler-rt/LICENSE.TXT`.
 
 ## Licence

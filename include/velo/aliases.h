@@ -156,7 +156,7 @@ extern __typeof__(GetVersionExW) GetVersionEx;
 #endif
 #endif
 
-#if VELO_CE == 1 && VELO_SH3
+#if VELO_WCE == 100 && VELO_SH3
 #ifdef _RAS_H
 #undef RasDeleteEntry
 extern __typeof__(RasDeleteEntryW) RasDeleteEntry;
@@ -208,6 +208,79 @@ extern __typeof__(RasValidateEntryNameW) RasValidateEntryName;
 extern __typeof__(FindResourceW) FindResource;
 #undef FindResourceW
 #define FindResourceW FindResource
+#undef GetVersionEx
+extern __typeof__(GetVersionExW) GetVersionEx;
+#undef GetVersionExW
+#define GetVersionExW GetVersionEx
+#endif
+#ifdef _WINUSER_H
+#undef GetClassLong
+extern __typeof__(GetClassLongW) GetClassLong;
+#undef GetClassLongW
+#define GetClassLongW GetClassLong
+#undef SetClassLong
+extern __typeof__(SetClassLongW) SetClassLong;
+#undef SetClassLongW
+#define SetClassLongW SetClassLong
+#endif
+#endif
+
+#if VELO_WCE == 101 && VELO_SH3
+#ifdef _RAS_H
+#undef RasDeleteEntry
+extern __typeof__(RasDeleteEntryW) RasDeleteEntry;
+#undef RasDeleteEntryW
+#define RasDeleteEntryW RasDeleteEntry
+#undef RasDial
+extern __typeof__(RasDialW) RasDial;
+#undef RasDialW
+#define RasDialW RasDial
+#undef RasEnumConnections
+extern __typeof__(RasEnumConnectionsW) RasEnumConnections;
+#undef RasEnumConnectionsW
+#define RasEnumConnectionsW RasEnumConnections
+#undef RasEnumEntries
+extern __typeof__(RasEnumEntriesW) RasEnumEntries;
+#undef RasEnumEntriesW
+#define RasEnumEntriesW RasEnumEntries
+#undef RasGetConnectStatus
+extern __typeof__(RasGetConnectStatusW) RasGetConnectStatus;
+#undef RasGetConnectStatusW
+#define RasGetConnectStatusW RasGetConnectStatus
+#undef RasGetEntryDialParams
+extern __typeof__(RasGetEntryDialParamsW) RasGetEntryDialParams;
+#undef RasGetEntryDialParamsW
+#define RasGetEntryDialParamsW RasGetEntryDialParams
+#undef RasGetEntryProperties
+extern __typeof__(RasGetEntryPropertiesW) RasGetEntryProperties;
+#undef RasGetEntryPropertiesW
+#define RasGetEntryPropertiesW RasGetEntryProperties
+#undef RasHangUp
+extern __typeof__(RasHangUpW) RasHangUp;
+#undef RasHangUpW
+#define RasHangUpW RasHangUp
+#undef RasRenameEntry
+extern __typeof__(RasRenameEntryW) RasRenameEntry;
+#undef RasRenameEntryW
+#define RasRenameEntryW RasRenameEntry
+#undef RasSetEntryDialParams
+extern __typeof__(RasSetEntryDialParamsW) RasSetEntryDialParams;
+#undef RasSetEntryDialParamsW
+#define RasSetEntryDialParamsW RasSetEntryDialParams
+#undef RasSetEntryProperties
+extern __typeof__(RasSetEntryPropertiesW) RasSetEntryProperties;
+#undef RasSetEntryPropertiesW
+#define RasSetEntryPropertiesW RasSetEntryProperties
+#undef RasValidateEntryName
+extern __typeof__(RasValidateEntryNameW) RasValidateEntryName;
+#undef RasValidateEntryNameW
+#define RasValidateEntryNameW RasValidateEntryName
+#endif
+#ifdef _WINBASE_H
+#undef CreateFileForMapping
+extern __typeof__(CreateFileForMappingW) CreateFileForMapping;
+#undef CreateFileForMappingW
+#define CreateFileForMappingW CreateFileForMapping
 #undef GetVersionEx
 extern __typeof__(GetVersionExW) GetVersionEx;
 #undef GetVersionExW

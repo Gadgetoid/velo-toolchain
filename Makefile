@@ -14,6 +14,8 @@ examples:
 examples-sh3:
 	cmake -S examples -B build/ce1-sh3 -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) -DVELO_CE_VERSION=1 -DVELO_ARCH=sh3 $(SH3_LLVM)
 	cmake --build build/ce1-sh3
+	cmake -S examples -B build/ce101-sh3 -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) -DVELO_CE_VERSION=1.01 -DVELO_ARCH=sh3 $(SH3_LLVM)
+	cmake --build build/ce101-sh3
 	cmake -S examples -B build/ce2-sh3 -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) -DVELO_CE_VERSION=2 -DVELO_ARCH=sh3 $(SH3_LLVM)
 	cmake --build build/ce2-sh3
 

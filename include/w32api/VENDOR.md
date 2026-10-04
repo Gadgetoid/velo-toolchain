@@ -47,7 +47,7 @@ CE 1.0 and 2.0 have no ANSI functions, and their declarations are marked unavail
 - `winnt.h`: REG_LEGAL_OPTION is 7 on CE
 - `tlhelp32.h`: Heap32First takes the snapshot handle on CE
 - `tlhelp32.h`: Heap32Next takes the snapshot handle on CE
-- `winnt.h`: SH3 CONTEXT has CE's exception fields and the CE 1.0 or 2.0 union after Psr
+- `winnt.h`: SH3 CONTEXT has CE's exception fields and the CE 1.0, 1.01 or 2.0 union after Psr
 - `wingdi.h`: DEVMODEW has no dmDisplayOrientation on CE 1.0 and 2.0
 - `commctrl.h`: TB_SETTOOLTIPS is WM_USER+81 on CE
 - `commctrl.h`: RB_GETBANDINFO is RB_GETBANDINFOW (WM_USER+28) on CE
@@ -68,6 +68,8 @@ CE 1.0 and 2.0 have no ANSI functions, and their declarations are marked unavail
 - `commctrl.h`: NMTVCUSTOMDRAW has no iLevel on CE
 - `commctrl.h`: NMMOUSE has no dwHitInfo on CE
 - `commctrl.h`: NMREBAR is CE's layout
+- `commctrl.h`: TB_SETBUTTONWIDTH is WM_USER+52 on CE 1.01
+- `commctrl.h`: TB_SETBUTTONWIDTH's IE 3.0 definition too
 - `commctrl.h`: SBN_LAST is -900 on CE
 - `commdlg.h`: PD_ flags are CE's
 - `commdlg.h`: PRINTDLGW is CE's print dialog structure

@@ -8,10 +8,16 @@ enable_language(CXX)
 if(NOT VELO_ARCH)
     set(VELO_ARCH mips)
 endif()
-if(VELO_ARCH STREQUAL "mips")
-    set(VELO_EXPORTS_NAME "ce${VELO_CE_VERSION}")
+string(REPLACE "." "" VELO_CE_NAME "ce${VELO_CE_VERSION}")
+if(VELO_CE_VERSION STREQUAL "1.01")
+    set(VELO_WIN32_WCE 101)
 else()
-    set(VELO_EXPORTS_NAME "ce${VELO_CE_VERSION}-${VELO_ARCH}")
+    set(VELO_WIN32_WCE ${VELO_CE_VERSION}00)
+endif()
+if(VELO_ARCH STREQUAL "mips")
+    set(VELO_EXPORTS_NAME "${VELO_CE_NAME}")
+else()
+    set(VELO_EXPORTS_NAME "${VELO_CE_NAME}-${VELO_ARCH}")
 endif()
 set(VELO_EXPORTS_DIR "${VELO_TOOLCHAIN_ROOT}/exports/${VELO_EXPORTS_NAME}")
 if(NOT IS_DIRECTORY "${VELO_EXPORTS_DIR}")
@@ -95,7 +101,7 @@ function(_velo_resources target out_options)
         set(compiled "${CMAKE_CURRENT_BINARY_DIR}/${target}_${name}.res")
         add_custom_command(
             OUTPUT "${compiled}"
-            COMMAND "${VELO_RC}" -D "_WIN32_WCE=${VELO_CE_VERSION}00" ${VELO_RC_ARCH_DEFINES} -I "${VELO_TOOLCHAIN_ROOT}/include" -I "${VELO_TOOLCHAIN_ROOT}/include/w32api" -I "${directory}" -FO "${compiled}" -- "${script}"
+            COMMAND "${VELO_RC}" -D "_WIN32_WCE=${VELO_WIN32_WCE}" ${VELO_RC_ARCH_DEFINES} -I "${VELO_TOOLCHAIN_ROOT}/include" -I "${VELO_TOOLCHAIN_ROOT}/include/w32api" -I "${directory}" -FO "${compiled}" -- "${script}"
             DEPENDS "${script}" ${dependencies}
             VERBATIM)
         target_sources(${target} PRIVATE "${compiled}")

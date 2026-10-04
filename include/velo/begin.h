@@ -49,6 +49,18 @@
 #define VELO_CE 1
 #endif
 #endif
+#ifndef VELO_WCE
+#if VELO_CE >= 2
+#define VELO_WCE 200
+#elif defined(_WIN32_WCE) && _WIN32_WCE == 101
+#define VELO_WCE 101
+#else
+#define VELO_WCE 100
+#endif
+#endif
+#if VELO_WCE == 101 && !defined(INTERNATIONAL)
+#define INTERNATIONAL
+#endif
 
 
 #ifndef _WIN32_IE
@@ -63,6 +75,8 @@
 #undef _WIN32_WCE
 #if VELO_CE >= 2
 #define _WIN32_WCE 0x200
+#elif VELO_WCE == 101
+#define _WIN32_WCE 0x101
 #else
 #define _WIN32_WCE 0x100
 #endif

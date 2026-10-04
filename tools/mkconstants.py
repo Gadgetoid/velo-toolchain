@@ -8,6 +8,7 @@ from importlib.machinery import SourceFileLoader
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 check = SourceFileLoader("check_headers", os.path.join(ROOT, "tests", "check-headers.py")).load_module()
 MIPS = check.ARCHITECTURES["mips"]
+VERSIONS = [(1, "VELO_CE == 1", None), (2, "VELO_CE == 2", None), (101, "VELO_WCE == 101", 1)]
 
 
 SDK_HEADER_HOMES = {"types.h": "windef.h", "tchar.h": "winnt.h"}
@@ -37,8 +38,8 @@ def missing_constants(clang, reference, version, work):
     sdk_include = check.sdk_folder(reference, version, work)
     headers = [header for header in check.HEADERS if os.path.exists(os.path.join(sdk_include, header))]
     our_headers = [header for header in headers if os.path.exists(os.path.join(ROOT, "include", header))]
-    sdk = check.Side(clang, MIPS["target"], version * 100, [sdk_include], check.SDK_DEFINES + MIPS["sdk_defines"], headers)
-    ours = check.Side(clang, MIPS["target"], version * 100, [os.path.join(ROOT, "include"), os.path.join(ROOT, "include", "w32api")], ["-DVELO_NO_CONSTANTS"],
+    sdk = check.Side(clang, MIPS["target"], check.WIN32_WCE[version], [sdk_include], check.SDK_DEFINES + MIPS["sdk_defines"], headers)
+    ours = check.Side(clang, MIPS["target"], check.WIN32_WCE[version], [os.path.join(ROOT, "include"), os.path.join(ROOT, "include", "w32api")], ["-DVELO_NO_CONSTANTS"],
                       our_headers)
     candidates = {name: name for name in sdk.macros() if not name.startswith("_")}
     sdk_values = sdk.evaluate(candidates)
@@ -61,8 +62,8 @@ def missing_types(clang, reference, version, work):
     sdk_include = os.path.join(work, "ce%d" % version)
     headers = [header for header in check.HEADERS if os.path.exists(os.path.join(sdk_include, header))]
     our_headers = [header for header in headers if os.path.exists(os.path.join(ROOT, "include", header))]
-    sdk = check.Side(clang, MIPS["target"], version * 100, [sdk_include], check.SDK_DEFINES + MIPS["sdk_defines"], headers)
-    ours = check.Side(clang, MIPS["target"], version * 100, [os.path.join(ROOT, "include"), os.path.join(ROOT, "include", "w32api")], ["-DVELO_NO_TYPES"],
+    sdk = check.Side(clang, MIPS["target"], check.WIN32_WCE[version], [sdk_include], check.SDK_DEFINES + MIPS["sdk_defines"], headers)
+    ours = check.Side(clang, MIPS["target"], check.WIN32_WCE[version], [os.path.join(ROOT, "include"), os.path.join(ROOT, "include", "w32api")], ["-DVELO_NO_TYPES"],
                       our_headers)
     sdk_tree = sdk.tree()
     where = check.type_headers(sdk_tree)
@@ -117,12 +118,18 @@ if __name__ == "__main__":
     lines = []
     skipped = []
     with tempfile.TemporaryDirectory() as work:
-        for version in (1, 2):
-            lines.append("#if VELO_CE == %d" % version)
-            for header, constants in sorted(missing_constants(arguments.clang, os.path.expanduser(arguments.reference), version, work).items()):
+        found_constants = {}
+        for version, condition, base in VERSIONS:
+            lines.append("#if %s" % condition)
+            found_constants[version] = missing_constants(arguments.clang, os.path.expanduser(arguments.reference), version, work)
+            for header, constants in sorted(found_constants[version].items()):
+                if base:
+                    constants = {name: value for name, value in constants.items() if name not in found_constants[base].get(header, {})}
                 guard = our_guard(header)
                 if not guard:
-                    skipped.append("CE %d.0 %s: %d" % (version, header, len(constants)))
+                    skipped.append("CE %s %s: %d" % (check.VERSION_NAMES[version], header, len(constants)))
+                    continue
+                if not constants:
                     continue
                 lines.append("#ifdef %s" % guard)
                 for name, value in sorted(constants.items()):
@@ -130,18 +137,22 @@ if __name__ == "__main__":
                 lines.append("#endif")
             lines += ["#endif", ""]
         type_lines = []
-        for version in (1, 2):
-            type_lines.append("#if VELO_CE == %d" % version)
+        found_types = {}
+        for version, condition, base in VERSIONS:
+            type_lines.append("#if %s" % condition)
             found, unresolved = missing_types(arguments.clang, os.path.expanduser(arguments.reference), version, work)
+            found_types[version] = {name for _, name, _ in found}
             for header, name, spelled in found:
+                if base and name in found_types[base]:
+                    continue
                 guard = our_guard(header) if header else None
                 if not guard:
-                    skipped.append("CE %d.0 type %s in %s" % (version, name, header))
+                    skipped.append("CE %s type %s in %s" % (check.VERSION_NAMES[version], name, header))
                     continue
                 declaration = "typedef %s;" % spelled if "(*%s)" % name in spelled else "typedef %s %s;" % (spelled, name)
                 type_lines += ["#ifdef %s" % guard, declaration, "#endif"]
             type_lines += ["#endif", ""]
-            print("mkconstants: CE %d.0 types needing definitions: %s" % (version, " ".join(unresolved)))
+            print("mkconstants: CE %s types needing definitions: %s" % (check.VERSION_NAMES[version], " ".join(unresolved)))
     with open(os.path.join(ROOT, "include", "velo", "constants.h"), "w") as output:
         output.write("\n".join(lines))
     with open(os.path.join(ROOT, "include", "velo", "types.h"), "w") as output:

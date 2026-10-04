@@ -9,6 +9,8 @@ import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HEADERS = ["windows.h", "commctrl.h", "commdlg.h", "winsock.h", "notify.h", "tlhelp32.h", "mmreg.h", "msacm.h", "imm.h", "ras.h", "af_irda.h", "windowsx.h", "winnetwk.h", "mmsystem.h", "lmcons.h", "tchar.h"]
+WIN32_WCE = {1: 100, 101: 101, 2: 200}
+VERSION_NAMES = {1: "1.0", 101: "1.01", 2: "2.0"}
 COMMON_FLAGS = ["-fshort-wchar", "-ffreestanding", "-w", "-ferror-limit=0"]
 ARCHITECTURES = {
     "mips": {"target": ["--target=mipsel-unknown-none-elf", "-march=mips1", "-msoft-float", "-Wno-experimental-option"],
@@ -23,7 +25,7 @@ EXCLUDED_FUNCTIONS = re.compile(r"^(Co[A-Z]\w*|Ole\w+|Stg\w+|Var[A-Z]\w*|Variant
                                 r"VectorFromBstr|SystemTimeToVariantTime|VariantTimeToSystemTime|line[A-Z]\w*|Dll[A-Z]\w*|ThisIsGwes|__C_specific_handler|"
                                 r"acmFilter\w+|acmFormatChoose)$")
 EXCLUDED_HEADERS = {"tapi.h", "mmreg.h", "mmddk.h", "oleauto.h", "oaidl.h", "objidl.h", "objbase.h", "oleidl.h", "ole2.h", "wtypes.h", "kfuncs.h",
-                    "unknwn.h", "rpc.h", "rpcdce.h", "rpcndr.h", "rpcnsip.h", "rpcnterr.h", "olectl.h", "ocidl.h", "cguid.h", "coguid.h"}
+                    "unknwn.h", "rpc.h", "rpcdce.h", "rpcndr.h", "rpcnsip.h", "rpcnterr.h", "olectl.h", "ocidl.h", "cguid.h", "coguid.h", "windowsx.h"}
 EXCLUDED_TYPES = re.compile(r"^(P?U?INT128|RNAAPP_INFO|PRNAAPP_INFO|RASPPPADDR|RasCntlEnum_t|RUNQ_t|PRUNQ_t|PTHREAD|P?EXCEPTION_ROUTINE|"
                             r"_onexit_t|l?div_t|P?SOCKHAND|LPHICON)$|^(LP)?(LINE|PHONE|HLINE|HPHONE|HCALL|P?ACMFILTER|P?ACMFORMATCHOOSE|ACMDRIVERPROC|LPACMDRIVERPROC|I[A-Z]\w*Vtbl$|I[A-Z][a-z]\w*$|LP[A-Z]*VTBL$|PFN(CANUNLOADNOW|GETCLASSOBJECT)$)")
 EXCLUDED_MACROS = re.compile(r"^(\w+[a-z0-9]A|\w+API|DEBUGMSG|ERRORMSG|RETAILMSG|DBGCHK|WSAStartup|WSACleanup|BASETYPES|cdecl|NETCONS_INCLUDED|"
@@ -108,7 +110,7 @@ def exports(version, arch):
 
 
 def sdk_folder(reference, version, work):
-    source = os.path.join(reference, "include", "ce%d00" % version)
+    source = os.path.join(reference, "include", "ce%d" % WIN32_WCE[version])
     folder = os.path.join(work, "ce%d" % version)
     os.makedirs(folder)
     for name in os.listdir(source):
@@ -200,13 +202,13 @@ def check(clang, reference, version, work, arch, target_arch):
     target = ARCHITECTURES[target_arch]["target"]
     headers = [header for header in HEADERS if os.path.exists(os.path.join(sdk_include, header))]
     our_headers = [header for header in headers if os.path.exists(os.path.join(ROOT, "include", header))]
-    sdk = Side(clang, target, version * 100, [sdk_include], SDK_DEFINES + ARCHITECTURES[arch]["sdk_defines"], headers)
-    ours = Side(clang, target, version * 100, [os.path.join(ROOT, "include"), os.path.join(ROOT, "include", "w32api")], ARCHITECTURES[arch]["defines"],
+    sdk = Side(clang, target, WIN32_WCE[version], [sdk_include], SDK_DEFINES + ARCHITECTURES[arch]["sdk_defines"], headers)
+    ours = Side(clang, target, WIN32_WCE[version], [os.path.join(ROOT, "include"), os.path.join(ROOT, "include", "w32api")], ARCHITECTURES[arch]["defines"],
                 our_headers)
     label = "" if arch == "mips" else " %s" % arch.upper()
     if target_arch != arch:
         label += " (%s target)" % target_arch
-    report = ["CE %d.0%s, headers: %s" % (version, label, " ".join(headers))]
+    report = ["CE %s%s, headers: %s" % (VERSION_NAMES[version], label, " ".join(headers))]
 
     sdk_macros = sdk.macros()
     our_macros = ours.macros()
@@ -241,7 +243,7 @@ def check(clang, reference, version, work, arch, target_arch):
     sdk_signatures, _ = sdk.signatures(sdk_functions)
     excluded = sorted(name for name in sdk_signatures if EXCLUDED_FUNCTIONS.match(name))
     our_signatures, unusable = ours.signatures(name for name in sdk_signatures if name not in excluded)
-    different = sorted(name for name in our_signatures if our_signatures[name] != sdk_signatures[name] and not KNOWN_SIGNATURES.match(name))
+    different = sorted(name for name in our_signatures if name in sdk_signatures and our_signatures[name] != sdk_signatures[name] and not KNOWN_SIGNATURES.match(name))
     report.append("functions: %d compared, %d excluded, %d missing or unavailable, %d different" %
                   (len(sdk_signatures) - len(excluded), len(excluded), len(unusable), len(different)))
     for name in different:
@@ -251,7 +253,7 @@ def check(clang, reference, version, work, arch, target_arch):
     problems += len(different) + len(unusable)
 
     sdk_typedefs = typedef_types(sdk_tree)
-    loose = Side(clang, target, version * 100, [os.path.join(ROOT, "include"), os.path.join(ROOT, "include", "w32api")],
+    loose = Side(clang, target, WIN32_WCE[version], [os.path.join(ROOT, "include"), os.path.join(ROOT, "include", "w32api")],
                  ARCHITECTURES[arch]["defines"] + ["-DNO_STRICT"], our_headers)
     loose_typedefs = typedef_types(loose.tree())
     handles = sorted(name for name, kind in sdk_typedefs.items() if kind == "void *" and name.startswith("H") and name in loose_typedefs and not EXCLUDED_TYPES.match(name))
@@ -276,7 +278,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Compare velo-toolchain's headers with the Windows CE 1.0 and 2.0 SDK headers")
     parser.add_argument("--reference", default=os.environ.get("VELO_REFERENCE"), help="tools/fetch-reference folder, default $VELO_REFERENCE")
     parser.add_argument("--clang", default=os.environ.get("CLANG", "clang"))
-    parser.add_argument("--ce", choices=["1", "2"], action="append")
+    parser.add_argument("--ce", choices=["1", "101", "2"], action="append", help="CE versions to check, default 1 and 2 (and 101 for sh3)")
     parser.add_argument("--arch", choices=sorted(ARCHITECTURES), default="mips", help="SDK defines and export lists to check against")
     parser.add_argument("--target-arch", choices=sorted(ARCHITECTURES), help="compile for this architecture's clang target instead, "
                         "to check the headers with a clang that lacks --arch's backend")
@@ -287,7 +289,8 @@ if __name__ == "__main__":
     total = 0
     lines = []
     with tempfile.TemporaryDirectory() as work:
-        for version in sorted(int(ce) for ce in (arguments.ce or ["1", "2"])):
+        default_versions = ["1", "101", "2"] if arguments.arch == "sh3" else ["1", "2"]
+        for version in sorted((int(ce) for ce in (arguments.ce or default_versions)), key=WIN32_WCE.get):
             problems, report = check(arguments.clang, os.path.expanduser(arguments.reference), version, work, arguments.arch,
                                      arguments.target_arch or arguments.arch)
             total += problems

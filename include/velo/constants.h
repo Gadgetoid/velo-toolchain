@@ -1679,3 +1679,27 @@
 #endif
 #endif
 #endif
+
+#if VELO_WCE == 101
+#ifdef _COMMCTRL_H
+#ifndef LVS_EX_IMAGEHEADER
+#define LVS_EX_IMAGEHEADER 128
+#endif
+#endif
+#ifdef _WINNLS_H
+#ifndef CAL_HIRJI
+#define CAL_HIRJI 6
+#endif
+#ifndef LOCALE_SYEARMONTH
+#define LOCALE_SYEARMONTH 0x1020
+#endif
+#ifndef WC_DEFAULTCHECK
+#define WC_DEFAULTCHECK 0x100
+#endif
+#endif
+#ifdef _WINUSER_H
+#ifndef WS_EX_INK
+#define WS_EX_INK 0x10000000
+#endif
+#endif
+#endif
