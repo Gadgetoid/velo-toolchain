@@ -152,10 +152,14 @@ end
         set(os_symbols_folder ":${VELO_OS_SYMBOLS}")
         set(os_symbols_load "  sharedlibrary\n")
     endif()
+    set(architecture "")
+    if(VELO_ARCH STREQUAL "sh3")
+        set(architecture "set architecture sh3\n")
+    endif()
     foreach(target IN LISTS executables)
         get_target_property(output ${target} VELO_OUTPUT)
         file(GENERATE OUTPUT "$<TARGET_FILE:${target}>.gdb" CONTENT
-"set confirm off
+"${architecture}set confirm off
 set exec-file-mismatch off
 maint set target-non-stop on
 file \"$<TARGET_FILE:${target}>\"
