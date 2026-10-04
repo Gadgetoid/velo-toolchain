@@ -2,6 +2,8 @@
 
 A CMake toolchain for Windows CE 1.0 and 2.0 MIPS programs and DLLs, aimed at the Philips Velo 1 (Toshiba TX3912, R3910 core). It uses clang and lld, then `tools/mkpe.py` turns the linked ELF into a CE PE.
 
+It can also build the same projects for SH3 Windows CE devices, with an LLVM that has a SuperH backend. See [SH3](#sh3).
+
 ## Requirements
 
 macOS:
@@ -46,6 +48,7 @@ This gives `build/myapp.exe` and `build/mylib.dll`, with the linked `.elf` besid
 - `llvm-rc` differs from Microsoft's rc in two ways that matter for SDK samples. It needs the comma after a control's text or name: `LTEXT "Text", -1, 5, 5, 50, 12` and `ICON IDI_APP, IDC_ICON, 5, 5, 32, 32`, where Microsoft's also takes them without. And in a string continued onto the next line with `\`, it keeps the next line's leading spaces, which Microsoft's drops.
 - `VELO_CE_VERSION`: `1` (default) or `2`. Sets `_WIN32_WCE` to `100` or `200` and picks the import libraries.
 - The PE says subsystem 9 (Windows CE GUI) with the CE version, 1.0 or 2.0, as Microsoft's CE 2.0 toolkit writes. CE 2.0 treats a program marked 1.0 as a CE 1.0 program, with another system font for client-area text and other font enumeration results. CE 1.0 runs both the same.
+- `VELO_ARCH`: `mips` (default) or `sh3`.
 - `CMAKE_BUILD_TYPE` defaults to `MinSizeRel` (`-Os`). `Debug` gives `-O0 -g`.
 
 ## Import libraries
@@ -243,9 +246,41 @@ To debug on a self-built CE 2.x image, set `VELO_CE2_ROM` to it and `VELO_CE2_ST
 
 `vscode/rc-language` is a VS Code extension that highlights resource scripts (`.rc`). Its README says how to install it.
 
+## SH3
+
+`-DVELO_ARCH=sh3` builds for SH3 Windows CE devices. It needs an LLVM with a SuperH backend, which LLVM releases don't have yet: set `VELO_LLVM_ROOT` to one, built from llvm/llvm-project#181287 with Windows CE's SH3 calling convention.
+
+```sh
+cmake -S . -B build-sh3 -DCMAKE_TOOLCHAIN_FILE=/path/to/velo-toolchain/cmake/velo-ce.cmake -DVELO_CE_VERSION=1 -DVELO_ARCH=sh3 -DVELO_LLVM_ROOT=/path/to/llvm
+```
+
+What changes:
+
+- clang targets `sh3el-unknown-none-elf`, and `SHx`, `SH3` and `_SH3_` are defined, as the SDK's SH3 projects do, for C and `.rc` files. The headers define them too if the compiler is SuperH, and `MIPS` and `_MIPS_` otherwise.
+- `CONTEXT` is CE's SH3 layout: `TEA`, `Expevt` and `Trapa` after `Psr`, then the debug registers in a union with CE 1.0's `hProc`, `akyCur` and `oldR15`, or CE 2.0's `oldR15` and `pFpuData`.
+- Import stubs load `__imp_<name>` from a literal after the stub and `jmp @r0`, as Microsoft's SH3 import libraries do.
+- `mkpe.py` writes machine 0x1A2 when the ELF is SuperH, and `R_SH_DIR32` relocations become HIGHLOW base relocations. PC-relative ones need none.
+- `velo_runtime` adds the 32-bit division builtins, since the SH3 has no divide instruction.
+
+The import libraries come from `exports/ce1-sh3` and `exports/ce2-sh3`: the SH3 import libraries in Microsoft's CE 1.0 and 2.0 SDKs, not a device's ROM. `tools/mkexports.py` reads them out of the SDK's `.lib` files, which `tools/fetch-reference` downloads to `lib/`:
+
+```sh
+python3 tools/mkexports.py $VELO_REFERENCE/lib/ce100/sh3/*.lib --output exports/ce1-sh3
+```
+
+The C runtime DLL's libraries (`msvcrt.lib`, `msvcrtd.lib`) are left out: that DLL isn't in ROM. Compared with the MIPS lists:
+
+- coredll is the same as the MIPS SDK's, plus `DebugBreak`. The MIPS SDK lists match the Velo's `exports/ce1` and `exports/ce2` coredll, commctrl and winsock exactly.
+- There are lists for the SDK's other DLLs: on CE 1.0 addrstor, htmlview, msgstore, pcmcia and pmemtool, and on CE 2.0 also atlce, hwxusa, inkx, ndis, toolhelp and wininet. The Velo's ROM-only DLLs aren't there.
+- CE 1.01's SH3 coredll adds 276 functions to CE 1.0's and drops 5. `VELO_CE_VERSION=1` uses CE 1.0's.
+
+`make examples-sh3` builds the examples into `build/ce1-sh3` and `build/ce2-sh3`, with `VELO_SH3_LLVM` as the LLVM. `make check-headers-sh3` compares the headers with the SDK headers using its SH3 defines. Without `VELO_SH3_LLVM` it compiles for MIPS instead (`--target-arch mips`), which checks the SH3 declarations but not the SuperH ABI's layouts.
+
+Not on SH3 yet: debugmgr, `velo-debug`, the GDB scripts and VS Code setup, `velo-symbolize`, and `make test` all rely on velo-emu, which emulates MIPS. SH3 builds still get GDB scripts, but nothing can use them yet. Programs have no `.pdata`, so CE can't unwind them for structured exception handling, as on MIPS.
+
 ## Reference material
 
-`tools/fetch-reference FOLDER` (or `$VELO_REFERENCE`) downloads the Windows CE 1.0, 1.01 and 2.0 SDK headers, the CE 2.0 toolkit's Win32 samples and the toolkits' documentation (InfoViewer `.ivt` titles, including the CE 1.0 and 2.0 SDK references and the PR3910 processor reference) from archive.org, and extracts the titles to HTML with `tools/extract-ivt`. They're Microsoft's, for reference only.
+`tools/fetch-reference FOLDER` (or `$VELO_REFERENCE`) downloads the Windows CE 1.0, 1.01 and 2.0 SDK headers, the SDKs' MIPS and SH3 libraries, the CE 2.0 toolkit's Win32 samples and the toolkits' documentation (InfoViewer `.ivt` titles, including the CE 1.0 and 2.0 SDK references and the PR3910 processor reference) from archive.org, and extracts the titles to HTML with `tools/extract-ivt`. They're Microsoft's, for reference only.
 
 ## Examples and tests
 
@@ -284,7 +319,8 @@ Other projects can use `tests/emulator.py` for their own programs: import it, se
 - `include/w32api/`: CeGCC's w32api headers (from MinGW), public domain, see `include/w32api/README.w32api`. `include/w32api/VENDOR.md` lists our patches.
 - `include/velo/constants.h` and `types.h`: values and types from the Windows CE 1.0 and 2.0 SDK headers (`tools/fetch-reference`).
 - `docs/api`: docstrings written in our own words from the Windows CE 1.0 and 2.0 SDK references.
-- `exports/`: from velo-apps' ROM export tables (`tools/velo1_rom_exports.json`, `tools/velo1_ce2_*_exports.tsv`).
+- `exports/ce1`, `exports/ce2`: from velo-apps' ROM export tables (`tools/velo1_rom_exports.json`, `tools/velo1_ce2_*_exports.tsv`).
+- `exports/ce1-sh3`, `exports/ce2-sh3`: function names from the CE 1.0 and 2.0 SDKs' SH3 import libraries (`tools/mkexports.py`).
 - `runtime/compiler-rt/`: LLVM compiler-rt builtins, Apache 2.0 with LLVM exceptions, see `runtime/compiler-rt/LICENSE.TXT`.
 
 ## Licence
