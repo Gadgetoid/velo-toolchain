@@ -2,6 +2,8 @@ import glob
 import html
 import os
 import re
+import shutil
+import subprocess
 import sys
 import textwrap
 
@@ -10,6 +12,9 @@ from highlight import highlight
 SOURCE = os.path.dirname(os.path.abspath(__file__))
 OUTPUT = os.path.dirname(SOURCE)
 ROOT = os.path.dirname(os.path.dirname(OUTPUT))
+SITE_URL = os.environ.get("PRIMER_URL", "https://gadgetoid.github.io/velo-toolchain/")
+CHROME = os.environ.get("CHROME", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+OG_IMAGE_ALT = "The Velo CE Primer: two example programs on a Philips Velo 1's greyscale screen, with Memphis shapes."
 
 CHAPTERS = [
     ("index.html", None, "Cover", "The Velo CE Primer"),
@@ -23,6 +28,23 @@ CHAPTERS = [
     ("8-appstore.html", 8, "App Store", "Project: An App Store"),
     ("9-reference.html", 9, "Reference", "Reference"),
 ]
+
+DESCRIPTIONS = {
+    "index.html": "A beginner's guide to programming Windows CE 1.0 and 2.0 on the Philips Velo 1 handheld PC, with example programs, "
+                  "screenshots, and two projects: a Bluesky client and an app store.",
+    "1-velo.html": "The Philips Velo 1's hardware, Windows CE 1.0 and 2.0, and how CE differs from the Windows you know.",
+    "2-tools.html": "Install velo-toolchain, build your first Windows CE program, run it in velo-emu, and debug it with GDB and VS Code.",
+    "3-win32.html": "WinMain, the message loop, window procedures, painting, the stylus and the keyboard, on Windows CE.",
+    "4-layout.html": "Five Windows CE screen layouts for the Velo's 480 x 240 screen, with screenshots: two panes, list and details, "
+                     "a dialog, tabs and controls, and custom drawing.",
+    "5-system.html": "Life without a C library on Windows CE: Unicode and UTF-8, memory, the object store, cards, the registry, "
+                     "processes and DLLs.",
+    "6-network.html": "Winsock on the Velo, HTTP through a proxy, worker threads, and talking to the user interface safely.",
+    "7-bluesky.html": "Building a Bluesky client for Windows CE: the AT Protocol calls, sessions, JSON, pictures, and how velo-bluesky "
+                      "fits together.",
+    "8-appstore.html": "Building an app store for the Velo: catalogues, downloads, installing, shortcuts, uninstalling and free space.",
+    "9-reference.html": "What exists on Windows CE 1.0 and 2.0, notification codes, gotchas, a glossary and further reading.",
+}
 
 
 def read_lines(path):
@@ -157,8 +179,38 @@ def page(index):
                % (number, title, navigation(file)))
     return ("<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
-            "<title>%s</title>\n<link rel=\"stylesheet\" href=\"style.css\">\n</head>\n<body>\n%s%s\n%s\n</body>\n</html>\n"
-            % (head_title, top, main, footer(index)))
+            "<title>%s</title>\n%s\n<link rel=\"stylesheet\" href=\"style.css\">\n</head>\n<body>\n%s%s\n%s\n</body>\n</html>\n"
+            % (head_title, metadata(file, number, head_title), top, main, footer(index)))
+
+
+def metadata(file, number, title):
+    url = SITE_URL + ("" if file == "index.html" else file)
+    description = html.escape(DESCRIPTIONS[file])
+    tags = [
+        '<meta name="description" content="%s">' % description,
+        '<meta property="og:site_name" content="The Velo CE Primer">',
+        '<meta property="og:type" content="%s">' % ("website" if number is None else "article"),
+        '<meta property="og:url" content="%s">' % url,
+        '<meta property="og:title" content="%s">' % html.escape(title),
+        '<meta property="og:description" content="%s">' % description,
+        '<meta property="og:image" content="%sog.png">' % SITE_URL,
+        '<meta property="og:image:width" content="1200">',
+        '<meta property="og:image:height" content="630">',
+        '<meta property="og:image:alt" content="%s">' % html.escape(OG_IMAGE_ALT),
+        '<meta property="og:locale" content="en_GB">',
+        '<link rel="canonical" href="%s">' % url,
+    ]
+    return "\n".join(tags)
+
+
+def render_og_image():
+    output = os.path.join(OUTPUT, "og.png")
+    subprocess.run([CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--window-size=1200,630",
+                    "--screenshot=%s" % output, "file://" + os.path.join(SOURCE, "og.html")],
+                   check=True, capture_output=True)
+    if shutil.which("pngquant"):
+        subprocess.run(["pngquant", "--force", "--strip", "--quality=60-90", "--ext", ".png", output], check=True)
+    print("og.png")
 
 
 def check(text, file):
@@ -176,3 +228,5 @@ if __name__ == "__main__":
         with open(os.path.join(OUTPUT, file), "w") as output:
             output.write(text)
         print(file)
+    if "--og" in sys.argv:
+        render_og_image()

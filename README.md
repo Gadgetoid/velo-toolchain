@@ -157,7 +157,7 @@ F5 starts the emulator if it isn't running, uploads the selected target's `.exe`
 
 `examples/` has `hello` (message box), `window` (window, painting, taps, icon), `maths` (soft float and 64-bit integers) and `dll` (a DLL and a program that loads it).
 
-`docs/primer/index.html` is a beginner's guide to writing Velo programs with this toolchain. Its examples are in `docs/primer/examples`: `make primer` builds them, and `make primer-screenshots` updates its screenshots, with the same settings as `make test`. Its pages are built from `docs/primer/src` with `python3 docs/primer/src/build.py`, which copies code listings from the examples, the headers' types and the export lists into the HTML, and needs a velo-bluesky checkout beside this one.
+`docs/primer/index.html` is a beginner's guide to writing Velo programs with this toolchain. Its examples are in `docs/primer/examples`: `make primer` builds them, and `make primer-screenshots` updates its screenshots, with the same settings as `make test`. Its pages are built from `docs/primer/src` with `python3 docs/primer/src/build.py`, which copies code listings from the examples, the headers' types and the export lists into the HTML, and needs a velo-bluesky checkout beside this one. `--og` also renders the link preview image, `og.png`, with Chrome. Link metadata uses `PRIMER_URL` (default `https://gadgetoid.github.io/velo-toolchain/`), where the primer is published.
 
 ```sh
 make examples   # build for CE 1.0 and CE 2.0 into build/ce1 and build/ce2
