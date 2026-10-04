@@ -194,7 +194,7 @@ tools/velo-debug run /Windows/maths.exe     # prints the process ID
 tools/velo-debug kill 0x80013f74
 ```
 
-`make debug-state` needs the same settings as `make test`. It starts debugmgr from a card, copies it to `\Windows`, hands over to that copy and saves the state, so loading it gives a Velo with debugmgr already answering. The card is out after loading, which for CE 2.0 with a separate system card includes the system card.
+`make debug-state` needs the same settings as `make test`. It starts debugmgr from a card, copies it to `\Windows`, hands over to that copy and saves the state, so loading it gives a Velo with debugmgr already answering. The card image is kept beside the state as `debug-card.img`, so loading the state finds its card, including a separate CE 2.0 system card. A state only loads on the ROM it was made with: `make debug-state` records that ROM beside each state (`debug-desktop.state.rom`), and `tools/velo-emulator` names it if `VELO_CE2_ROM` (or CE 1.0's `rom/nk.bin`) differs. For CE 2.0, velo-emu's merged ROM (`rom/nk-ce2-merged.bin`) is the easiest: it has the desktop connection software in ROM and needs no system card.
 
 `velo-debug` also has `get`, `ls`, `rm`, `mkdir`, `rmdir`, `mv`, `quit` and `handover` (start another debugmgr, then stop). `kill` only ends programs debugmgr started. The message format is in [debugmgr/PROTOCOL.md](debugmgr/PROTOCOL.md).
 

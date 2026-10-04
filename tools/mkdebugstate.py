@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import os
 import shutil
 import subprocess
@@ -63,4 +64,8 @@ if __name__ == "__main__":
                 emulator_process.kill()
     if not os.path.exists(output):
         sys.exit("no state saved")
+    with open(target["rom"], "rb") as rom:
+        digest = hashlib.sha256(rom.read()).hexdigest()
+    with open(output + ".rom", "w") as record:
+        record.write("%s %s\n" % (digest, os.path.abspath(target["rom"])))
     print(output)

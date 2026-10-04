@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import hashlib
 import os
 import shutil
 import socket
@@ -29,10 +30,18 @@ if __name__ == "__main__":
     state = os.path.join(ROOT, "build", "debugmgr", "ce" + arguments.ce, "debug-desktop.state")
     if not os.path.exists(state):
         sys.exit("velo-emulator: error: no %s; run make debug-state in %s" % (state, ROOT))
+    rom = emulator.TARGETS[arguments.ce]["rom"]()
+    if os.path.exists(state + ".rom"):
+        expected_digest, expected_rom = open(state + ".rom").read().strip().split(" ", 1)
+        with open(rom, "rb") as rom_file:
+            digest = hashlib.sha256(rom_file.read()).hexdigest()
+        if digest != expected_digest:
+            setting = "VELO_EMU's rom/nk.bin" if arguments.ce == "1" else "VELO_CE%s_ROM" % arguments.ce
+            sys.exit("velo-emulator: error: the debug state was made with %s, but %s is %s; set it to that ROM, or run make debug-state with this one"
+                     % (expected_rom, setting, rom))
     session = os.path.join(ROOT, "build", "debugmgr", "ce" + arguments.ce, "session.state")
     shutil.copyfile(state, session)
     folder = emulator.environment("VELO_EMU")
-    rom = emulator.TARGETS[arguments.ce]["rom"]()
     if arguments.headless:
         command = [os.path.join(folder, "headless"), rom, "--load=%s" % session, "--gdb=%d" % port]
     else:
