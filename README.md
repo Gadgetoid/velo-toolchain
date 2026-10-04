@@ -169,6 +169,7 @@ private:
 - CE 1.0 has no `GetModuleFileNameW`, and `LoadLibraryW` doesn't search the program's folder. DLLs normally go in `\Windows`, or pass a full path (see `examples/dll`).
 - A DLL's import tables go in a 0x200 byte space before its IAT. `mkpe.py` says if a DLL needs more: `target_link_options(mylib PRIVATE --defsym=VELO_IMPORT_RESERVE=0x400)`.
 - `tools/velo-cc` filters clang's "MIPS-I support is experimental" warning. Set `CMAKE_C_COMPILER_LAUNCHER` and `CMAKE_CXX_COMPILER_LAUNCHER` to replace it.
+- Programs and DLLs have no `.pdata` (function table) on MIPS or SH3, so CE can't unwind their frames. `__try` doesn't work in them, exceptions can't unwind through them, and a fault inside a window procedure ends the process.
 
 ## Debugging
 
@@ -283,7 +284,7 @@ The C runtime DLL's libraries (`msvcrt.lib`, `msvcrtd.lib`) are left out: that D
 | --- | --- | --- | --- |
 | ![hello on SH3 CE 2.11](docs/screenshots/sh3/hello.png) | ![window on SH3 CE 2.11](docs/screenshots/sh3/window.png) | ![maths on SH3 CE 2.11](docs/screenshots/sh3/maths.png) | ![greeter on SH3 CE 2.11](docs/screenshots/sh3/greeter.png) |
 
-Not on SH3 yet: `make debug-state`, `tools/velo-emulator`, the GDB scripts and VS Code setup, and `make test` are written for velo-emu and the Velo. `velo-symbolize` works on SH3 builds. Programs have no `.pdata`, so CE can't unwind them for structured exception handling, as on MIPS.
+Not on SH3 yet: `make debug-state`, `tools/velo-emulator`, the GDB scripts and VS Code setup, and `make test` are written for velo-emu and the Velo. `velo-symbolize` works on SH3 builds.
 
 ## Reference material
 
