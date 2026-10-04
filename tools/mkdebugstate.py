@@ -1,5 +1,6 @@
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -43,7 +44,9 @@ if __name__ == "__main__":
     agent_path = os.path.join(build, AGENT)
     with tempfile.TemporaryDirectory() as work:
         os.chdir(work)
-        image, _ = emulator.make_card(build, target, work)
+        made_image, _ = emulator.make_card(build, target, work)
+        image = os.path.join(os.path.dirname(output), "debug-card.img")
+        shutil.move(made_image, image)
         events, _ = emulator.launch_events(target, AGENT, "")
         command = [os.path.join(target["emulator"], "headless"), target["rom"], "--load=%s" % target["state"], "--card=%s" % image, *events,
                    "--agent=%s" % SOCKET, "--seconds=100000", "--save=%s" % output]
