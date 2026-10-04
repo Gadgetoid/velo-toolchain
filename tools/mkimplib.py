@@ -4,7 +4,19 @@ import re
 IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
-def stub(function, dll):
+def import_slot(function, dll, word=".word"):
+    return f"""    .section .iat.{dll}.{function},"aw",@progbits
+    .balign 4
+    .weak __imp_{function}
+    .weak "__velo_import${dll}${function}"
+__imp_{function}:
+"__velo_import${dll}${function}":
+    {word} 0
+
+"""
+
+
+def mips_stub(function, dll):
     return f"""    .section .text.{function},"ax",@progbits
     .weak {function}
     .type {function},@function
@@ -15,28 +27,44 @@ def stub(function, dll):
     jr $25
     nop
 
-    .section .iat.{dll}.{function},"aw",@progbits
+""" + import_slot(function, dll)
+
+
+def sh3_stub(function, dll):
+    return f"""    .section .text.{function},"ax",@progbits
     .balign 4
-    .weak __imp_{function}
-    .weak "__velo_import${dll}${function}"
-__imp_{function}:
-"__velo_import${dll}${function}":
-    .word 0
+    .weak {function}
+    .type {function},@function
+{function}:
+    mov.l .Lslot_{function},r0
+    mov.l @r0,r0
+    jmp @r0
+    nop
+.Lslot_{function}:
+    .long __imp_{function}
 
-"""
+""" + import_slot(function, dll, ".long")
 
 
-def generate(functions, dll):
-    lines = ["    .set noreorder", "    .set noat", ""]
+ARCHITECTURES = {
+    "mips": (["    .set noreorder", "    .set noat", ""], mips_stub),
+    "sh3": ([], sh3_stub),
+}
+
+
+def generate(functions, dll, arch="mips"):
+    preamble, stub = ARCHITECTURES[arch]
+    lines = list(preamble)
     lines += [stub(function, dll) for function in functions]
     return "\n".join(lines)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Generate a MIPS import library for a Windows CE DLL from its export list")
+    parser = argparse.ArgumentParser(description="Generate an import library for a Windows CE DLL from its export list")
     parser.add_argument("exports")
     parser.add_argument("dll")
     parser.add_argument("output")
+    parser.add_argument("--arch", choices=sorted(ARCHITECTURES), default="mips")
     arguments = parser.parse_args()
     functions = []
     for line in open(arguments.exports):
@@ -44,4 +72,4 @@ if __name__ == "__main__":
         if IDENTIFIER.match(name) and name not in functions:
             functions.append(name)
     with open(arguments.output, "w") as output:
-        output.write(generate(functions, arguments.dll))
+        output.write(generate(functions, arguments.dll, arguments.arch))

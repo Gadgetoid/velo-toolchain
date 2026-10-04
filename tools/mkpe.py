@@ -1,8 +1,9 @@
 """
-Linked MIPS ELF (--emit-relocs) to Windows CE 1.0/2.0 PE32.
+Linked MIPS or SH3 ELF (--emit-relocs) to Windows CE 1.0/2.0 PE32.
 
-- Machine 0x166 (MIPS little endian). Subsystem 9 (Windows CE GUI), version from --ce-version
-  (1.0 or 2.0), as the CE 2.0 toolkit's linker writes for /subsystem:windowsce,<version>.
+- Machine 0x166 (MIPS little endian) or 0x1A2 (SH3), from the ELF's machine. Subsystem 9 (Windows CE
+  GUI), version from --ce-version (1.0 or 2.0), as the CE 2.0 toolkit's linker writes for
+  /subsystem:windowsce,<version>.
 - Image base 0x10000, headers 0x400, file alignment 0x200.
 - Sections 4 KB aligned: the R3910 has 4 KB pages only.
 - Sections: .text, .rdata, .data, .idata, then .edata (DLL), .rsrc (icon, .res files), .reloc.
@@ -10,7 +11,8 @@ Linked MIPS ELF (--emit-relocs) to Windows CE 1.0/2.0 PE32.
   slots from the same DLL (__velo_import$<dll>$<name>, else COREDLL.dll).
 - EXE: IAT at the start of .data. DLL: IAT in .idata, after descriptors and lookup tables.
 - ELF relocations become base relocations: R_MIPS_32 HIGHLOW, R_MIPS_26 JMPADDR,
-  R_MIPS_HI16 HIGHADJ, R_MIPS_LO16 LOW.
+  R_MIPS_HI16 HIGHADJ, R_MIPS_LO16 LOW; R_SH_DIR32 HIGHLOW, and SH PC-relative and
+  relaxation relocations none.
 """
 import argparse
 import struct
@@ -27,6 +29,13 @@ CODE = 0x60000020
 READ_ONLY = 0x40000040
 READ_WRITE = 0xC0000040
 SHF_ALLOC = 0x2
+SHT_RELA = 4
+SHT_REL = 9
+EM_MIPS = 8
+EM_SH = 42
+PE_MACHINES = {EM_MIPS: 0x166, EM_SH: 0x1A2}
+R_SH_DIR32 = 1
+SH_POSITION_INDEPENDENT = set(range(2, 10)) | set(range(25, 33))
 RT_ICON = 3
 RT_GROUP_ICON = 14
 DEFAULT_LANGUAGE = 0x409
@@ -63,11 +72,36 @@ def read_elf(path):
     return data, sections, symbols, entry
 
 
+def elf_machine(data):
+    machine = struct.unpack_from("<H", data, 0x12)[0]
+    if machine not in PE_MACHINES:
+        raise ValueError("ELF machine %d is not MIPS or SH" % machine)
+    return machine
+
+
+def read_sh_relocations(data, sections):
+    found = []
+    for name, header in sections.items():
+        target = sections.get(name[len(".rela"):])
+        if header[1] != SHT_RELA or not target or not target[2] & SHF_ALLOC:
+            continue
+        for position in range(0, header[5], 12):
+            offset, info = struct.unpack_from("<II", data, header[4] + position)
+            kind = info & 0xFF
+            if kind == R_SH_DIR32:
+                found.append((3, offset, None))
+            elif kind and kind not in SH_POSITION_INDEPENDENT:
+                raise ValueError("relocation type %d at %x" % (kind, offset))
+    return found
+
+
 def read_relocations(data, sections):
+    if elf_machine(data) == EM_SH:
+        return read_sh_relocations(data, sections)
     found = []
     for name, header in sections.items():
         target = sections.get(name[len(".rel"):])
-        if header[1] != 9 or not target or not target[2] & SHF_ALLOC:
+        if header[1] != SHT_REL or not target or not target[2] & SHF_ALLOC:
             continue
         entries = [struct.unpack_from("<II", data, header[4] + position) for position in range(0, header[5], 8)]
         index = 0
@@ -408,7 +442,7 @@ def build(elf_path, output_path, ce_version, exports=None, dll_name=None, resour
     dos = bytearray(0x80)
     dos[0:0x20] = bytes.fromhex("4d5a90000300000004000000ffff0000b8000000000000004000000000000000")
     struct.pack_into("<I", dos, 0x3C, 0x80)
-    file_header = struct.pack("<HHIIIHH", 0x166, len(layout), 0, 0, 0, len(optional), 0x210E if exports else 0x010E)
+    file_header = struct.pack("<HHIIIHH", PE_MACHINES[elf_machine(data)], len(layout), 0, 0, 0, len(optional), 0x210E if exports else 0x010E)
     headers = bytes(dos) + b"PE\0\0" + file_header + optional + bytes(section_headers)
     if len(headers) > HEADERS_SIZE:
         raise ValueError("headers too large")
@@ -416,7 +450,7 @@ def build(elf_path, output_path, ce_version, exports=None, dll_name=None, resour
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Convert a linked MIPS ELF into a Windows CE PE")
+    parser = argparse.ArgumentParser(description="Convert a linked MIPS or SH3 ELF into a Windows CE PE")
     parser.add_argument("elf")
     parser.add_argument("output")
     parser.add_argument("--ce-version", required=True, help="Windows CE version the program targets, e.g. 1 or 2")

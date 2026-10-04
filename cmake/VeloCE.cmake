@@ -5,9 +5,17 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 enable_language(ASM)
 enable_language(CXX)
 
-set(VELO_EXPORTS_DIR "${VELO_TOOLCHAIN_ROOT}/exports/ce${VELO_CE_VERSION}")
+if(NOT VELO_ARCH)
+    set(VELO_ARCH mips)
+endif()
+if(VELO_ARCH STREQUAL "mips")
+    set(VELO_EXPORTS_NAME "ce${VELO_CE_VERSION}")
+else()
+    set(VELO_EXPORTS_NAME "ce${VELO_CE_VERSION}-${VELO_ARCH}")
+endif()
+set(VELO_EXPORTS_DIR "${VELO_TOOLCHAIN_ROOT}/exports/${VELO_EXPORTS_NAME}")
 if(NOT IS_DIRECTORY "${VELO_EXPORTS_DIR}")
-    message(FATAL_ERROR "No export lists for VELO_CE_VERSION=${VELO_CE_VERSION}")
+    message(FATAL_ERROR "No export lists for VELO_CE_VERSION=${VELO_CE_VERSION} VELO_ARCH=${VELO_ARCH}")
 endif()
 
 if(NOT DEFINED VELO_OS_SYMBOLS)
@@ -35,14 +43,14 @@ target_link_libraries(velo_cxx_runtime PRIVATE velo_headers)
 add_library(velo::cxx_runtime ALIAS velo_cxx_runtime)
 
 file(GLOB VELO_EXPORT_LISTS "${VELO_EXPORTS_DIR}/*.txt")
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/velo/ce${VELO_CE_VERSION}")
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/velo/${VELO_EXPORTS_NAME}")
 foreach(exports IN LISTS VELO_EXPORT_LISTS)
     get_filename_component(dll "${exports}" NAME_WE)
     string(TOUPPER "${dll}" dll_upper)
-    set(stubs "${CMAKE_BINARY_DIR}/velo/ce${VELO_CE_VERSION}/${dll}.S")
+    set(stubs "${CMAKE_BINARY_DIR}/velo/${VELO_EXPORTS_NAME}/${dll}.S")
     add_custom_command(
         OUTPUT "${stubs}"
-        COMMAND "${Python3_EXECUTABLE}" "${VELO_TOOLCHAIN_ROOT}/tools/mkimplib.py" "${exports}" "${dll_upper}.dll" "${stubs}"
+        COMMAND "${Python3_EXECUTABLE}" "${VELO_TOOLCHAIN_ROOT}/tools/mkimplib.py" "${exports}" "${dll_upper}.dll" "${stubs}" --arch ${VELO_ARCH}
         DEPENDS "${exports}" "${VELO_TOOLCHAIN_ROOT}/tools/mkimplib.py"
         VERBATIM)
     add_library(velo_${dll} STATIC EXCLUDE_FROM_ALL "${stubs}")
@@ -77,13 +85,17 @@ function(_velo_resources target out_options)
     if(scripts)
         find_program(VELO_RC llvm-rc HINTS "${VELO_LLVM_ROOT}/bin" REQUIRED)
     endif()
+    set(VELO_RC_ARCH_DEFINES "")
+    foreach(define IN LISTS VELO_ARCH_DEFINES)
+        list(APPEND VELO_RC_ARCH_DEFINES -D "${define}")
+    endforeach()
     foreach(script IN LISTS scripts)
         get_filename_component(name "${script}" NAME_WE)
         get_filename_component(directory "${script}" DIRECTORY)
         set(compiled "${CMAKE_CURRENT_BINARY_DIR}/${target}_${name}.res")
         add_custom_command(
             OUTPUT "${compiled}"
-            COMMAND "${VELO_RC}" -D "_WIN32_WCE=${VELO_CE_VERSION}00" -I "${VELO_TOOLCHAIN_ROOT}/include" -I "${VELO_TOOLCHAIN_ROOT}/include/w32api" -I "${directory}" -FO "${compiled}" -- "${script}"
+            COMMAND "${VELO_RC}" -D "_WIN32_WCE=${VELO_CE_VERSION}00" ${VELO_RC_ARCH_DEFINES} -I "${VELO_TOOLCHAIN_ROOT}/include" -I "${VELO_TOOLCHAIN_ROOT}/include/w32api" -I "${directory}" -FO "${compiled}" -- "${script}"
             DEPENDS "${script}" ${dependencies}
             VERBATIM)
         target_sources(${target} PRIVATE "${compiled}")
