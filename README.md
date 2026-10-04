@@ -126,9 +126,15 @@ For VS Code, copy `vscode/launch.json` and `vscode/tasks.json` into a project's 
 
 F5 starts the emulator if it isn't running, uploads the selected target's `.exe` and runs it, stopping at breakpoints. The emulator keeps running between sessions.
 
+## Reference material
+
+`tools/fetch-reference FOLDER` (or `$VELO_REFERENCE`) downloads the Windows CE 1.0, 1.01 and 2.0 SDK headers, the CE 2.0 toolkit's Win32 samples and the toolkits' documentation (InfoViewer `.ivt` titles, including the CE 1.0 SDK reference and the PR3910 processor reference) from archive.org. They're Microsoft's, for reference only.
+
 ## Examples and tests
 
 `examples/` has `hello` (message box), `window` (window, painting, taps, icon), `maths` (soft float and 64-bit integers) and `dll` (a DLL and a program that loads it).
+
+`docs/primer/index.html` is a beginner's guide to writing Velo programs with this toolchain. Its examples are in `docs/primer/examples`: `make primer` builds them, and `make primer-screenshots` updates its screenshots, with the same settings as `make test`.
 
 ```sh
 make examples   # build for CE 1.0 and CE 2.0 into build/ce1 and build/ce2
