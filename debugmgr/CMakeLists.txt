@@ -3,4 +3,8 @@ project(debugmgr C)
 
 include(VeloCE)
 
-velo_add_executable(debugmgr debugmgr.c)
+if(VELO_ARCH STREQUAL "sh3")
+    velo_add_executable(debugmgr OUTPUT velo-debugmgr.exe debugmgr.c)
+else()
+    velo_add_executable(debugmgr debugmgr.c)
+endif()

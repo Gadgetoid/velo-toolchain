@@ -3,7 +3,7 @@ CLANG ?= $(firstword $(wildcard $(shell brew --prefix llvm 2>/dev/null)/bin/clan
 SH3_LLVM = $(if $(VELO_SH3_LLVM),-DVELO_LLVM_ROOT=$(VELO_SH3_LLVM))
 SH3_CHECK = $(if $(VELO_SH3_LLVM),--clang $(VELO_SH3_LLVM)/bin/clang,--clang $(CLANG) --target-arch mips)
 
-.PHONY: examples examples-sh3 test test-sh3 screenshots-sh3 screenshots primer primer-screenshots debugmgr debugmgr-sh3 debug-state headers docstrings check-headers check-headers-sh3 check-cxx-headers clean
+.PHONY: examples examples-sh3 test test-sh3 screenshots-sh3 screenshots primer primer-screenshots debugmgr debugmgr-sh3 debug-state debug-state-sh3 headers docstrings check-headers check-headers-sh3 check-cxx-headers clean
 
 examples:
 	cmake -S examples -B build/ce1 -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) -DVELO_CE_VERSION=1
@@ -64,6 +64,9 @@ debugmgr-sh3:
 debug-state: debugmgr
 	python3 tools/mkdebugstate.py build/debugmgr/ce1 build/debugmgr/ce1/debug-desktop.state --ce 1
 	python3 tools/mkdebugstate.py build/debugmgr/ce2 build/debugmgr/ce2/debug-desktop.state --ce 2
+
+debug-state-sh3: debugmgr-sh3
+	python3 tools/mkdebugstate.py build/debugmgr/ce2-sh3 build/debugmgr/ce2-sh3/debug-desktop.state --arch sh3
 
 headers:
 	python3 tools/vendor-w32api.py $(VELO_W32API)

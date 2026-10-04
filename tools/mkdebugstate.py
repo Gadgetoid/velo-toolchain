@@ -16,6 +16,8 @@ velo_debug = SourceFileLoader("velo_debug", os.path.join(ROOT, "tools", "velo-de
 
 AGENT = "debugmgr.exe"
 INSTALLED = "/Windows/debugmgr.exe"
+SH3_AGENT = "velo-debugmgr.exe"
+SH3_INSTALLED = "/Windows/velo-debugmgr.exe"
 SOCKET = "agent.sock"
 CONNECT_SECONDS = 120
 
@@ -34,28 +36,34 @@ def connect(emulator_process):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Save a velo-emu state with debugmgr running from \\Windows")
+    parser = argparse.ArgumentParser(description="Save an emulator state with debugmgr running from \\Windows")
     parser.add_argument("build", help="debugmgr build directory")
     parser.add_argument("output", help="state file to write")
-    parser.add_argument("--ce", choices=sorted(emulator.TARGETS), default="1")
+    parser.add_argument("--ce", choices=["1", "2"], default="1")
+    parser.add_argument("--arch", choices=["mips", "sh3"], default="mips", help="sh3: the SH3 emulator (VELO_SH3_EMU, VELO_SH3_ROM)")
     arguments = parser.parse_args()
-    target = emulator.load_target(arguments.ce)
+    target = emulator.load_target(arguments.ce, arguments.arch)
+    agent_name, installed = (SH3_AGENT, SH3_INSTALLED) if arguments.arch == "sh3" else (AGENT, INSTALLED)
     output = os.path.abspath(arguments.output)
     build = os.path.abspath(arguments.build)
-    agent_path = os.path.join(build, AGENT)
+    agent_path = os.path.join(build, agent_name)
     with tempfile.TemporaryDirectory() as work:
         os.chdir(work)
-        made_image, _ = emulator.make_card(build, target, work)
-        image = os.path.join(os.path.dirname(output), "debug-card.img")
-        shutil.move(made_image, image)
-        events, _ = emulator.launch_events(target, AGENT, "")
-        command = [os.path.join(target["emulator"], "headless"), target["rom"], "--load=%s" % target["state"], "--card=%s" % image, *events,
-                   "--agent=%s" % SOCKET, "--seconds=100000", "--save=%s" % output]
+        if target.get("folder"):
+            target["state"] = emulator.make_desktop_state(target, work)
+        media, _ = emulator.make_media(build, target, work)
+        if not target.get("folder"):
+            image = os.path.join(os.path.dirname(output), "debug-card.img")
+            shutil.move(media, image)
+            media = image
+        events, _ = emulator.launch_events(target, agent_name, "")
+        command = [os.path.join(target["emulator"], "headless"), target["rom"], "--load=%s" % target["state"], emulator.media_option(target, media),
+                   *events, "--agent=%s" % SOCKET, "--seconds=100000", "--save=%s" % output]
         emulator_process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:
             agent = connect(emulator_process)
-            agent.put(agent_path, INSTALLED)
-            agent.handover(INSTALLED)
+            agent.put(agent_path, installed)
+            agent.handover(installed)
             agent.ping()
             emulator_process.terminate()
             emulator_process.wait(timeout=60)
