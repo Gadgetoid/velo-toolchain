@@ -108,7 +108,7 @@ Run debugmgr from RAM (`\Windows`) rather than a card: CE loads its code from th
 
 ### GDB and VS Code
 
-Each executable gets a GDB script beside its `.elf`, `<name>.elf.gdb`. It loads the symbols, sets the program to run as `\Windows\<name>.exe`, and defines `velo-load`, which uploads the `.exe` through debugmgr. `tools/velo-emulator --ce 1|2` starts velo-emu from the debug desktop state with its GDB stub on port 2001 (CE 1.0) or 2002 (CE 2.0), or reports one already running there. Add `--headless` for no window.
+Each executable gets a GDB script beside its `.elf`, `<name>.elf.gdb`. It loads the symbols, sets the program to run as `\Windows\<name>.exe`, and defines `velo-load`, which uploads the `.exe` and the project's DLLs (all but `EXCLUDE_FROM_ALL` ones) to `\Windows` through debugmgr, where `LoadLibraryW` finds them by name. `tools/velo-emulator --ce 1|2` starts velo-emu from the debug desktop state with its GDB stub on port 2001 (CE 1.0) or 2002 (CE 2.0), or reports one already running there. Add `--headless` for no window.
 
 ```sh
 tools/velo-emulator --ce 1 &
@@ -124,7 +124,7 @@ For VS Code, copy `vscode/launch.json` and `vscode/tasks.json` into a project's 
 - `VELO_TOOLCHAIN` (this folder), `VELO_EMU`, and for CE 2.0 `VELO_CE2_ROM`, in VS Code's environment
 - `make debug-state` run once here
 
-F5 starts the emulator if it isn't running, uploads the selected target's `.exe` and runs it, stopping at breakpoints. The emulator keeps running between sessions. Only the `.exe` is uploaded: copy any DLLs it loads with `remote put` (or `velo-debug put`).
+F5 starts the emulator if it isn't running, uploads the selected target's `.exe` and runs it, stopping at breakpoints. The emulator keeps running between sessions.
 
 ## Examples and tests
 

@@ -77,19 +77,40 @@ function(_velo_resources target out_options)
     set(${out_options} ${options} PARENT_SCOPE)
 endfunction()
 
-function(_velo_gdb_script target output)
-    set(program "$<TARGET_FILE_DIR:${target}>/${output}")
-    file(GENERATE OUTPUT "$<TARGET_FILE:${target}>.gdb" CONTENT
+function(_velo_gdb_scripts)
+    get_property(executables GLOBAL PROPERTY VELO_EXECUTABLES)
+    get_property(libraries GLOBAL PROPERTY VELO_LIBRARIES)
+    set(library_folders "")
+    set(library_uploads "")
+    foreach(library IN LISTS libraries)
+        get_target_property(output ${library} VELO_OUTPUT)
+        string(APPEND library_folders ":$<TARGET_FILE_DIR:${library}>")
+        string(APPEND library_uploads "  remote put \"$<TARGET_FILE_DIR:${library}>/${output}\" /Windows/${output}\n")
+    endforeach()
+    foreach(target IN LISTS executables)
+        get_target_property(output ${target} VELO_OUTPUT)
+        file(GENERATE OUTPUT "$<TARGET_FILE:${target}>.gdb" CONTENT
 "set confirm off
 set exec-file-mismatch off
 file \"$<TARGET_FILE:${target}>\"
 set breakpoint pending on
-set solib-search-path $<TARGET_FILE_DIR:${target}>
+set solib-search-path $<TARGET_FILE_DIR:${target}>${library_folders}
 set remote exec-file /Windows/${output}
 define velo-load
-  remote put \"${program}\" /Windows/${output}
-end
+  remote put \"$<TARGET_FILE_DIR:${target}>/${output}\" /Windows/${output}
+${library_uploads}end
 ")
+    endforeach()
+endfunction()
+
+function(_velo_add_gdb_script target output kind)
+    set_target_properties(${target} PROPERTIES VELO_OUTPUT "${output}")
+    set_property(GLOBAL APPEND PROPERTY ${kind} ${target})
+    get_property(deferred GLOBAL PROPERTY VELO_GDB_SCRIPTS_DEFERRED)
+    if(NOT deferred)
+        set_property(GLOBAL PROPERTY VELO_GDB_SCRIPTS_DEFERRED TRUE)
+        cmake_language(DEFER DIRECTORY "${CMAKE_SOURCE_DIR}" CALL _velo_gdb_scripts)
+    endif()
 endfunction()
 
 function(_velo_require_exports target)
@@ -117,7 +138,7 @@ function(velo_add_executable target)
     endif()
     _velo_resources(${target} resource_options ${VELO_RESOURCES})
     _velo_pe(${target} "${VELO_OUTPUT}" ${options} ${resource_options})
-    _velo_gdb_script(${target} "${VELO_OUTPUT}")
+    _velo_add_gdb_script(${target} "${VELO_OUTPUT}" VELO_EXECUTABLES)
 endfunction()
 
 function(velo_add_library target)
@@ -149,4 +170,7 @@ function(velo_add_library target)
     endif()
     _velo_resources(${target} resource_options ${VELO_RESOURCES})
     _velo_pe(${target} "${VELO_OUTPUT}" ${options} ${resource_options})
+    if(NOT VELO_EXCLUDE_FROM_ALL)
+        _velo_add_gdb_script(${target} "${VELO_OUTPUT}" VELO_LIBRARIES)
+    endif()
 endfunction()
