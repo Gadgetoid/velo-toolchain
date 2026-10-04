@@ -44,6 +44,7 @@ This gives `build/myapp.exe` and `build/mylib.dll`, with the linked `.elf` besid
 - `velo_add_library(target [EXCLUDE_FROM_ALL] [OUTPUT file.dll] [RESOURCES files...] EXPORTS name[=symbol]... | EXPORTS_FILE file sources...)`: entry point `DllMain`. `EXPORTS_FILE` has one export per line.
 - `RESOURCES`: `.rc` files are compiled with `llvm-rc` and linked into `.rsrc` with the icon. Other files listed (headers, bitmaps) are dependencies. The `.rc` can include `windows.h` and `commctrl.h`. CE has no `DialogBoxParamW`: use `FindResource`, `LoadResource` and `DialogBoxIndirectParamW`.
 - `VELO_CE_VERSION`: `1` (default) or `2`. Sets `_WIN32_WCE` to `100` or `200` and picks the import libraries.
+- The PE says subsystem 9 (Windows CE GUI) with the CE version, 1.0 or 2.0, as Microsoft's CE 2.0 toolkit writes. CE 2.0 treats a program marked 1.0 as a CE 1.0 program, with another system font for client-area text and other font enumeration results. CE 1.0 runs both the same.
 - `CMAKE_BUILD_TYPE` defaults to `MinSizeRel` (`-Os`). `Debug` gives `-O0 -g`.
 
 ## Import libraries

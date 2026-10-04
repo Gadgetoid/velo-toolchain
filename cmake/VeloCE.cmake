@@ -48,7 +48,7 @@ endfunction()
 function(_velo_pe target output)
     set_property(TARGET ${target} APPEND PROPERTY LINK_DEPENDS "${VELO_TOOLCHAIN_ROOT}/tools/mkpe.py")
     add_custom_command(TARGET ${target} POST_BUILD
-        COMMAND "${Python3_EXECUTABLE}" "${VELO_TOOLCHAIN_ROOT}/tools/mkpe.py" "$<TARGET_FILE:${target}>" "$<TARGET_FILE_DIR:${target}>/${output}" ${ARGN}
+        COMMAND "${Python3_EXECUTABLE}" "${VELO_TOOLCHAIN_ROOT}/tools/mkpe.py" "$<TARGET_FILE:${target}>" "$<TARGET_FILE_DIR:${target}>/${output}" "--ce-version=${VELO_CE_VERSION}" ${ARGN}
         VERBATIM)
 endfunction()
 

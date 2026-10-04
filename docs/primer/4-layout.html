@@ -47,7 +47,7 @@
 <li><strong>A status bar underneath</strong>, when there's something to report.</li>
 <li><strong>Size everything in <code>WM_SIZE</code></strong>, from the client rectangle minus the command bar's and status bar's heights. Don't hard-code 480.</li>
 <li><strong>Use system colours</strong> (<code>GetSysColor</code>, <code>GetSysColorBrush</code>) for anything that should look like the rest of CE, and the four safe greys below for everything else you draw.</li>
-<li><strong>Make tap targets at least 20 pixels tall.</strong> A standard dialog button, 14 dialog units, is 22 pixels tall on the Velo. A stylus is precise, but a thumb on the move isn't.</li>
+<li><strong>Make tap targets at least 20 pixels tall.</strong> A standard dialog button, 14 dialog units, is 22 pixels tall on CE 1.0 and 24 on CE 2.0. A stylus is precise, but a thumb on the move isn't.</li>
 </ul>
 <p>The examples below are in <code>docs/primer/examples</code>. Each one builds for both CE versions and starts in the state shown.</p>
 </section>
@@ -257,7 +257,7 @@
     <span class="keyword">DEFPUSHBUTTON</span> <span class="string">"OK"</span>, <span class="constant">IDOK</span>, <span class="number">122</span>, <span class="number">80</span>, <span class="number">48</span>, <span class="number">14</span>, <span class="constant">WS_TABSTOP</span>
     <span class="keyword">PUSHBUTTON</span> <span class="string">"Cancel"</span>, <span class="constant">IDCANCEL</span>, <span class="number">176</span>, <span class="number">80</span>, <span class="number">48</span>, <span class="number">14</span>, <span class="constant">WS_TABSTOP</span>
 <span class="keyword">END</span></code></pre>
-<p>Positions are in <em>dialog units</em>, which scale with the dialog font: this 230-unit-wide dialog is 351 pixels wide on the Velo, frame included, about one and a half pixels per unit. <code>&amp;</code> in a label underlines the next letter. <code>WS_GROUP</code> starts a group of radio buttons, which ends at the next control with <code>WS_GROUP</code>.</p>
+<p>Positions are in <em>dialog units</em>, which scale with the dialog font: this 230-unit-wide dialog is 351 pixels wide on CE 1.0 and 408 on CE 2.0, frame included, about one and a half and 1.8 pixels per unit. <code>&amp;</code> in a label underlines the next letter. <code>WS_GROUP</code> starts a group of radio buttons, which ends at the next control with <code>WS_GROUP</code>.</p>
 <aside>
 <strong>Velo Tip</strong>
 <p>On CE a group box paints its whole inside. Controls created after it are underneath and disappear, so list the group box <em>after</em> the controls it surrounds. The same goes for a tab control in recipe 4. Siblings stack in the order they're created, first on top.</p>
@@ -484,7 +484,7 @@
 <p>Make fonts once at startup, keep them, and delete them at exit. <code>GetTextMetricsW</code> gives a font's line height, and <code>DrawTextW</code> with <code>DT_CALCRECT</code> measures wrapped text without drawing it, which is how you lay out a list of variable-height items.</p>
 <aside>
 <strong>Velo Tip</strong>
-<p>CE 1.0 draws italic badly, and on CE 2.0 "Courier New" quietly falls back to the proportional system font. Use bold and size for emphasis, and don't count on a fixed-pitch font on CE 2.0.</p>
+<p>CE 1.0 draws italic badly. Use bold and size for emphasis.</p>
 </aside>
 <h3>No flicker</h3>
 <p>Drawing a busy window piece by piece makes it flash. Draw into a bitmap the size of the window, then copy it to the screen in one go:</p>

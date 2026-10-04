@@ -1,7 +1,8 @@
 """
 Linked MIPS ELF (--emit-relocs) to Windows CE 1.0/2.0 PE32.
 
-- Machine 0x166 (MIPS little endian), subsystem 2 version 4.0, as the CE 1.0 SDK wrote.
+- Machine 0x166 (MIPS little endian). Subsystem 9 (Windows CE GUI), version from --ce-version
+  (1.0 or 2.0), as the CE 2.0 toolkit's linker writes for /subsystem:windowsce,<version>.
 - Image base 0x10000, headers 0x400, file alignment 0x200.
 - Sections 4 KB aligned: the R3910 has 4 KB pages only.
 - Sections: .text, .rdata, .data, .idata, then .edata (DLL), .rsrc (icon, .res files), .reloc.
@@ -29,6 +30,7 @@ SHF_ALLOC = 0x2
 RT_ICON = 3
 RT_GROUP_ICON = 14
 DEFAULT_LANGUAGE = 0x409
+IMAGE_SUBSYSTEM_WINDOWS_CE_GUI = 9
 
 
 def align(value, alignment):
@@ -275,7 +277,12 @@ def build_resources(resources, section_rva):
     return bytes(output)
 
 
-def build(elf_path, output_path, exports=None, dll_name=None, resources=None):
+def subsystem_version(ce_version):
+    major, _, minor = ce_version.partition(".")
+    return int(major), int(minor or 0)
+
+
+def build(elf_path, output_path, ce_version, exports=None, dll_name=None, resources=None):
     data, sections, symbols, entry = read_elf(elf_path)
     text_va, text = section_bytes(data, sections[".text"])
     if ".rdata" in sections:
@@ -393,8 +400,8 @@ def build(elf_path, output_path, exports=None, dll_name=None, resources=None):
         0x10B, 3, 0, code_size, initialized_size, 0,
         entry - IMAGE_BASE, text_va - IMAGE_BASE, (rdata_va or data_va) - IMAGE_BASE,
         IMAGE_BASE, SECTION_ALIGNMENT, FILE_ALIGNMENT,
-        4, 0, 0, 0, 4, 0, 0,
-        image_size, HEADERS_SIZE, 0, 2, 0,
+        4, 0, 0, 0, *subsystem_version(ce_version), 0,
+        image_size, HEADERS_SIZE, 0, IMAGE_SUBSYSTEM_WINDOWS_CE_GUI, 0,
         0x10000, 0x1000, 0x100000, 0x1000, 0, 16,
     ) + b"".join(struct.pack("<II", *directory) for directory in directories)
 
@@ -412,6 +419,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert a linked MIPS ELF into a Windows CE PE")
     parser.add_argument("elf")
     parser.add_argument("output")
+    parser.add_argument("--ce-version", required=True, help="Windows CE version the program targets, e.g. 1 or 2")
     parser.add_argument("--exports", help="comma-separated exports, NAME or NAME=SYMBOL; makes a DLL")
     parser.add_argument("--exports-file", help="exports, one per line; makes a DLL")
     parser.add_argument("--icon")
@@ -422,4 +430,4 @@ if __name__ == "__main__":
     resources = icon_resources(arguments.icon) if arguments.icon else []
     for res_path in arguments.resources:
         resources += compiled_resources(res_path)
-    build(arguments.elf, arguments.output, exports or None, dll_name, resources)
+    build(arguments.elf, arguments.output, arguments.ce_version, exports or None, dll_name, resources)

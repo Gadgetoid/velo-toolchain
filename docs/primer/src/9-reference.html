@@ -33,7 +33,7 @@
 <tr><td>Tap coordinates are huge numbers</td><td><code>LOWORD</code> of a negative coordinate</td><td>Cast through <code>short</code></td></tr>
 <tr><td>Nothing happens after <code>LB_SETCURSEL</code> or similar</td><td>Notifications only follow what the user does</td><td>Update dependent state yourself</td></tr>
 <tr><td>Waiting for a started program returns at once on CE 1.0</td><td>A new process's handle reports finished there</td><td>Poll for its window instead</td></tr>
-<tr><td>Italic text looks broken on CE 1.0, Courier New isn't fixed-pitch on CE 2.0</td><td>The ROMs' fonts</td><td>Use bold and size for emphasis</td></tr>
+<tr><td>Italic text looks broken on CE 1.0</td><td>The CE 1.0 ROM's fonts</td><td>Use bold and size for emphasis</td></tr>
 <tr><td>HTTPS fails</td><td>No modern TLS on the Velo</td><td>Plain HTTP through a proxy</td></tr>
 <tr><td><code>SetEvent</code> doesn't link</td><td>CE has no such export: it's an inline function over <code>EventModify</code></td><td>Use the toolchain's <code>windows.h</code></td></tr>
 <tr><td><code>SetWindowLongW(window, GWL_USERDATA, ...)</code> fails on CE 1.0</td><td>CE 1.0 doesn't support <code>GWL_USERDATA</code></td><td>Extra window memory: <code>cbWndExtra</code> and offset 0</td></tr>
