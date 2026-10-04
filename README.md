@@ -138,7 +138,7 @@ gdb -x build/myapp.elf.gdb -ex "target extended-remote :2001" -ex "set target-wi
 
 Set the character set after connecting, since connecting resets it, so `WCHAR` strings show as text.
 
-For VS Code, copy `vscode/launch.json` and `vscode/tasks.json` into a project's `.vscode`. They need:
+For VS Code, copy `vscode/launch.json`, `vscode/tasks.json` and `vscode/settings.json` into a project's `.vscode`. The settings have IntelliSense take include paths from CMake Tools. They need:
 
 - the C/C++ and CMake Tools extensions, with the project configured with this toolchain, `CMAKE_BUILD_TYPE=Debug`, and the `VELO_CE_VERSION` that matches the launch configuration you pick
 - `gdb` with MIPS support (Homebrew's `gdb` on macOS, `gdb-multiarch` on Linux)
