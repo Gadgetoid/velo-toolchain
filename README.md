@@ -282,7 +282,7 @@ The C runtime DLL's libraries (`msvcrt.lib`, `msvcrtd.lib`) are left out: that D
 | --- | --- | --- | --- |
 | ![hello on SH3 CE 2.11](docs/screenshots/sh3/hello.png) | ![window on SH3 CE 2.11](docs/screenshots/sh3/window.png) | ![maths on SH3 CE 2.11](docs/screenshots/sh3/maths.png) | ![greeter on SH3 CE 2.11](docs/screenshots/sh3/greeter.png) |
 
-Not on SH3 yet: `make debug-state`, `tools/velo-emulator`, the GDB scripts and VS Code setup, and `make test` are written for velo-emu and the Velo. `velo-symbolize` needs an `llvm-symbolizer` that knows SuperH, from `VELO_LLVM_ROOT`. Programs have no `.pdata`, so CE can't unwind them for structured exception handling, as on MIPS.
+Not on SH3 yet: `make debug-state`, `tools/velo-emulator`, the GDB scripts and VS Code setup, and `make test` are written for velo-emu and the Velo. `velo-symbolize` works on SH3 builds. Programs have no `.pdata`, so CE can't unwind them for structured exception handling, as on MIPS.
 
 ## Reference material
 
