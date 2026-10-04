@@ -48,7 +48,7 @@ This gives `build/myapp.exe` and `build/mylib.dll`, with the linked `.elf` besid
 
 ## Import libraries
 
-`velo::<dll>` links against a DLL in the Velo 1 ROM. `exports/ce1/` and `exports/ce2/` list each DLL's exports, taken from the CE 1.0 and CE 2.0 ROMs. Calling a function the ROM doesn't export fails at link time:
+`velo::<dll>` links against a DLL in the Velo 1 ROM. `exports/ce1/` and `exports/ce2/` list each DLL's exports, taken from the CE 1.0 and CE 2.0 ROMs. The headers make calling a function the ROM doesn't export a compile error, and one declared some other way fails at link time:
 
 ```
 ld.lld: error: undefined symbol: GetModuleFileNameW
@@ -187,6 +187,12 @@ Other projects can use `tests/emulator.py` for their own programs: import it, se
 ## Sources
 
 - `tools/mkpe.py` and the linker scripts: from velo-apps' installer build, extended for imports from more than one DLL.
-- `include/windows.h`, `include/winsock.h`: from velo-micropython's `ce.h`.
+- `include/w32api/`: CeGCC's w32api headers (from MinGW), public domain, see `include/w32api/README.w32api`. `include/w32api/VENDOR.md` lists our patches.
+- `include/velo/constants.h` and `types.h`: values and types from the Windows CE 1.0 and 2.0 SDK headers (`tools/fetch-reference`).
+- `docs/api`: docstrings written in our own words from the Windows CE 1.0 and 2.0 SDK references.
 - `exports/`: from velo-apps' ROM export tables (`tools/velo1_rom_exports.json`, `tools/velo1_ce2_*_exports.tsv`).
 - `runtime/compiler-rt/`: LLVM compiler-rt builtins, Apache 2.0 with LLVM exceptions, see `runtime/compiler-rt/LICENSE.TXT`.
+
+## Licence
+
+MIT, see `LICENSE`. Bundled third-party code keeps its own licence, as listed under Sources.
