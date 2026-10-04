@@ -11,7 +11,7 @@
 <p>On a real Velo you'd run a proxy that does the same on the PC it connects to. Make the proxy a setting in your program, as velo-bluesky does, and let it be blank to connect directly to a plain HTTP server.</p>
 <aside>
 <strong>Velo Tip</strong>
-<p>Everything between the Velo and the proxy is unencrypted, including passwords and tokens. That's acceptable on a serial cable to your own PC, not across a network you don't control.</p>
+<p>Everything between the Velo and the proxy is unencrypted, including passwords and tokens. That's acceptable on a serial cable to your own PC, not across a network you don't control. Microsoft's CE documentation describes a secure sockets option, but it predates any TLS version today's servers accept.</p>
 </aside>
 </section>
 
@@ -68,6 +68,11 @@ Connection: close
 <pre data-file="velo-bluesky/src/worker.c"><code>@function ../velo-bluesky/src/worker.c take_job
 @function ../velo-bluesky/src/worker.c worker_main</code></pre>
 <p><code>worker_submit</code> adds a job under the lock and sets the <code>wake</code> event. Each job gets a ticket number, so when the user moves on (say, to a different post) the interface can cancel the old job and ignore any results still on their way for it.</p>
+</section>
+
+<section>
+<h2>When the Connection Drops</h2>
+<p>A Velo left alone suspends after a while, and the PPP link goes with it. Expect a long download to fail part way: make every request safe to repeat, keep what's arrived, and offer to try again rather than starting over. A download to a <code>.part</code> file (chapter 8) can carry on with an HTTP <code>Range</code> header, if the server supports it.</p>
 </section>
 
 <section>

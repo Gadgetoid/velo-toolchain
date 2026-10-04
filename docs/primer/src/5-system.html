@@ -7,7 +7,7 @@
 <p>CE's <code>coredll.dll</code> exports the C library's wide string functions on both versions, and <code>windows.h</code> declares them: <code>wcslen</code>, <code>wcscpy</code>, <code>wcsncpy</code>, <code>wcscat</code>, <code>wcscmp</code>, <code>wcsncmp</code>, <code>_wcsicmp</code>, <code>_wcsnicmp</code>, <code>wcschr</code>, <code>wcsrchr</code>, <code>wcsstr</code>, <code>wcstok</code>, <code>_wcsdup</code>, <code>_wcsupr</code>, <code>_wcslwr</code> and <code>_wtol</code> for turning text into a number, among others. <code>towlower</code> and <code>towupper</code> are CE 2.0 only.</p>
 <p>There's nothing for 8-bit <code>char</code> strings except <code>memchr</code>: no <code>strlen</code>, <code>strcmp</code> or <code>atoi</code>. Write the few you need. They're short, and a dozen of them cover a whole network client: velo-bluesky's <code>src/text.c</code> has its set.</p>
 <h3>UTF-8</h3>
-<p>The web, JSON and most files are UTF-8. CE 1.0 has no conversion functions at all, and CE 2.0's <code>MultiByteToWideChar</code> is only on CE 2.0. These two work everywhere, and let you decide what happens to bad input:</p>
+<p>The web, JSON and most files are UTF-8. CE 1.0 has no conversion functions at all, and CE 2.0's <code>MultiByteToWideChar</code> rejects <code>CP_UTF8</code> with error 87. These two work on both, and let you decide what happens to bad input:</p>
 <pre><code>static int utf16_to_utf8(const WCHAR *text, char *output, int size) {
     static const unsigned char leads[] = {0, 0, 0xC0, 0xE0, 0xF0};
     int written = 0;
@@ -159,5 +159,6 @@ LocalFree(post);</code></pre>
 <p>Given a bare name, CE looks on the PC Card, then in <code>\Windows</code>, then in the root. For anything else, give the full path. Unlike desktop Windows, the arguments don't include the program's name, and the other parameters must be <code>NULL</code>, <code>FALSE</code> or 0. <code>WaitForSingleObject(started.hProcess, INFINITE)</code> waits for it to finish, on CE 2.0. On CE 1.0 a new process's handle reports finished straight away, so that doesn't work there.</p>
 <h3>Loading a DLL</h3>
 <pre data-file="examples/dll/greeter.c"><code>@source examples/dll/greeter.c</code></pre>
-<p>Note <code>GetProcAddressW</code>: on CE the function name is a wide string. A DLL's own functions are exported by name with <code>EXPORTS</code> in <code>velo_add_library</code>. On CE 1.0, <code>LoadLibraryW</code> looks in <code>\Windows</code> but not in the program's folder, so either put DLLs in <code>\Windows</code> or load them by full path.</p>
+<p>Note <code>GetProcAddressW</code>: on CE the function name is a wide string. A DLL's own functions are exported by name with <code>EXPORTS</code> in <code>velo_add_library</code>. <code>LoadLibraryW</code> with a bare name looks on the PC Card, in <code>\Windows</code> and in the root, but never in the program's own folder, on either version. Put DLLs in <code>\Windows</code> or load them by full path.</p>
+<p>CE also matches loaded DLLs by name alone. Microsoft's documentation warns that once <code>\Windows\sample.dll</code> is loaded, asking for <code>\My Folder\sample.dll</code> gives you the copy already loaded. Give your DLLs names nobody else will use.</p>
 </section>

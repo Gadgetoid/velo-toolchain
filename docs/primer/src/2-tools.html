@@ -31,7 +31,7 @@ cmake --build build/ce2</code></pre>
 <thead><tr><th>In <code>CMakeLists.txt</code></th><th>Does</th></tr></thead>
 <tbody>
 <tr><td><code>velo_add_executable(app a.c b.c)</code></td><td>Builds <code>app.exe</code>, starting at <code>WinMain</code>.</td></tr>
-<tr><td><code>ICON app.ico</code></td><td>Gives it an icon (resource 1), shown in the file manager and on shortcuts.</td></tr>
+<tr><td><code>ICON app.ico</code></td><td>Gives it an icon (resource 1), shown in the file manager and on shortcuts. CE 1.0 only shows 2-bit (four grey) icons.</td></tr>
 <tr><td><code>RESOURCES app.rc resource.h</code></td><td>Compiles menus, dialogs, strings, bitmaps and accelerators from a <code>.rc</code> file with <code>llvm-rc</code>. Other files listed are dependencies.</td></tr>
 <tr><td><code>target_link_libraries(app PRIVATE velo::commctrl)</code></td><td>Links a ROM DLL: <code>commctrl</code> for the command bar and common controls, <code>winsock</code> for networking. <code>coredll</code> is always linked.</td></tr>
 <tr><td><code>velo_add_library(lib lib.c EXPORTS Name)</code></td><td>Builds a DLL. See <code>examples/dll</code>.</td></tr>

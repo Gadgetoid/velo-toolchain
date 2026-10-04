@@ -28,7 +28,7 @@
 <tr><td>"'<em>Function</em>' is unavailable: not in Windows CE 1.0"</td><td>That ROM doesn't export it</td><td>Use an alternative, or put it behind <code>#if _WIN32_WCE >= 200</code></td></tr>
 <tr><td>Program crashes reading a struct from a buffer</td><td>Unaligned access on MIPS</td><td>Copy with <code>memcpy</code> or read bytes</td></tr>
 <tr><td>Program can't find its own files</td><td>No current directory, and no <code>GetModuleFileNameW</code> on CE 1.0</td><td>Full paths, a known install folder, or the folder on the command line</td></tr>
-<tr><td><code>LoadLibraryW(L"mine.dll")</code> fails on CE 1.0</td><td>It doesn't search the program's folder</td><td>Put DLLs in <code>\Windows</code> or use a full path</td></tr>
+<tr><td><code>LoadLibraryW(L"mine.dll")</code> fails</td><td>Neither version searches the program's folder</td><td>Put DLLs in <code>\Windows</code> or use a full path</td></tr>
 <tr><td>The interface freezes during a download</td><td>Blocking socket calls on the interface thread</td><td>A worker thread, results by <code>PostMessageW</code></td></tr>
 <tr><td>Tap coordinates are huge numbers</td><td><code>LOWORD</code> of a negative coordinate</td><td>Cast through <code>short</code></td></tr>
 <tr><td>Nothing happens after <code>LB_SETCURSEL</code> or similar</td><td>Notifications only follow what the user does</td><td>Update dependent state yourself</td></tr>
@@ -36,6 +36,9 @@
 <tr><td>Italic text looks broken on CE 1.0, Courier New isn't fixed-pitch on CE 2.0</td><td>The ROMs' fonts</td><td>Use bold and size for emphasis</td></tr>
 <tr><td>HTTPS fails</td><td>No modern TLS on the Velo</td><td>Plain HTTP through a proxy</td></tr>
 <tr><td><code>SetEvent</code> doesn't link</td><td>CE has no such export: it's an inline function over <code>EventModify</code></td><td>Use the toolchain's <code>windows.h</code></td></tr>
+<tr><td><code>SetWindowLongW(window, GWL_USERDATA, ...)</code> fails on CE 1.0</td><td>CE 1.0 doesn't support <code>GWL_USERDATA</code></td><td>Extra window memory: <code>cbWndExtra</code> and offset 0</td></tr>
+<tr><td><code>MultiByteToWideChar(CP_UTF8, ...)</code> fails</td><td>CE has no UTF-8 code page</td><td>Convert UTF-8 yourself (chapter 5)</td></tr>
+<tr><td><code>BitBlt</code> fails on CE 1.0</td><td>CE 1.0 only does <code>SRCCOPY</code>, <code>SRCPAINT</code>, <code>SRCAND</code> and <code>SRCINVERT</code></td><td>Stick to those four</td></tr>
 <tr><td>Dividing by zero gives a strange number</td><td>Integer division doesn't trap</td><td>Check divisors</td></tr>
 <tr><td>Program closes silently</td><td>It crashed</td><td>Run it under GDB, or with <code>--debug-output</code> and <code>velo-symbolize</code></td></tr>
 </tbody>
@@ -88,6 +91,7 @@
 <h2>Further Reading</h2>
 <ul>
 <li>Douglas Boling, <cite>Programming Microsoft Windows CE</cite> (Microsoft Press, 1998). The book on CE programming, written for CE 2.0.</li>
+<li><cite>Microsoft Windows CE Programmer's Guide</cite> (Microsoft Press, 1998). Microsoft's own reference, with a note on each function about how CE differs from desktop Windows.</li>
 <li>Charles Petzold, <cite>Programming Windows</cite>, fifth edition (Microsoft Press, 1998). Win32 in depth: messages, GDI, controls and dialogs.</li>
 <li>The toolchain's <code>README.md</code>, and <code>debugmgr/PROTOCOL.md</code> for the debug manager.</li>
 <li>velo-emu's <code>README.md</code>: the emulator, its proxy, headless options, GDB and the host mailbox.</li>

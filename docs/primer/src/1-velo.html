@@ -28,7 +28,7 @@
 <tr><th>PC Card folder</th><td><code>\PC Card</code></td><td><code>\Storage Card</code></td></tr>
 <tr><th>Functions exported by <code>coredll.dll</code></th><td><!-- @export-count 1 coredll --></td><td><!-- @export-count 2 coredll --></td></tr>
 <tr><th>Other DLLs you can link</th><td><code>commctrl</code>, <code>winsock</code></td><td>Those, plus <code>commdlg</code>, <code>ole32</code>, <code>oleaut32</code>, <code>ceshell</code></td></tr>
-<tr><th>Character set conversion</th><td>None: convert UTF-8 yourself</td><td><code>MultiByteToWideChar</code>, <code>WideCharToMultiByte</code></td></tr>
+<tr><th>Character set conversion</th><td>None</td><td><code>MultiByteToWideChar</code>, <code>WideCharToMultiByte</code>, but not for UTF-8: convert that yourself on both</td></tr>
 <tr><th>Find your own program's path</th><td>Not possible</td><td><code>GetModuleFileNameW</code></td></tr>
 <tr><th>Dialog helpers</th><td><code>GetDlgItem</code>, <code>SetDlgItemInt</code>, <code>GetDlgItemInt</code> only</td><td>Also <code>SetDlgItemTextW</code>, <code>GetDlgItemTextW</code>, <code>SendDlgItemMessageW</code></td></tr>
 <tr><th>Pens</th><td><code>CreatePenIndirect</code> only</td><td>Also <code>CreatePen</code></td></tr>

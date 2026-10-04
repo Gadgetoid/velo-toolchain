@@ -137,6 +137,7 @@
 <strong>Velo Tip</strong>
 <p>Setting the list box's selection with <code>LB_SETCURSEL</code> doesn't send <code>LBN_SELCHANGE</code>: notifications are for what the user does. After changing a control from code, update whatever depends on it yourself, as <code>show_note</code> does.</p>
 </aside>
+<p>Microsoft's CE 1.0 documentation says a menu can't contain a submenu there, so keep menus one level deep if you build for both.</p>
 <p>For a pane divider the user can drag, leave a gap between the panes, paint it in <code>WM_PAINT</code>, and handle the stylus on the frame itself with <code>SetCapture</code>. velo-bluesky's <code>src/main.c</code> does this in about 30 lines.</p>
 </section>
 
@@ -376,7 +377,7 @@
         <span class="function">SendMessageW</span>(<span class="function">GetDlgItem</span>(frame, <span class="constant">IDC_LEVEL</span>), <span class="constant">PBM_SETPOS</span>, volume, <span class="number">0</span>);
     }
     <span class="keyword">return</span> <span class="number">0</span>;</code></pre>
-<p>Create the pages first and the tab control last, so the pages are on top of it. <code>WS_CLIPSIBLINGS</code> stops the tab control painting over them.</p>
+<p>Create the pages first and the tab control last, so the pages are on top of it. CE gives every window <code>WS_CLIPSIBLINGS</code> and <code>WS_CLIPCHILDREN</code> whether you ask or not, so creation order is what decides who paints over whom.</p>
 <h3>What's there</h3>
 <p>Tested by creating each class on both ROMs after <code>InitCommonControls</code>:</p>
 <figure>
@@ -504,6 +505,7 @@
     <span class="function">EndPaint</span>(frame, &amp;paint_info);
 }</code></pre>
 <p>With that, return 1 from <code>WM_ERASEBKGND</code>, because the bitmap covers everything. A 480 x 240 bitmap is 29 KB at 2 bits per pixel and 57 KB at 4: you can make one per paint, or keep one.</p>
+<p>CE 1.0's <code>BitBlt</code> only does four raster operations: <code>SRCCOPY</code>, <code>SRCPAINT</code>, <code>SRCAND</code> and <code>SRCINVERT</code>. Anything else fails. CE 2.0 does them all. Those four are enough to draw a picture through a mask.</p>
 <h3>Pens and CE 1.0</h3>
 <p>CE 1.0 has no <code>CreatePen</code>. <code>CreatePenIndirect</code> works on both:</p>
 <pre data-file="docs/primer/examples/drawing/drawing.c"><code><span class="keyword">static</span> <span class="type">void</span> <span class="function">draw_shapes</span>(<span class="type">HDC</span> dc, <span class="type">int</span> x, <span class="type">int</span> y) {

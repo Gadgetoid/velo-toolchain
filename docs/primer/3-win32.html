@@ -169,7 +169,11 @@
 <h3>Send and post</h3>
 <p><code>SendMessageW</code> calls the window procedure now and returns its result. <code>PostMessageW</code> puts the message on the queue and returns at once. Messages from <code>WM_APP</code> (0x8000) upward are yours to define, which is how a worker thread tells the interface something has finished: chapter 6.</p>
 <h3>Keeping state</h3>
-<p>A program with one main window can keep its state in <code>static</code> variables, as all the examples do. A window class with many instances keeps a pointer per window with <code>SetWindowLongW(window, GWL_USERDATA, (LONG)state)</code> and reads it back in the window procedure with <code>GetWindowLongW</code>. Dialogs do the same with <code>DWL_USER</code>.</p>
+<p>A program with one main window can keep its state in <code>static</code> variables, as all the examples do. A window class with many instances keeps a pointer per window in <em>extra window memory</em>: set <code>cbWndExtra = 4</code> in the <code>WNDCLASSW</code>, store the pointer with <code>SetWindowLongW(window, 0, (LONG)state)</code> and read it back in the window procedure with <code>GetWindowLongW(window, 0)</code>. Dialogs do the same with <code>DWL_USER</code>.</p>
+<aside>
+<strong>Velo Tip</strong>
+<p>Desktop code often uses <code>GWL_USERDATA</code> for this. CE 1.0 refuses it (<code>SetWindowLongW</code> fails with error 1413), though CE 2.0 accepts it. Extra window memory works on both.</p>
+</aside>
 </section>
 
 <section>

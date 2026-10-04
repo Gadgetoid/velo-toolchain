@@ -52,7 +52,7 @@ clock	Pocket Clock	2.1	18432	ClockFrame	http://example.com/velo/ce1/clock.exe	A 
 <h2>Installing</h2>
 <p>An install is three steps. Each is something the user could undo by hand in the file manager, which is how it should be.</p>
 <ol>
-<li><strong>Files.</strong> Programs go in their own folder in <code>\Program Files</code>. DLLs that other programs load go in <code>\Windows</code>, because CE 1.0's <code>LoadLibraryW</code> doesn't look in the program's own folder.</li>
+<li><strong>Files.</strong> Programs go in their own folder in <code>\Program Files</code>. DLLs that other programs load go in <code>\Windows</code>, because <code>LoadLibraryW</code> never looks in a program's own folder. Check a DLL's name doesn't clash with one already there: CE matches loaded DLLs by name alone.</li>
 <li><strong>A shortcut</strong> in <code>\Windows\Programs</code>, so it's on Start &gt; Programs. <code>\Windows\Desktop</code> puts one on the desktop as well.</li>
 <li><strong>A record</strong> in the registry of what was installed, for updating and removing.</li>
 </ol>
