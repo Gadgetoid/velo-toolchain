@@ -1,0 +1,198 @@
+## _wcsdup(string)
+Duplicates a string into newly allocated memory.
+
+Free the copy with free.
+
+@param string String to copy.
+@return The copy, or NULL if out of memory.
+
+## _wcsicmp(first, second)
+Compares two strings, ignoring case.
+
+@param first First string.
+@param second Second string.
+@return Negative, zero or positive as first sorts before, equal to or
+        after second.
+
+## _wcslwr(string)
+Converts a string to lowercase in place.
+
+@param string String to convert.
+@return string.
+
+## _wcsnicmp(first, second, count)
+Compares up to count characters of two strings, ignoring case.
+
+@param first First string.
+@param second Second string.
+@param count Maximum number of characters to compare.
+@return Negative, zero or positive as first sorts before, equal to or
+        after second.
+
+## _wcsnset(string, character, count)
+Sets up to count characters of a string to one character.
+
+Stops at the terminating null if that comes first.
+
+@param string String to change.
+@param character Character to fill with.
+@param count Maximum number of characters to set.
+@return string.
+
+## _wcsrev(string)
+Reverses a string in place.
+
+@param string String to reverse.
+@return string.
+
+## _wcsset(string, character)
+Sets every character of a string to one character.
+
+The terminating null is kept.
+
+@param string String to change.
+@param character Character to fill with.
+@return string.
+
+## _wcsupr(string)
+Converts a string to uppercase in place.
+
+@param string String to convert.
+@return string.
+
+## iswctype(character, type)
+Tests a wide character against a character class.
+
+@param character Character to test.
+@param type Class mask: _UPPER, _LOWER, _DIGIT, _SPACE, _PUNCT, _CONTROL,
+       _BLANK, _HEX or _ALPHA, or a combination.
+@return Nonzero if the character is in the class, 0 if not.
+
+## towlower(character)
+Converts a wide character to lowercase.
+
+@param character Character to convert.
+@return The lowercase character, or character unchanged if it has none.
+
+## towupper(character)
+Converts a wide character to uppercase.
+
+@param character Character to convert.
+@return The uppercase character, or character unchanged if it has none.
+
+## wcscat(destination, source)
+Appends one string to another.
+
+@param destination String to append to. Must have room for the result.
+@param source String to append.
+@return destination.
+
+## wcschr(string, character)
+Finds the first occurrence of a character in a string.
+
+@param string String to search.
+@param character Character to find. The terminating null can be found.
+@return Pointer to the character, or NULL if not found.
+
+## wcscmp(first, second)
+Compares two strings.
+
+@param first First string.
+@param second Second string.
+@return Negative, zero or positive as first sorts before, equal to or
+        after second.
+
+## wcscpy(destination, source)
+Copies a string, including the terminating null.
+
+@param destination Buffer that receives the copy. Must be large enough.
+@param source String to copy.
+@return destination.
+
+## wcscspn(string, characters)
+Returns the length of the initial part of a string that contains none
+of a set of characters.
+
+@param string String to scan.
+@param characters Characters to stop at.
+@return Index of the first character from the set, or the string's
+        length if there is none.
+
+## wcslen(string)
+Returns the length of a string in characters.
+
+@param string The string.
+@return Number of characters, not counting the terminating null.
+
+## wcsncat(destination, source, count)
+Appends up to count characters of one string to another.
+
+Always adds a terminating null.
+
+@param destination String to append to. Must have room for count + 1
+       more characters.
+@param source String to append.
+@param count Maximum number of characters to append.
+@return destination.
+
+## wcsncmp(first, second, count)
+Compares up to count characters of two strings.
+
+@param first First string.
+@param second Second string.
+@param count Maximum number of characters to compare.
+@return Negative, zero or positive as first sorts before, equal to or
+        after second.
+
+## wcsncpy(destination, source, count)
+Copies up to count characters of a string.
+
+Pads with nulls if source is shorter than count. Doesn't add a
+terminating null if source is count characters or longer.
+
+@param destination Buffer that receives the copy.
+@param source String to copy.
+@param count Number of characters to write.
+@return destination.
+
+## wcspbrk(string, characters)
+Finds the first character in a string that is in a set.
+
+@param string String to search.
+@param characters Characters to look for.
+@return Pointer to the first match, or NULL if none.
+
+## wcsrchr(string, character)
+Finds the last occurrence of a character in a string.
+
+@param string String to search.
+@param character Character to find.
+@return Pointer to the character, or NULL if not found.
+
+## wcsspn(string, characters)
+Returns the length of the initial part of a string made only of a set of
+characters.
+
+@param string String to scan.
+@param characters Characters allowed.
+@return Index of the first character not in the set.
+
+## wcsstr(string, substring)
+Finds the first occurrence of a substring.
+
+@param string String to search.
+@param substring String to find.
+@return Pointer to the match, or NULL if not found. An empty substring
+        matches at the start of string.
+
+## wcstok(string, delimiters)
+Splits a string into tokens.
+
+Pass the string on the first call and NULL on later calls to continue
+from where the last one stopped. Writes nulls into the string and keeps
+its position between calls.
+
+@param string String to tokenise, or NULL to continue.
+@param delimiters Characters that separate tokens. Can differ between
+       calls.
+@return The next token, or NULL when there are no more.

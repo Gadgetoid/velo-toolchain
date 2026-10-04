@@ -65,6 +65,7 @@ The Win32 headers are CeGCC's w32api (public domain) in `include/w32api`, patche
 - `#include <windows.h>` gives the API as the target CE version has it: `_WIN32_WCE` is `100` or `200`, `UNICODE` is defined, and it brings in the C runtime functions coredll exports (`wchar.h`, `stdlib.h`, `string.h`) and the object store database (`windbase.h`, with both the `Ce` and `Peg` names on both versions). `commctrl.h`, `commdlg.h`, `winsock.h`, `notify.h`, `ras.h`, `msacm.h`, `imm.h`, `tlhelp32.h` and the rest include it.
 - Calling a function the target ROM doesn't export is a compile error, e.g. `'GetModuleFileNameW' is unavailable: not in Windows CE 1.0`.
 - CE exports some wide functions without the `W` (`FindResource`, `GetVersionEx`, `GetClassLong`, the `Ras` and `acm` functions): either name works.
+- Every function the ROMs export has a docstring and named parameters, for editor hover and signature help. They're written from the CE 1.0 and 2.0 SDK references, with CE restrictions and the version that has the function.
 - `velo::runtime`, always linked: compiler-rt builtins (soft float, 64-bit division) and `memcpy`, `memmove`, `memset`, `memcmp`. Beyond coredll's wide-string functions there is no C library: use `LocalAlloc`, `wsprintfW` and your own maths.
 
 Not covered, so declare them yourself if you need them:
@@ -82,6 +83,7 @@ Not covered, so declare them yourself if you need them:
 - `tools/vendor-w32api.py` copies and patches w32api; `include/w32api/VENDOR.md` lists the patches.
 - `tools/mkheaders.py` writes the wrappers, `velo/aliases.h` and `velo/unavailable.h` from `exports/`.
 - `tools/mkconstants.py` writes `velo/constants.h` and `velo/types.h`: SDK constants and typedefs w32api lacks.
+- `tools/mkdocs.py` (also `make docstrings`) writes the docstrings from `docs/api` above each declaration, and names its parameters.
 
 Both need a clang with the MIPS backend (`CLANG`, default Homebrew's).
 

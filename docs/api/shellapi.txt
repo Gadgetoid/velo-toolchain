@@ -1,0 +1,48 @@
+## ExtractIconExW(lpszExeFileName, nIconIndex, phiconLarge, phiconSmall, nIcons)
+Extracts an icon from an executable, DLL or icon file.
+
+Free the icons with DestroyIcon.
+
+@param lpszExeFileName Path of the file.
+@param nIconIndex 0 for the first icon, or -N for the icon with
+       resource ID N. Other indexes are not supported.
+@param phiconLarge Receives the large icon, or NULL.
+@param phiconSmall Receives the small icon, or NULL.
+@param nIcons Must be 1.
+@return Nonzero on success, 0 on failure.
+
+## SHCreateShortcut(szShortcut, szTarget)
+Creates a shortcut file pointing at a target path.
+
+@param szShortcut Path of the shortcut to create. Must not be NULL.
+@param szTarget Target path, up to 256 characters.
+@return TRUE on success, FALSE on failure.
+
+## SHFileOperationW(lpFileOp)
+Copies, moves, renames or deletes files, with optional progress and
+confirmation UI.
+
+Paths in pFrom and pTo are lists of null-terminated strings ending with
+an extra null.
+
+@param lpFileOp SHFILEOPSTRUCT with the operation (FO_COPY, FO_MOVE,
+       FO_RENAME or FO_DELETE), source and destination lists and
+       FOF_* flags.
+@return 0 on success, or nonzero on failure. fAnyOperationsAborted is
+        set if the user cancelled.
+
+## SHGetShortcutTarget(szShortcut, szTarget, cbMax)
+Returns the target path of a shortcut file.
+
+@param szShortcut Path of the shortcut.
+@param szTarget Receives the target path.
+@param cbMax Size of szTarget in characters.
+@return TRUE on success, FALSE on failure.
+
+## SHLoadDIBitmap(szFileName)
+Loads a .bmp file into a bitmap.
+
+Free with DeleteObject.
+
+@param szFileName Full path of the file.
+@return The bitmap, or NULL on failure.

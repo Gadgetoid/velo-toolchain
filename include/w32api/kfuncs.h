@@ -60,6 +60,17 @@ static inline DWORD GetCurrentProcessId()
 
    Event Constants and EventModify signature in the c# example at:
    http://msdn.microsoft.com/library/default.asp?url=/library/en-us/dnnetcomp/html/PISAPICF.asp  */
+/**
+ * Sets, resets or pulses an event.
+ *
+ * Undocumented in the Windows CE SDK. The kernel entry point behind
+ * SetEvent, ResetEvent and PulseEvent, which are inline wrappers around
+ * it in kfuncs.h.
+ *
+ * @param h The event.
+ * @param e EVENT_SET, EVENT_RESET or EVENT_PULSE.
+ * @return TRUE on success, FALSE on failure.
+ */
 WINBASEAPI BOOL WINAPI EventModify(HANDLE h, DWORD e);
 
 #define	EVENT_PULSE	1
@@ -85,6 +96,17 @@ static inline BOOL SetEvent (HANDLE x)
 #define TLS_FUNCALLOC   0
 #define TLS_FUNCFREE    1
 
+/**
+ * Allocates or frees a thread local storage slot.
+ *
+ * Undocumented in the Windows CE SDK. The kernel entry point behind
+ * TlsAlloc and TlsFree, which are inline wrappers around it in kfuncs.h.
+ *
+ * @param func TLS_FUNCALLOC or TLS_FUNCFREE.
+ * @param val The slot to free for TLS_FUNCFREE, otherwise 0.
+ * @return For TLS_FUNCALLOC, the new slot index or 0xFFFFFFFF on failure.
+ *         For TLS_FUNCFREE, nonzero on success.
+ */
 WINBASEAPI DWORD WINAPI TlsCall(DWORD func, DWORD val);
 
 static inline DWORD TlsAlloc (void)

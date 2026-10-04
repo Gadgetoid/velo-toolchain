@@ -1561,48 +1561,448 @@ LRESULT WINAPI DefDriverProc(DWORD,HDRVR,UINT,LPARAM,LPARAM);
 UINT WINAPI mmsystemGetVersion(void);
 #define OutputDebugStr OutputDebugString
 BOOL WINAPI sndPlaySoundA(LPCSTR,UINT);
-BOOL WINAPI sndPlaySoundW(LPCWSTR,UINT);
+/**
+ * Plays a waveform sound from a file, memory or a registry sound entry.
+ *
+ * The name is looked up in the registry first, then treated as a file
+ * name, searched for in the given path then \Windows. If it isn't found,
+ * the default system sound plays unless SND_NODEFAULT is set. The sound
+ * must fit in memory. Call GetLastError on failure.
+ *
+ * @param lpszSound Registry sound name, file name (.wav optional) or, with
+ *        SND_MEMORY, a pointer to a .wav image. NULL stops the sound
+ *        playing.
+ * @param fuSound SND_SYNC or SND_ASYNC, plus any of SND_LOOP (with
+ *        SND_ASYNC), SND_MEMORY, SND_NODEFAULT, SND_NOSTOP, SND_ALIAS
+ *        (registry only) and SND_FILENAME (file only).
+ * @return TRUE on success, FALSE on failure or if SND_NOSTOP was set and
+ *         a sound was playing.
+ */
+BOOL WINAPI sndPlaySoundW(LPCWSTR lpszSound,UINT fuSound);
 BOOL WINAPI PlaySoundA(LPCSTR,HMODULE,DWORD);
-BOOL WINAPI PlaySoundW(LPCWSTR,HMODULE,DWORD);
+/**
+ * Plays a waveform sound from a file, a resource, memory or a registry
+ * sound alias.
+ *
+ * @param pszSound The sound: a file name, alias, resource name or
+ *        in-memory image, depending on fdwSound. NULL stops the sound
+ *        playing.
+ * @param hmod Module holding the resource for SND_RESOURCE, otherwise
+ *        NULL.
+ * @param fdwSound SND_FILENAME, SND_ALIAS, SND_RESOURCE or SND_MEMORY,
+ *        plus SND_SYNC or SND_ASYNC, and optionally SND_LOOP (with
+ *        SND_ASYNC), SND_NODEFAULT and SND_NOSTOP.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI PlaySoundW(LPCWSTR pszSound,HMODULE hmod,DWORD fdwSound);
+/**
+ * Returns the number of waveform output devices.
+ *
+ * @return The number of devices, 0 if there are none.
+ *
+ * @note Windows CE 2.0 only.
+ */
 UINT WINAPI waveOutGetNumDevs(void);
 MMRESULT WINAPI waveOutGetDevCapsA(UINT,LPWAVEOUTCAPSA,UINT);
 MMRESULT WINAPI _WNAME(waveOutGetDevCaps)(UINT,LPWAVEOUTCAPSW,UINT);
-MMRESULT WINAPI waveOutGetVolume(HWAVEOUT,PDWORD);
-MMRESULT WINAPI waveOutSetVolume(HWAVEOUT,DWORD);
+/**
+ * Gets the volume of the waveform output device.
+ *
+ * Windows CE supports only the default output device and ignores hwo.
+ * On Windows CE 1.0 this parameter is a device identifier rather than a
+ * handle. Returns the full 16-bit values last set, even if the hardware
+ * uses fewer bits.
+ *
+ * @param hwo Ignored. Pass NULL.
+ * @param pdwVolume Receives the volume: left channel in the low word,
+ *        right in the high word, 0x0000 silent to 0xFFFF full. A mono
+ *        device uses only the low word.
+ * @return MMSYSERR_NOERROR, or MMSYSERR_NOTSUPPORTED.
+ */
+MMRESULT WINAPI waveOutGetVolume(HWAVEOUT hwo,PDWORD pdwVolume);
+/**
+ * Sets the volume of the waveform output device.
+ *
+ * Windows CE supports only the default output device and ignores hwo.
+ * On Windows CE 1.0 this parameter is a device identifier rather than a
+ * handle. Volume is logarithmic. Hardware may use only the top bits of
+ * each value.
+ *
+ * @param hwo Ignored. Pass NULL.
+ * @param dwVolume Left channel in the low word, right in the high word,
+ *        0x0000 silent to 0xFFFF full. A mono device uses only the low
+ *        word.
+ * @return MMSYSERR_NOERROR, or MMSYSERR_NOTSUPPORTED.
+ */
+MMRESULT WINAPI waveOutSetVolume(HWAVEOUT hwo,DWORD dwVolume);
 MMRESULT WINAPI waveOutGetErrorTextA(MMRESULT,LPSTR,UINT);
 MMRESULT WINAPI _WNAME(waveOutGetErrorText)(MMRESULT,LPWSTR,UINT);
-MMRESULT WINAPI waveOutOpen(LPHWAVEOUT,UINT,LPCWAVEFORMATEX,DWORD,DWORD,DWORD);
-MMRESULT WINAPI waveOutClose(HWAVEOUT);
-MMRESULT WINAPI waveOutPrepareHeader(HWAVEOUT,LPWAVEHDR,UINT);
-MMRESULT WINAPI waveOutUnprepareHeader(HWAVEOUT,LPWAVEHDR,UINT);
-MMRESULT WINAPI waveOutWrite(HWAVEOUT,LPWAVEHDR,UINT);
-MMRESULT WINAPI waveOutPause(HWAVEOUT);
-MMRESULT WINAPI waveOutRestart(HWAVEOUT);
-MMRESULT WINAPI waveOutReset(HWAVEOUT);
-MMRESULT WINAPI waveOutBreakLoop(HWAVEOUT);
-MMRESULT WINAPI waveOutGetPosition(HWAVEOUT,LPMMTIME,UINT);
-MMRESULT WINAPI waveOutGetPitch(HWAVEOUT,PDWORD);
-MMRESULT WINAPI waveOutSetPitch(HWAVEOUT,DWORD);
-MMRESULT WINAPI waveOutGetPlaybackRate(HWAVEOUT,PDWORD);
-MMRESULT WINAPI waveOutSetPlaybackRate(HWAVEOUT,DWORD);
-MMRESULT WINAPI waveOutGetID(HWAVEOUT,LPUINT);
-MMRESULT WINAPI waveOutMessage(HWAVEOUT,UINT,DWORD,DWORD);
+/**
+ * Opens a waveform output device for playback.
+ *
+ * Play by preparing buffers with waveOutPrepareHeader and queuing them
+ * with waveOutWrite. Close with waveOutClose. A callback function runs in
+ * a driver context and should only do minimal work, such as signalling an
+ * event.
+ *
+ * @param phwo Receives the device handle. Can be NULL with
+ *        WAVE_FORMAT_QUERY.
+ * @param uDeviceID Device identifier from 0 to waveOutGetNumDevs() - 1,
+ *        or WAVE_MAPPER.
+ * @param pwfx The format of the data to play.
+ * @param dwCallback Window, function or event to notify of WOM_OPEN,
+ *        WOM_DONE and WOM_CLOSE, as given by fdwOpen, or 0.
+ * @param dwCallbackInstance Passed to a callback function.
+ * @param fdwOpen CALLBACK_NULL, CALLBACK_WINDOW, CALLBACK_FUNCTION and so
+ *        on, plus optionally WAVE_FORMAT_QUERY to test the format without
+ *        opening the device.
+ * @return MMSYSERR_NOERROR, or an error such as WAVERR_BADFORMAT,
+ *         MMSYSERR_ALLOCATED or MMSYSERR_BADDEVICEID.
+ *
+ * @note Windows CE 2.0 only.
+ */
+MMRESULT WINAPI waveOutOpen(LPHWAVEOUT phwo,UINT uDeviceID,LPCWAVEFORMATEX pwfx,DWORD dwCallback,DWORD dwCallbackInstance,DWORD fdwOpen);
+/**
+ * Closes a waveform output device.
+ *
+ * Fails while buffers are still queued: call waveOutReset and unprepare
+ * them first.
+ *
+ * @param hwo The output device.
+ * @return MMSYSERR_NOERROR, or an error such as WAVERR_STILLPLAYING or
+ *         MMSYSERR_INVALHANDLE.
+ *
+ * @note Windows CE 2.0 only.
+ */
+MMRESULT WINAPI waveOutClose(HWAVEOUT hwo);
+/**
+ * Prepares a buffer for playback.
+ *
+ * Set lpData, dwBufferLength and dwFlags before calling. Unprepare with
+ * waveOutUnprepareHeader before freeing the buffer.
+ *
+ * @param hwo The output device.
+ * @param pwh The buffer header.
+ * @param cbwh sizeof(WAVEHDR).
+ * @return MMSYSERR_NOERROR, or an error such as MMSYSERR_NOMEM.
+ *
+ * @note Windows CE 2.0 only.
+ */
+MMRESULT WINAPI waveOutPrepareHeader(HWAVEOUT hwo,LPWAVEHDR pwh,UINT cbwh);
+/**
+ * Undoes waveOutPrepareHeader on a buffer.
+ *
+ * Call once the driver has finished with the buffer (WHDR_DONE set), and
+ * before freeing it.
+ *
+ * @param hwo The output device.
+ * @param pwh The buffer header.
+ * @param cbwh sizeof(WAVEHDR).
+ * @return MMSYSERR_NOERROR, or WAVERR_STILLPLAYING if the buffer is still
+ *         queued.
+ *
+ * @note Windows CE 2.0 only.
+ */
+MMRESULT WINAPI waveOutUnprepareHeader(HWAVEOUT hwo,LPWAVEHDR pwh,UINT cbwh);
+/**
+ * Queues a prepared buffer for playback.
+ *
+ * Playback starts at once unless the device is paused. When the buffer
+ * has played, the driver sets WHDR_DONE and notifies the callback with
+ * WOM_DONE.
+ *
+ * @param hwo The output device.
+ * @param pwh The prepared buffer header.
+ * @param cbwh sizeof(WAVEHDR).
+ * @return MMSYSERR_NOERROR, or an error such as WAVERR_UNPREPARED or
+ *         MMSYSERR_INVALHANDLE.
+ *
+ * @note Windows CE 2.0 only.
+ */
+MMRESULT WINAPI waveOutWrite(HWAVEOUT hwo,LPWAVEHDR pwh,UINT cbwh);
+/**
+ * Pauses playback, keeping the current position.
+ *
+ * Resume with waveOutRestart.
+ *
+ * @param hwo The output device.
+ * @return MMSYSERR_NOERROR, or an error such as MMSYSERR_INVALHANDLE.
+ *
+ * @note Windows CE 2.0 only.
+ */
+MMRESULT WINAPI waveOutPause(HWAVEOUT hwo);
+/**
+ * Resumes playback after waveOutPause.
+ *
+ * @param hwo The output device.
+ * @return MMSYSERR_NOERROR, or an error such as MMSYSERR_INVALHANDLE.
+ *
+ * @note Windows CE 2.0 only.
+ */
+MMRESULT WINAPI waveOutRestart(HWAVEOUT hwo);
+/**
+ * Stops playback, returns all queued buffers and resets the position to
+ * 0.
+ *
+ * Returned buffers are marked WHDR_DONE and reported to the callback.
+ * Also clears a pause.
+ *
+ * @param hwo The output device.
+ * @return MMSYSERR_NOERROR, or an error such as MMSYSERR_INVALHANDLE.
+ *
+ * @note Windows CE 2.0 only.
+ */
+MMRESULT WINAPI waveOutReset(HWAVEOUT hwo);
+/**
+ * Ends a playback loop, letting playback continue with the next buffer.
+ *
+ * The current pass of the loop finishes first. Loops are set up with
+ * WHDR_BEGINLOOP, WHDR_ENDLOOP and dwLoops in WAVEHDR.
+ *
+ * @param hwo The output device.
+ * @return MMSYSERR_NOERROR, or an error such as MMSYSERR_INVALHANDLE.
+ *
+ * @note Windows CE 2.0 only.
+ */
+MMRESULT WINAPI waveOutBreakLoop(HWAVEOUT hwo);
+/**
+ * Gets the current playback position of a waveform output device.
+ *
+ * Set pmmt->wType to the format wanted (TIME_BYTES, TIME_SAMPLES,
+ * TIME_MS and so on). If the driver doesn't support it, it substitutes
+ * another and changes wType. The position resets to 0 on waveOutReset.
+ *
+ * @param hwo The output device.
+ * @param pmmt Receives the position.
+ * @param cbmmt sizeof(MMTIME).
+ * @return MMSYSERR_NOERROR, or an error such as MMSYSERR_INVALHANDLE.
+ *
+ * @note Windows CE 2.0 only.
+ */
+MMRESULT WINAPI waveOutGetPosition(HWAVEOUT hwo,LPMMTIME pmmt,UINT cbmmt);
+/**
+ * Gets the pitch multiplier of a waveform output device.
+ *
+ * Many devices don't support pitch control.
+ *
+ * @param hwo The output device.
+ * @param pdwPitch Receives the pitch as 16.16 fixed point: 0x00010000 is
+ *        normal pitch.
+ * @return MMSYSERR_NOERROR, or MMSYSERR_NOTSUPPORTED or another error.
+ *
+ * @note Windows CE 2.0 only.
+ */
+MMRESULT WINAPI waveOutGetPitch(HWAVEOUT hwo,PDWORD pdwPitch);
+/**
+ * Sets the pitch multiplier of a waveform output device.
+ *
+ * Changes pitch without changing speed or sample rate. Many devices don't
+ * support it.
+ *
+ * @param hwo The output device.
+ * @param dwPitch Pitch as 16.16 fixed point: 0x00010000 is normal,
+ *        0x00008000 is half.
+ * @return MMSYSERR_NOERROR, or MMSYSERR_NOTSUPPORTED or another error.
+ *
+ * @note Windows CE 2.0 only.
+ */
+MMRESULT WINAPI waveOutSetPitch(HWAVEOUT hwo,DWORD dwPitch);
+/**
+ * Gets the playback rate multiplier of a waveform output device.
+ *
+ * Many devices don't support rate control.
+ *
+ * @param hwo The output device.
+ * @param pdwRate Receives the rate as 16.16 fixed point: 0x00010000 is
+ *        normal speed.
+ * @return MMSYSERR_NOERROR, or MMSYSERR_NOTSUPPORTED or another error.
+ *
+ * @note Windows CE 2.0 only.
+ */
+MMRESULT WINAPI waveOutGetPlaybackRate(HWAVEOUT hwo,PDWORD pdwRate);
+/**
+ * Sets the playback rate multiplier of a waveform output device.
+ *
+ * Changes speed without changing the sample rate or pitch. Many devices
+ * don't support it.
+ *
+ * @param hwo The output device.
+ * @param dwRate Rate as 16.16 fixed point: 0x00010000 is normal,
+ *        0x00020000 is double speed.
+ * @return MMSYSERR_NOERROR, or MMSYSERR_NOTSUPPORTED or another error.
+ *
+ * @note Windows CE 2.0 only.
+ */
+MMRESULT WINAPI waveOutSetPlaybackRate(HWAVEOUT hwo,DWORD dwRate);
+/**
+ * Gets the device identifier of an open waveform output device.
+ *
+ * @param hwo The output device.
+ * @param puDeviceID Receives the device identifier.
+ * @return MMSYSERR_NOERROR, or an error such as MMSYSERR_INVALHANDLE.
+ *
+ * @note Windows CE 2.0 only.
+ */
+MMRESULT WINAPI waveOutGetID(HWAVEOUT hwo,LPUINT puDeviceID);
+/**
+ * Sends a message directly to a waveform output driver.
+ *
+ * @param hwo The output device, or a device identifier cast to HWAVEOUT.
+ * @param uMsg The driver message.
+ * @param dw1 Message parameter.
+ * @param dw2 Message parameter.
+ * @return The driver's result.
+ *
+ * @note Windows CE 2.0 only.
+ */
+MMRESULT WINAPI waveOutMessage(HWAVEOUT hwo,UINT uMsg,DWORD dw1,DWORD dw2);
+/**
+ * Returns the number of waveform input devices.
+ *
+ * @return The number of devices, 0 if there are none.
+ */
 UINT WINAPI waveInGetNumDevs(void);
 MMRESULT WINAPI waveInGetDevCapsA(UINT,LPWAVEINCAPSA,UINT);
 MMRESULT WINAPI _WNAME(waveInGetDevCaps)(UINT,LPWAVEINCAPSW,UINT);
 MMRESULT WINAPI waveInGetErrorTextA(MMRESULT,LPSTR,UINT);
 MMRESULT WINAPI _WNAME(waveInGetErrorText)(MMRESULT,LPWSTR,UINT);
-MMRESULT WINAPI waveInOpen(LPHWAVEIN,UINT,LPCWAVEFORMATEX,DWORD,DWORD,DWORD);
-MMRESULT WINAPI waveInClose(HWAVEIN);
-MMRESULT WINAPI waveInPrepareHeader(HWAVEIN,LPWAVEHDR,UINT);
-MMRESULT WINAPI waveInUnprepareHeader(HWAVEIN,LPWAVEHDR,UINT);
-MMRESULT WINAPI waveInAddBuffer(HWAVEIN,LPWAVEHDR,UINT);
-MMRESULT WINAPI waveInStart(HWAVEIN);
-MMRESULT WINAPI waveInStop(HWAVEIN);
-MMRESULT WINAPI waveInReset(HWAVEIN);
-MMRESULT WINAPI waveInGetPosition(HWAVEIN,LPMMTIME,UINT);
-MMRESULT WINAPI waveInGetID(HWAVEIN,LPUINT);
-MMRESULT WINAPI waveInMessage(HWAVEIN,UINT,DWORD,DWORD);
+/**
+ * Opens a waveform input device for recording.
+ *
+ * Recording doesn't begin until waveInStart. Close with waveInClose. A
+ * callback function runs in a driver context and should only do minimal
+ * work, such as signalling an event.
+ *
+ * @param phwi Receives the device handle. Can be NULL with
+ *        WAVE_FORMAT_QUERY.
+ * @param uDeviceID Device identifier from 0 to waveInGetNumDevs() - 1,
+ *        or WAVE_MAPPER.
+ * @param pwfx The format to record in.
+ * @param dwCallback Window, function or event to notify of WIM_OPEN,
+ *        WIM_DATA and WIM_CLOSE, as given by fdwOpen, or 0.
+ * @param dwCallbackInstance Passed to a callback function.
+ * @param fdwOpen CALLBACK_NULL, CALLBACK_WINDOW, CALLBACK_FUNCTION and so
+ *        on, plus optionally WAVE_FORMAT_QUERY to test the format without
+ *        opening the device.
+ * @return MMSYSERR_NOERROR, or an error such as WAVERR_BADFORMAT,
+ *         MMSYSERR_ALLOCATED or MMSYSERR_BADDEVICEID.
+ */
+MMRESULT WINAPI waveInOpen(LPHWAVEIN phwi,UINT uDeviceID,LPCWAVEFORMATEX pwfx,DWORD dwCallback,DWORD dwCallbackInstance,DWORD fdwOpen);
+/**
+ * Closes a waveform input device.
+ *
+ * Fails while buffers are still queued: call waveInReset and unprepare
+ * them first.
+ *
+ * @param hwi The input device.
+ * @return MMSYSERR_NOERROR, or an error such as WAVERR_STILLPLAYING or
+ *         MMSYSERR_INVALHANDLE.
+ */
+MMRESULT WINAPI waveInClose(HWAVEIN hwi);
+/**
+ * Prepares a buffer for waveform input.
+ *
+ * Set lpData, dwBufferLength and dwFlags (0) before calling. Unprepare
+ * with waveInUnprepareHeader before freeing the buffer.
+ *
+ * @param hwi The input device.
+ * @param pwh The buffer header.
+ * @param cbwh sizeof(WAVEHDR).
+ * @return MMSYSERR_NOERROR, or an error such as MMSYSERR_NOMEM.
+ */
+MMRESULT WINAPI waveInPrepareHeader(HWAVEIN hwi,LPWAVEHDR pwh,UINT cbwh);
+/**
+ * Undoes waveInPrepareHeader on a buffer.
+ *
+ * Call once the driver has returned the buffer, and before freeing it.
+ *
+ * @param hwi The input device.
+ * @param pwh The buffer header.
+ * @param cbwh sizeof(WAVEHDR).
+ * @return MMSYSERR_NOERROR, or WAVERR_STILLPLAYING if the buffer is still
+ *         queued.
+ */
+MMRESULT WINAPI waveInUnprepareHeader(HWAVEIN hwi,LPWAVEHDR pwh,UINT cbwh);
+/**
+ * Queues a buffer on a waveform input device for recording into.
+ *
+ * The buffer must first be prepared with waveInPrepareHeader. When it is
+ * full, or recording stops, the driver sets WHDR_DONE in dwFlags and
+ * notifies the callback with WIM_DATA. dwBytesRecorded holds the amount
+ * of data.
+ *
+ * @param hwi The input device.
+ * @param pwh The prepared buffer header.
+ * @param cbwh sizeof(WAVEHDR).
+ * @return MMSYSERR_NOERROR, or an error such as WAVERR_UNPREPARED or
+ *         MMSYSERR_INVALHANDLE.
+ */
+MMRESULT WINAPI waveInAddBuffer(HWAVEIN hwi,LPWAVEHDR pwh,UINT cbwh);
+/**
+ * Starts recording on a waveform input device.
+ *
+ * Queue buffers with waveInAddBuffer first. Has no effect if recording
+ * has already started.
+ *
+ * @param hwi The input device.
+ * @return MMSYSERR_NOERROR, or an error such as MMSYSERR_INVALHANDLE.
+ */
+MMRESULT WINAPI waveInStart(HWAVEIN hwi);
+/**
+ * Stops recording on a waveform input device.
+ *
+ * The buffer in progress is returned, marked done, with the data so far.
+ * Other queued buffers stay queued and the position isn't reset.
+ *
+ * @param hwi The input device.
+ * @return MMSYSERR_NOERROR, or an error such as MMSYSERR_INVALHANDLE.
+ */
+MMRESULT WINAPI waveInStop(HWAVEIN hwi);
+/**
+ * Stops recording, returns all queued buffers and resets the position to
+ * 0.
+ *
+ * Returned buffers are marked WHDR_DONE and reported to the callback.
+ *
+ * @param hwi The input device.
+ * @return MMSYSERR_NOERROR, or an error such as MMSYSERR_INVALHANDLE.
+ */
+MMRESULT WINAPI waveInReset(HWAVEIN hwi);
+/**
+ * Gets the current recording position of a waveform input device.
+ *
+ * Set pmmt->wType to the format wanted (TIME_BYTES, TIME_SAMPLES,
+ * TIME_MS and so on). If the driver doesn't support it, it substitutes
+ * another and changes wType. The position resets to 0 on waveInReset.
+ *
+ * @param hwi The input device.
+ * @param pmmt Receives the position.
+ * @param cbmmt sizeof(MMTIME).
+ * @return MMSYSERR_NOERROR, or an error such as MMSYSERR_INVALHANDLE.
+ *
+ * @note Windows CE 2.0 only.
+ */
+MMRESULT WINAPI waveInGetPosition(HWAVEIN hwi,LPMMTIME pmmt,UINT cbmmt);
+/**
+ * Gets the device identifier of an open waveform input device.
+ *
+ * @param hwi The input device.
+ * @param puDeviceID Receives the device identifier.
+ * @return MMSYSERR_NOERROR, or an error such as MMSYSERR_INVALHANDLE.
+ */
+MMRESULT WINAPI waveInGetID(HWAVEIN hwi,LPUINT puDeviceID);
+/**
+ * Sends a message directly to a waveform input driver.
+ *
+ * @param hwi The input device, or a device identifier cast to HWAVEIN.
+ * @param uMsg The driver message.
+ * @param dw1 Message parameter.
+ * @param dw2 Message parameter.
+ * @return The driver's result.
+ */
+MMRESULT WINAPI waveInMessage(HWAVEIN hwi,UINT uMsg,DWORD dw1,DWORD dw2);
 UINT WINAPI midiOutGetNumDevs(void);
 MMRESULT WINAPI midiStreamOpen(LPHMIDISTRM,LPUINT,DWORD,DWORD,DWORD,DWORD);
 MMRESULT WINAPI midiStreamClose(HMIDISTRM);
@@ -1865,7 +2265,40 @@ typedef MCI_ANIM_WINDOW_PARMSW MCI_ANIM_WINDOW_PARMS,*PMCI_ANIM_WINDOW_PARMS,*LP
 typedef MCI_OVLY_OPEN_PARMSW MCI_OVLY_OPEN_PARMS,*PMCI_OVLY_OPEN_PARMS,*LPMCI_OVLY_OPEN_PARMS;
 typedef MCI_OVLY_WINDOW_PARMSW MCI_OVLY_WINDOW_PARMS,*PMCI_OVLY_WINDOW_PARMS,*LPMCI_OVLY_WINDOW_PARMS;
 typedef MCI_OVLY_SAVE_PARMSW MCI_OVLY_SAVE_PARMS,*PMCI_OVLY_SAVE_PARMS,*LPMCI_OVLY_SAVE_PARMS;
+/**
+ * Plays a waveform sound from a file, memory or a registry sound entry.
+ *
+ * The name is looked up in the registry first, then treated as a file
+ * name, searched for in the given path then \Windows. If it isn't found,
+ * the default system sound plays unless SND_NODEFAULT is set. The sound
+ * must fit in memory. Call GetLastError on failure.
+ *
+ * @param lpszSound Registry sound name, file name (.wav optional) or, with
+ *        SND_MEMORY, a pointer to a .wav image. NULL stops the sound
+ *        playing.
+ * @param fuSound SND_SYNC or SND_ASYNC, plus any of SND_LOOP (with
+ *        SND_ASYNC), SND_MEMORY, SND_NODEFAULT, SND_NOSTOP, SND_ALIAS
+ *        (registry only) and SND_FILENAME (file only).
+ * @return TRUE on success, FALSE on failure or if SND_NOSTOP was set and
+ *         a sound was playing.
+ */
 #define sndPlaySound sndPlaySoundW
+/**
+ * Plays a waveform sound from a file, a resource, memory or a registry
+ * sound alias.
+ *
+ * @param pszSound The sound: a file name, alias, resource name or
+ *        in-memory image, depending on fdwSound. NULL stops the sound
+ *        playing.
+ * @param hmod Module holding the resource for SND_RESOURCE, otherwise
+ *        NULL.
+ * @param fdwSound SND_FILENAME, SND_ALIAS, SND_RESOURCE or SND_MEMORY,
+ *        plus SND_SYNC or SND_ASYNC, and optionally SND_LOOP (with
+ *        SND_ASYNC), SND_NODEFAULT and SND_NOSTOP.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define PlaySound PlaySoundW
 #define waveOutGetDevCaps _WNAME(waveOutGetDevCaps)
 #define waveOutGetErrorText _WNAME(waveOutGetErrorText)

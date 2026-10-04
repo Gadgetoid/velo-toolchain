@@ -339,87 +339,644 @@ typedef IMEMENUITEMINFOA IMEMENUITEMINFO,*PIMEMENUITEMINFO,*LPIMEMENUITEMINFO;
 #endif
 HKL WINAPI ImmInstallIMEA(LPCSTR,LPCSTR);
 HKL WINAPI ImmInstallIMEW(LPCWSTR,LPCWSTR);
-HWND WINAPI ImmGetDefaultIMEWnd(HWND);
+/**
+ * Returns the default IME window.
+ *
+ * The system creates a single default IME window. Windows CE doesn't
+ * support the IME window class.
+ *
+ * @param hWnd A window, used to find the IME window.
+ * @return The default IME window, or NULL.
+ *
+ * @note Windows CE 2.0 only.
+ */
+HWND WINAPI ImmGetDefaultIMEWnd(HWND hWnd);
 UINT WINAPI ImmGetDescriptionA(HKL,LPSTR,UINT);
-UINT WINAPI ImmGetDescriptionW(HKL,LPWSTR,UINT);
+/**
+ * Gets an IME's description string.
+ *
+ * @param hKL Keyboard layout of the IME.
+ * @param lpszDescription Receives the description, or NULL.
+ * @param uBufLen Buffer size in characters, or 0 to query the length.
+ * @return Characters copied, not counting the terminator, or the length
+ *         needed when uBufLen is 0.
+ *
+ * @note Windows CE 2.0 only.
+ */
+UINT WINAPI ImmGetDescriptionW(HKL hKL,LPWSTR lpszDescription,UINT uBufLen);
 UINT WINAPI ImmGetIMEFileNameA(HKL,LPSTR,UINT);
 UINT WINAPI ImmGetIMEFileNameW(HKL,LPWSTR,UINT);
-DWORD WINAPI ImmGetProperty(HKL,DWORD);
+/**
+ * Gets the properties and capabilities of an IME.
+ *
+ * @param hKL Keyboard layout. Must be NULL on Windows CE.
+ * @param fdwIndex IGP_PROPERTY, IGP_CONVERSION, IGP_SENTENCE, IGP_UI,
+ *        IGP_SETCOMPSTR, IGP_SELECT or IGP_GETIMEVERSION.
+ * @return The requested property flags or value.
+ *
+ * @note Windows CE 2.0 only.
+ */
+DWORD WINAPI ImmGetProperty(HKL hKL,DWORD fdwIndex);
 BOOL WINAPI ImmIsIME(HKL);
-BOOL WINAPI ImmSimulateHotKey(HWND,DWORD);
+/**
+ * Acts as if the user pressed an IME hot key in a window.
+ *
+ * Windows CE supports only IME_JHOTKEY_CLOSE_OPEN, which toggles the
+ * Japanese IME open and closed.
+ *
+ * @param hWnd The window.
+ * @param dwHotKeyID The hot key, IME_JHOTKEY_CLOSE_OPEN.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI ImmSimulateHotKey(HWND hWnd,DWORD dwHotKeyID);
 HIMC WINAPI ImmCreateContext(void);
 BOOL WINAPI ImmDestroyContext(HIMC);
-HIMC WINAPI ImmGetContext(HWND);
-BOOL WINAPI ImmReleaseContext(HWND,HIMC);
-HIMC WINAPI ImmAssociateContext(HWND,HIMC);
+/**
+ * Returns the input context associated with a window.
+ *
+ * Release it with ImmReleaseContext.
+ *
+ * @param hWnd The window.
+ * @return The input context, or NULL if the window has none.
+ *
+ * @note Windows CE 2.0 only.
+ */
+HIMC WINAPI ImmGetContext(HWND hWnd);
+/**
+ * Releases an input context from ImmGetContext.
+ *
+ * Call once for every ImmGetContext.
+ *
+ * @param hWnd The window passed to ImmGetContext.
+ * @param hIMC The input context.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI ImmReleaseContext(HWND hWnd,HIMC hIMC);
+/**
+ * Associates an input context with a window.
+ *
+ * Each window gets the default input context when created. On Windows CE
+ * the only contexts an application can pass are the default one and
+ * NULL.
+ *
+ * @param hWnd The window.
+ * @param hIMC The default input context, or NULL to remove the window's
+ *        association.
+ * @return The window's previous input context.
+ *
+ * @note Windows CE 2.0 only.
+ */
+HIMC WINAPI ImmAssociateContext(HWND hWnd,HIMC hIMC);
 LONG WINAPI ImmGetCompositionStringA(HIMC,DWORD,PVOID,DWORD);
-LONG WINAPI ImmGetCompositionStringW(HIMC,DWORD,PVOID,DWORD);
+/**
+ * Gets part of the composition or result string, or its attributes.
+ *
+ * Usually called on WM_IME_COMPOSITION with GCS_RESULTSTR to collect the
+ * finished text.
+ *
+ * @param hIMC The input context.
+ * @param dwIndex What to get: GCS_COMPSTR, GCS_COMPATTR, GCS_COMPCLAUSE,
+ *        GCS_COMPREADSTR, GCS_RESULTSTR, GCS_RESULTCLAUSE, GCS_CURSORPOS
+ *        and so on.
+ * @param lpBuf Receives the data. Strings aren't null-terminated.
+ * @param dwBufLen Buffer size in bytes, or 0 to query the size needed.
+ * @return Bytes copied, or needed when dwBufLen is 0. For GCS_CURSORPOS,
+ *         the cursor position. IMM_ERROR_NODATA or IMM_ERROR_GENERAL on
+ *         failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+LONG WINAPI ImmGetCompositionStringW(HIMC hIMC,DWORD dwIndex,PVOID lpBuf,DWORD dwBufLen);
 BOOL WINAPI ImmSetCompositionStringA(HIMC,DWORD,PCVOID,DWORD,PCVOID,DWORD);
-BOOL WINAPI ImmSetCompositionStringW(HIMC,DWORD,PCVOID,DWORD,PCVOID,DWORD);
+/**
+ * Sets the composition and reading strings, or their attributes or
+ * clauses.
+ *
+ * @param hIMC The input context.
+ * @param dwIndex SCS_SETSTR, SCS_CHANGEATTR or SCS_CHANGECLAUSE.
+ * @param lpComp Composition data, or NULL.
+ * @param dwCompLen Size of lpComp, in bytes.
+ * @param lpRead Reading data, or NULL.
+ * @param dwReadLen Size of lpRead, in bytes.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI ImmSetCompositionStringW(HIMC hIMC,DWORD dwIndex,PCVOID lpComp,DWORD dwCompLen,PCVOID lpRead,DWORD dwReadLen);
 DWORD WINAPI ImmGetCandidateListCountA(HIMC,PDWORD);
-DWORD WINAPI ImmGetCandidateListCountW(HIMC,PDWORD);
+/**
+ * Gets the number of candidate lists and the buffer size needed for all
+ * of them.
+ *
+ * @param hIMC The input context.
+ * @param lpdwListCount Receives the number of candidate lists.
+ * @return Bytes needed to hold all the lists, or 0 on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+DWORD WINAPI ImmGetCandidateListCountW(HIMC hIMC,PDWORD lpdwListCount);
 DWORD WINAPI ImmGetCandidateListA(HIMC,DWORD,PCANDIDATELIST,DWORD);
-DWORD WINAPI ImmGetCandidateListW(HIMC,DWORD,PCANDIDATELIST,DWORD);
+/**
+ * Copies a candidate list into a buffer.
+ *
+ * @param hIMC The input context.
+ * @param dwIndex Index of the candidate list.
+ * @param lpCandList Receives the CANDIDATELIST and its strings.
+ * @param dwBufLen Buffer size in bytes, or 0 to query the size needed.
+ * @return Bytes copied, or needed when dwBufLen is 0. 0 on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+DWORD WINAPI ImmGetCandidateListW(HIMC hIMC,DWORD dwIndex,PCANDIDATELIST lpCandList,DWORD dwBufLen);
 DWORD WINAPI ImmGetGuideLineA(HIMC,DWORD,LPSTR,DWORD);
-DWORD WINAPI ImmGetGuideLineW(HIMC,DWORD,LPWSTR,DWORD);
-BOOL WINAPI ImmGetConversionStatus(HIMC,LPDWORD,PDWORD);
-BOOL WINAPI ImmSetConversionStatus(HIMC,DWORD,DWORD);
-BOOL WINAPI ImmGetOpenStatus(HIMC);
-BOOL WINAPI ImmSetOpenStatus(HIMC,BOOL);
+/**
+ * Gets the IME's error or guidance information.
+ *
+ * @param hIMC The input context.
+ * @param dwIndex GGL_LEVEL, GGL_INDEX, GGL_STRING or GGL_PRIVATE.
+ * @param lpBuf Receives the string or private data. Unused for GGL_LEVEL
+ *        and GGL_INDEX.
+ * @param dwBufLen Buffer size in bytes, or 0 to query the size needed.
+ * @return For GGL_LEVEL a GL_LEVEL_* value, for GGL_INDEX a GL_ID_*
+ *         value, otherwise bytes copied or needed.
+ *
+ * @note Windows CE 2.0 only.
+ */
+DWORD WINAPI ImmGetGuideLineW(HIMC hIMC,DWORD dwIndex,LPWSTR lpBuf,DWORD dwBufLen);
+/**
+ * Gets the current conversion and sentence modes.
+ *
+ * @param hIMC The input context.
+ * @param lpfdwConversion Receives IME_CMODE_* flags.
+ * @param lpfdwSentence Receives an IME_SMODE_* value.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI ImmGetConversionStatus(HIMC hIMC,LPDWORD lpfdwConversion,PDWORD lpfdwSentence);
+/**
+ * Sets the conversion and sentence modes.
+ *
+ * @param hIMC The input context.
+ * @param fdwConversion IME_CMODE_* flags.
+ * @param fdwSentence An IME_SMODE_* value.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI ImmSetConversionStatus(HIMC hIMC,DWORD fdwConversion,DWORD fdwSentence);
+/**
+ * Returns whether the IME is open.
+ *
+ * @param hIMC The input context.
+ * @return TRUE if open, FALSE if closed.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI ImmGetOpenStatus(HIMC hIMC);
+/**
+ * Opens or closes the IME.
+ *
+ * @param hIMC The input context.
+ * @param fOpen TRUE to open, FALSE to close.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI ImmSetOpenStatus(HIMC hIMC,BOOL fOpen);
 #ifndef NOGDI
 BOOL WINAPI ImmGetCompositionFontA(HIMC,LPLOGFONTA);
-BOOL WINAPI ImmGetCompositionFontW(HIMC,LPLOGFONTW);
+/**
+ * Gets the font used to show the composition string.
+ *
+ * @param hIMC The input context.
+ * @param lplf Receives the font.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI ImmGetCompositionFontW(HIMC hIMC,LPLOGFONTW lplf);
 BOOL WINAPI ImmSetCompositionFontA(HIMC,LPLOGFONTA);
-BOOL WINAPI ImmSetCompositionFontW(HIMC,LPLOGFONTW);
+/**
+ * Sets the font used to show the composition string.
+ *
+ * @param hIMC The input context.
+ * @param lplf The font.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI ImmSetCompositionFontW(HIMC hIMC,LPLOGFONTW lplf);
 #endif
 BOOL WINAPI ImmConfigureIMEA(HKL,HWND,DWORD,PVOID);
-BOOL WINAPI ImmConfigureIMEW(HKL,HWND,DWORD,PVOID);
+/**
+ * Shows an IME's configuration dialog.
+ *
+ * @param hKL Keyboard layout of the IME.
+ * @param hWnd Parent window for the dialog.
+ * @param dwMode IME_CONFIG_GENERAL, IME_CONFIG_REGISTERWORD or
+ *        IME_CONFIG_SELECTDICTIONARY.
+ * @param lpData A REGISTERWORDW for IME_CONFIG_REGISTERWORD, otherwise
+ *        NULL.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI ImmConfigureIMEW(HKL hKL,HWND hWnd,DWORD dwMode,PVOID lpData);
 LRESULT WINAPI ImmEscapeA(HKL,HIMC,UINT,PVOID);
-LRESULT WINAPI ImmEscapeW(HKL,HIMC,UINT,PVOID);
+/**
+ * Sends an IME-specific escape to an IME.
+ *
+ * @param hKL Keyboard layout of the IME.
+ * @param hIMC The input context.
+ * @param uEscape Escape code, IME_ESC_*.
+ * @param lpData Escape-specific data.
+ * @return Escape-specific, 0 on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+LRESULT WINAPI ImmEscapeW(HKL hKL,HIMC hIMC,UINT uEscape,PVOID lpData);
 DWORD WINAPI ImmGetConversionListA(HKL,HIMC,LPCSTR,PCANDIDATELIST,DWORD,UINT);
-DWORD WINAPI ImmGetConversionListW(HKL,HIMC,LPCWSTR,PCANDIDATELIST,DWORD,UINT);
-BOOL WINAPI ImmNotifyIME(HIMC,DWORD,DWORD,DWORD);
+/**
+ * Gets the conversion results for a character or word without changing
+ * the input context.
+ *
+ * @param hKL Keyboard layout. Must be NULL on Windows CE.
+ * @param hIMC The input context.
+ * @param lpSrc The string to convert.
+ * @param lpDst Receives a CANDIDATELIST of results.
+ * @param dwBufLen Buffer size in bytes, or 0 to query the size needed.
+ * @param uFlag GCL_CONVERSION, GCL_REVERSECONVERSION or
+ *        GCL_REVERSE_LENGTH.
+ * @return Bytes copied, or needed when dwBufLen is 0. 0 on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+DWORD WINAPI ImmGetConversionListW(HKL hKL,HIMC hIMC,LPCWSTR lpSrc,PCANDIDATELIST lpDst,DWORD dwBufLen,UINT uFlag);
+/**
+ * Tells the IME about a change to an input context, or asks it to act on
+ * the composition or candidates.
+ *
+ * @param hIMC The input context.
+ * @param dwAction NI_COMPOSITIONSTR, NI_OPENCANDIDATE, NI_CLOSECANDIDATE,
+ *        NI_SELECTCANDIDATESTR, NI_CHANGECANDIDATELIST,
+ *        NI_SETCANDIDATE_PAGESIZE or NI_SETCANDIDATE_PAGESTART.
+ * @param dwIndex Action-specific: for NI_COMPOSITIONSTR, CPS_COMPLETE,
+ *        CPS_CANCEL, CPS_CONVERT or CPS_REVERT. Otherwise usually the
+ *        candidate list index.
+ * @param dwValue Action-specific, such as the candidate index.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI ImmNotifyIME(HIMC hIMC,DWORD dwAction,DWORD dwIndex,DWORD dwValue);
 BOOL WINAPI ImmGetStatusWindowPos(HIMC,LPPOINT);
-BOOL WINAPI ImmSetStatusWindowPos(HIMC,LPPOINT);
-BOOL WINAPI ImmGetCompositionWindow(HIMC,PCOMPOSITIONFORM);
-BOOL WINAPI ImmSetCompositionWindow(HIMC,PCOMPOSITIONFORM);
-BOOL WINAPI ImmGetCandidateWindow(HIMC,DWORD,PCANDIDATEFORM);
-BOOL WINAPI ImmSetCandidateWindow(HIMC,PCANDIDATEFORM);
+/**
+ * Moves the IME status window.
+ *
+ * @param hIMC The input context.
+ * @param lpptPos New position, in screen coordinates.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI ImmSetStatusWindowPos(HIMC hIMC,LPPOINT lpptPos);
+/**
+ * Gets the position and style of the composition window.
+ *
+ * @param hIMC The input context.
+ * @param lpCompForm Receives the COMPOSITIONFORM.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI ImmGetCompositionWindow(HIMC hIMC,PCOMPOSITIONFORM lpCompForm);
+/**
+ * Sets the position and style of the composition window.
+ *
+ * @param hIMC The input context.
+ * @param lpCompForm The COMPOSITIONFORM to apply.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI ImmSetCompositionWindow(HIMC hIMC,PCOMPOSITIONFORM lpCompForm);
+/**
+ * Gets the position and style of a candidate window.
+ *
+ * @param hIMC The input context.
+ * @param dwIndex Index of the candidate window.
+ * @param lpCandidate Receives the CANDIDATEFORM.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI ImmGetCandidateWindow(HIMC hIMC,DWORD dwIndex,PCANDIDATEFORM lpCandidate);
+/**
+ * Sets the position and style of a candidate window.
+ *
+ * The dwIndex member of CANDIDATEFORM can be 0 to 4 on Windows CE.
+ *
+ * @param hIMC The input context.
+ * @param lpCandidate The CANDIDATEFORM to apply.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI ImmSetCandidateWindow(HIMC hIMC,PCANDIDATEFORM lpCandidate);
 BOOL WINAPI ImmIsUIMessageA(HWND,UINT,WPARAM,LPARAM);
-BOOL WINAPI ImmIsUIMessageW(HWND,UINT,WPARAM,LPARAM);
+/**
+ * Checks whether a message is meant for the IME window, and passes it on
+ * if so.
+ *
+ * @param hWndIME The default IME window, from ImmGetDefaultIMEWnd.
+ * @param msg The message.
+ * @param wParam The message's wParam.
+ * @param lParam The message's lParam.
+ * @return TRUE if the message belongs to the IME window, otherwise FALSE.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI ImmIsUIMessageW(HWND hWndIME,UINT msg,WPARAM wParam,LPARAM lParam);
 UINT WINAPI ImmGetVirtualKey(HWND);
 BOOL WINAPI ImmRegisterWordA(HKL,LPCSTR,DWORD,LPCSTR);
-BOOL WINAPI ImmRegisterWordW(HKL,LPCWSTR,DWORD,LPCWSTR);
+/**
+ * Adds a word to an IME's dictionary.
+ *
+ * @param hKL Keyboard layout of the IME.
+ * @param lpszReading Reading of the word.
+ * @param dwStyle Word style, IME_REGWORD_STYLE_* or an IME-specific
+ *        value.
+ * @param lpszRegister The word.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI ImmRegisterWordW(HKL hKL,LPCWSTR lpszReading,DWORD dwStyle,LPCWSTR lpszRegister);
 BOOL WINAPI ImmUnregisterWordA(HKL,LPCSTR,DWORD,LPCSTR);
-BOOL WINAPI ImmUnregisterWordW(HKL,LPCWSTR,DWORD,LPCWSTR);
+/**
+ * Removes a word from an IME's dictionary.
+ *
+ * @param hKL Keyboard layout of the IME.
+ * @param lpszReading Reading of the word.
+ * @param dwStyle Word style, as passed to ImmRegisterWordW.
+ * @param lpszUnregister The word.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI ImmUnregisterWordW(HKL hKL,LPCWSTR lpszReading,DWORD dwStyle,LPCWSTR lpszUnregister);
 UINT WINAPI ImmGetRegisterWordStyleA(HKL,UINT,PSTYLEBUFA);
-UINT WINAPI ImmGetRegisterWordStyleW(HKL,UINT,PSTYLEBUFW);
+/**
+ * Gets the word styles an IME supports.
+ *
+ * @param hKL Keyboard layout of the IME.
+ * @param nItem Number of STYLEBUFW entries in lpStyleBuf, or 0 to query
+ *        the count.
+ * @param lpStyleBuf Receives the styles.
+ * @return Styles copied, or the number available when nItem is 0.
+ *
+ * @note Windows CE 2.0 only.
+ */
+UINT WINAPI ImmGetRegisterWordStyleW(HKL hKL,UINT nItem,PSTYLEBUFW lpStyleBuf);
 UINT WINAPI ImmEnumRegisterWordA(HKL,REGISTERWORDENUMPROCA,LPCSTR,DWORD,LPCSTR,PVOID);
-UINT WINAPI ImmEnumRegisterWordW(HKL,REGISTERWORDENUMPROCW,LPCWSTR,DWORD,LPCWSTR,PVOID);
+/**
+ * Enumerates the words registered with an IME that match a reading,
+ * style and string.
+ *
+ * @param hKL Keyboard layout of the IME.
+ * @param lpfnEnumProc Callback, called once per matching word.
+ * @param lpszReading Reading to match, or NULL for any.
+ * @param dwStyle Style to match, or 0 for any.
+ * @param lpszRegister Word to match, or NULL for any.
+ * @param lpData Passed through to the callback.
+ * @return The last value returned by the callback, or 0 on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+UINT WINAPI ImmEnumRegisterWordW(HKL hKL,REGISTERWORDENUMPROCW lpfnEnumProc,LPCWSTR lpszReading,DWORD dwStyle,LPCWSTR lpszRegister,PVOID lpData);
 BOOL WINAPI EnableEUDC(BOOL);
 BOOL WINAPI ImmDisableIME(DWORD);
 DWORD WINAPI ImmGetImeMenuItemsA(HIMC,DWORD,DWORD,LPIMEMENUITEMINFOA,LPIMEMENUITEMINFOA,DWORD);
 DWORD WINAPI ImmGetImeMenuItemsW(HIMC,DWORD,DWORD,LPIMEMENUITEMINFOW,LPIMEMENUITEMINFOW,DWORD);
 
 #ifdef UNICODE
+/**
+ * Enumerates the words registered with an IME that match a reading,
+ * style and string.
+ *
+ * @param hKL Keyboard layout of the IME.
+ * @param lpfnEnumProc Callback, called once per matching word.
+ * @param lpszReading Reading to match, or NULL for any.
+ * @param dwStyle Style to match, or 0 for any.
+ * @param lpszRegister Word to match, or NULL for any.
+ * @param lpData Passed through to the callback.
+ * @return The last value returned by the callback, or 0 on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define ImmEnumRegisterWord ImmEnumRegisterWordW
+/**
+ * Gets the word styles an IME supports.
+ *
+ * @param hKL Keyboard layout of the IME.
+ * @param nItem Number of STYLEBUFW entries in lpStyleBuf, or 0 to query
+ *        the count.
+ * @param lpStyleBuf Receives the styles.
+ * @return Styles copied, or the number available when nItem is 0.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define ImmGetRegisterWordStyle ImmGetRegisterWordStyleW
+/**
+ * Removes a word from an IME's dictionary.
+ *
+ * @param hKL Keyboard layout of the IME.
+ * @param lpszReading Reading of the word.
+ * @param dwStyle Word style, as passed to ImmRegisterWordW.
+ * @param lpszUnregister The word.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define ImmUnregisterWord ImmUnregisterWordW
+/**
+ * Adds a word to an IME's dictionary.
+ *
+ * @param hKL Keyboard layout of the IME.
+ * @param lpszReading Reading of the word.
+ * @param dwStyle Word style, IME_REGWORD_STYLE_* or an IME-specific
+ *        value.
+ * @param lpszRegister The word.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define ImmRegisterWord ImmRegisterWordW
 #define ImmInstallIME ImmInstallIMEW
+/**
+ * Checks whether a message is meant for the IME window, and passes it on
+ * if so.
+ *
+ * @param hWndIME The default IME window, from ImmGetDefaultIMEWnd.
+ * @param msg The message.
+ * @param wParam The message's wParam.
+ * @param lParam The message's lParam.
+ * @return TRUE if the message belongs to the IME window, otherwise FALSE.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define ImmIsUIMessage ImmIsUIMessageW
+/**
+ * Gets the conversion results for a character or word without changing
+ * the input context.
+ *
+ * @param hKL Keyboard layout. Must be NULL on Windows CE.
+ * @param hIMC The input context.
+ * @param lpSrc The string to convert.
+ * @param lpDst Receives a CANDIDATELIST of results.
+ * @param dwBufLen Buffer size in bytes, or 0 to query the size needed.
+ * @param uFlag GCL_CONVERSION, GCL_REVERSECONVERSION or
+ *        GCL_REVERSE_LENGTH.
+ * @return Bytes copied, or needed when dwBufLen is 0. 0 on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define ImmGetConversionList ImmGetConversionListW
+/**
+ * Sends an IME-specific escape to an IME.
+ *
+ * @param hKL Keyboard layout of the IME.
+ * @param hIMC The input context.
+ * @param uEscape Escape code, IME_ESC_*.
+ * @param lpData Escape-specific data.
+ * @return Escape-specific, 0 on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define ImmEscape ImmEscapeW
+/**
+ * Shows an IME's configuration dialog.
+ *
+ * @param hKL Keyboard layout of the IME.
+ * @param hWnd Parent window for the dialog.
+ * @param dwMode IME_CONFIG_GENERAL, IME_CONFIG_REGISTERWORD or
+ *        IME_CONFIG_SELECTDICTIONARY.
+ * @param lpData A REGISTERWORDW for IME_CONFIG_REGISTERWORD, otherwise
+ *        NULL.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define ImmConfigureIME ImmConfigureIMEW
 #ifndef NOGDI
+/**
+ * Sets the font used to show the composition string.
+ *
+ * @param hIMC The input context.
+ * @param lplf The font.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define ImmSetCompositionFont ImmSetCompositionFontW
+/**
+ * Gets the font used to show the composition string.
+ *
+ * @param hIMC The input context.
+ * @param lplf Receives the font.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define ImmGetCompositionFont ImmGetCompositionFontW
 #endif
+/**
+ * Gets the IME's error or guidance information.
+ *
+ * @param hIMC The input context.
+ * @param dwIndex GGL_LEVEL, GGL_INDEX, GGL_STRING or GGL_PRIVATE.
+ * @param lpBuf Receives the string or private data. Unused for GGL_LEVEL
+ *        and GGL_INDEX.
+ * @param dwBufLen Buffer size in bytes, or 0 to query the size needed.
+ * @return For GGL_LEVEL a GL_LEVEL_* value, for GGL_INDEX a GL_ID_*
+ *         value, otherwise bytes copied or needed.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define ImmGetGuideLine ImmGetGuideLineW
+/**
+ * Copies a candidate list into a buffer.
+ *
+ * @param hIMC The input context.
+ * @param dwIndex Index of the candidate list.
+ * @param lpCandList Receives the CANDIDATELIST and its strings.
+ * @param dwBufLen Buffer size in bytes, or 0 to query the size needed.
+ * @return Bytes copied, or needed when dwBufLen is 0. 0 on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define ImmGetCandidateList ImmGetCandidateListW
+/**
+ * Gets the number of candidate lists and the buffer size needed for all
+ * of them.
+ *
+ * @param hIMC The input context.
+ * @param lpdwListCount Receives the number of candidate lists.
+ * @return Bytes needed to hold all the lists, or 0 on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define ImmGetCandidateListCount ImmGetCandidateListCountW
+/**
+ * Sets the composition and reading strings, or their attributes or
+ * clauses.
+ *
+ * @param hIMC The input context.
+ * @param dwIndex SCS_SETSTR, SCS_CHANGEATTR or SCS_CHANGECLAUSE.
+ * @param lpComp Composition data, or NULL.
+ * @param dwCompLen Size of lpComp, in bytes.
+ * @param lpRead Reading data, or NULL.
+ * @param dwReadLen Size of lpRead, in bytes.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define ImmSetCompositionString ImmSetCompositionStringW
+/**
+ * Gets part of the composition or result string, or its attributes.
+ *
+ * Usually called on WM_IME_COMPOSITION with GCS_RESULTSTR to collect the
+ * finished text.
+ *
+ * @param hIMC The input context.
+ * @param dwIndex What to get: GCS_COMPSTR, GCS_COMPATTR, GCS_COMPCLAUSE,
+ *        GCS_COMPREADSTR, GCS_RESULTSTR, GCS_RESULTCLAUSE, GCS_CURSORPOS
+ *        and so on.
+ * @param lpBuf Receives the data. Strings aren't null-terminated.
+ * @param dwBufLen Buffer size in bytes, or 0 to query the size needed.
+ * @return Bytes copied, or needed when dwBufLen is 0. For GCS_CURSORPOS,
+ *         the cursor position. IMM_ERROR_NODATA or IMM_ERROR_GENERAL on
+ *         failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define ImmGetCompositionString ImmGetCompositionStringW
+/**
+ * Gets an IME's description string.
+ *
+ * @param hKL Keyboard layout of the IME.
+ * @param lpszDescription Receives the description, or NULL.
+ * @param uBufLen Buffer size in characters, or 0 to query the length.
+ * @return Characters copied, not counting the terminator, or the length
+ *         needed when uBufLen is 0.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define ImmGetDescription ImmGetDescriptionW
 #define ImmGetIMEFileName ImmGetIMEFileNameW
 #define ImmGetImeMenuItems ImmGetImeMenuItemsW

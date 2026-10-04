@@ -55,7 +55,16 @@ typedef struct fd_set {
 	u_int   fd_count;
 	SOCKET  fd_array[FD_SETSIZE];
 } fd_set;
-int PASCAL __WSAFDIsSet(SOCKET,fd_set*);
+/**
+ * Tests whether a socket is in an fd_set.
+ *
+ * The implementation behind the FD_ISSET macro: use FD_ISSET instead.
+ *
+ * @param fd The socket.
+ * @param set The set, e.g. as returned by select.
+ * @return Nonzero if fd is in the set, otherwise 0.
+ */
+int PASCAL __WSAFDIsSet(SOCKET fd,fd_set*set);
 #ifndef FD_CLR
 #define FD_CLR(fd,set) do { u_int __i;\
 for (__i = 0; __i < ((fd_set *)(set))->fd_count ; __i++) {\
@@ -464,30 +473,373 @@ struct sockproto {
 #define NO_DATA	WSANO_DATA
 #define NO_ADDRESS	WSANO_ADDRESS
 #endif /* ! (__INSIDE_CYGWIN__ || __INSIDE_MSYS__) */
-SOCKET PASCAL accept(SOCKET,struct sockaddr*,int*);
-int PASCAL bind(SOCKET,const struct sockaddr*,int);
-int PASCAL closesocket(SOCKET);
-int PASCAL connect(SOCKET,const struct sockaddr*,int);
-int PASCAL ioctlsocket(SOCKET,long,u_long *);
-int PASCAL getpeername(SOCKET,struct sockaddr*,int*);
-int PASCAL getsockname(SOCKET,struct sockaddr*,int*);
-int PASCAL getsockopt(SOCKET,int,int,char*,int*);
-unsigned long PASCAL inet_addr(const char*);
-DECLARE_STDCALL_P(char *) inet_ntoa(struct in_addr);
-int PASCAL listen(SOCKET,int);
-int PASCAL recv(SOCKET,char*,int,int);
-int PASCAL recvfrom(SOCKET,char*,int,int,struct sockaddr*,int*);
-int PASCAL send(SOCKET,const char*,int,int);
-int PASCAL sendto(SOCKET,const char*,int,int,const struct sockaddr*,int);
-int PASCAL setsockopt(SOCKET,int,int,const char*,int);
-int PASCAL shutdown(SOCKET,int);
-SOCKET PASCAL socket(int,int,int);
-DECLARE_STDCALL_P(struct hostent *) gethostbyaddr(const char*,int,int);
-DECLARE_STDCALL_P(struct hostent *) gethostbyname(const char*);
-DECLARE_STDCALL_P(struct servent *) getservbyport(int,const char*);
-DECLARE_STDCALL_P(struct servent *) getservbyname(const char*,const char*);
-DECLARE_STDCALL_P(struct protoent *) getprotobynumber(int);
-DECLARE_STDCALL_P(struct protoent *) getprotobyname(const char*);
+/**
+ * Accepts a pending connection on a listening socket.
+ *
+ * Returns a new connected socket; the listening socket stays open. Blocks
+ * until a connection arrives unless the socket is nonblocking.
+ *
+ * @param s Socket that has been bound and put in listen mode.
+ * @param addr Receives the peer's address, or NULL. Must be NULL for
+ *        IrDA sockets.
+ * @param addrlen In: size of addr in bytes. Out: size of the address
+ *        stored. NULL if addr is NULL, and for IrDA sockets.
+ * @return The new socket, or INVALID_SOCKET on failure (see
+ *         WSAGetLastError; WSAEWOULDBLOCK if nonblocking with nothing
+ *         pending). Windows CE never returns WSAEINTR.
+ */
+SOCKET PASCAL accept(SOCKET s,struct sockaddr*addr,int*addrlen);
+/**
+ * Assigns a local address and port to a socket.
+ *
+ * Call before listen, or before recvfrom on an unconnected datagram
+ * socket. With INADDR_ANY any local interface is used; with port 0 the
+ * stack picks a free port in the range 1024 to 5000 (see getsockname).
+ * For IrDA sockets, include af_irda.h and pass a SOCKADDR_IRDA; there is
+ * no INADDR_ANY equivalent. On Windows CE 2.0, IrDA clients don't call
+ * bind.
+ *
+ * @param s Unbound socket.
+ * @param addr Local address, e.g. a SOCKADDR_IN cast to struct sockaddr *.
+ * @param namelen Size of addr in bytes.
+ * @return 0 on success, or SOCKET_ERROR (see WSAGetLastError, e.g.
+ *         WSAEADDRINUSE).
+ */
+int PASCAL bind(SOCKET s,const struct sockaddr*addr,int namelen);
+/**
+ * Closes a socket and frees its descriptor.
+ *
+ * By default, returns at once and sends any queued data in the
+ * background. With SO_LINGER and a zero timeout, it resets the connection
+ * and discards unsent data; with a nonzero timeout it blocks until the
+ * data is sent or the timeout expires (WSAEWOULDBLOCK if the socket is
+ * nonblocking).
+ *
+ * @param s The socket.
+ * @return 0 on success, or SOCKET_ERROR (see WSAGetLastError). Windows CE
+ *         never returns WSAEINTR.
+ */
+int PASCAL closesocket(SOCKET s);
+/**
+ * Connects a socket to a remote address.
+ *
+ * For a stream socket, opens the connection. For a datagram socket, sets
+ * the default destination for send and recv. Binds an unbound socket
+ * automatically. On a nonblocking socket it fails with WSAEWOULDBLOCK
+ * and completes in the background: select for writability to see when.
+ * For IrDA, find a device with the IRLMP_ENUMDEVICES socket option and
+ * pass a SOCKADDR_IRDA.
+ *
+ * @param s Unconnected socket.
+ * @param name Remote address, e.g. a SOCKADDR_IN.
+ * @param namelen Size of name in bytes.
+ * @return 0 on success, or SOCKET_ERROR (see WSAGetLastError, e.g.
+ *         WSAECONNREFUSED, WSAETIMEDOUT). Windows CE never returns
+ *         WSAEINTR.
+ */
+int PASCAL connect(SOCKET s,const struct sockaddr*name,int namelen);
+/**
+ * Gets or sets a socket's I/O mode.
+ *
+ * @param s The socket.
+ * @param cmd FIONBIO (set nonblocking if *argp is nonzero, blocking if 0;
+ *        sockets start blocking), FIONREAD (*argp receives the bytes a
+ *        single recv can read, or the size of the next datagram) or
+ *        SIOCATMARK (*argp receives TRUE if no out-of-band data is waiting;
+ *        SOCK_STREAM with SO_OOBINLINE only).
+ * @param argp Argument for cmd, in and/or out.
+ * @return 0 on success, or SOCKET_ERROR (see WSAGetLastError).
+ */
+int PASCAL ioctlsocket(SOCKET s,long cmd,u_long *argp);
+/**
+ * Returns the remote address of a connected socket.
+ *
+ * @param s Connected socket.
+ * @param name Receives the peer address.
+ * @param namelen In: size of name in bytes. Out: size of the address
+ *        stored.
+ * @return 0 on success, or SOCKET_ERROR (see WSAGetLastError; WSAENOTCONN
+ *         if not connected).
+ */
+int PASCAL getpeername(SOCKET s,struct sockaddr*name,int*namelen);
+/**
+ * Returns the local address of a socket.
+ *
+ * Useful after bind with port 0, or after connect without bind. A socket
+ * bound to INADDR_ANY may not report its IP address until it is connected.
+ *
+ * @param s Bound or connected socket.
+ * @param name Receives the local address.
+ * @param namelen In: size of name in bytes. Out: size of the address
+ *        stored.
+ * @return 0 on success, or SOCKET_ERROR (see WSAGetLastError; WSAEINVAL if
+ *         not bound).
+ */
+int PASCAL getsockname(SOCKET s,struct sockaddr*name,int*namelen);
+/**
+ * Reads a socket option.
+ *
+ * Returns the default if the option was never set. Not supported:
+ * SO_RCVLOWAT, SO_RCVTIMEO, SO_SNDLOWAT, SO_SNDTIMEO, IP_OPTIONS and
+ * TCP_MAXSEG. For IrDA, include af_irda.h: IRLMP_ENUMDEVICES lists
+ * devices in range (a DEVICELIST; if the buffer is too small, optlen
+ * receives the size needed), IRLMP_IAS_QUERY reads an IAS attribute and
+ * IRLMP_SEND_PDU_LEN gives the largest send in IRLMP_IRLPT_MODE. Of the
+ * SOL_SOCKET options, IrDA supports only SO_LINGER and SO_DONTLINGER.
+ *
+ * @param s The socket.
+ * @param level SOL_SOCKET, IPPROTO_TCP (for TCP_NODELAY) or SOL_IRLMP.
+ * @param optname Option, e.g. SO_ACCEPTCONN, SO_BROADCAST, SO_DEBUG,
+ *        SO_DONTLINGER, SO_DONTROUTE, SO_ERROR (reads and clears),
+ *        SO_KEEPALIVE, SO_LINGER, SO_OOBINLINE, SO_RCVBUF, SO_REUSEADDR,
+ *        SO_SNDBUF, SO_TYPE or TCP_NODELAY.
+ * @param optval Receives the value: a struct linger for SO_LINGER, an
+ *        int or BOOL for most others.
+ * @param optlen In: size of optval in bytes. Out: size of the value.
+ * @return 0 on success, or SOCKET_ERROR (see WSAGetLastError;
+ *         WSAENOPROTOOPT for an unsupported option).
+ */
+int PASCAL getsockopt(SOCKET s,int level,int optname,char*optval,int*optlen);
+/**
+ * Parses a dotted IPv4 address string.
+ *
+ * Accepts a.b.c.d, and the BSD forms a.b.c, a.b and a, where the last part
+ * fills the remaining bytes.
+ *
+ * @param cp The address string, e.g. "192.168.0.1".
+ * @return The address in network byte order, suitable for
+ *         sin_addr.s_addr, or INADDR_NONE if the string is invalid. Note
+ *         INADDR_NONE is also the value of "255.255.255.255".
+ */
+unsigned long PASCAL inet_addr(const char*cp);
+/**
+ * Formats an IPv4 address as a dotted string.
+ *
+ * The string is in a per-thread Winsock buffer, valid until the next
+ * Winsock call on the thread: copy it if you need to keep it.
+ *
+ * @param in The address.
+ * @return The string, e.g. "192.168.0.1", or NULL on failure.
+ */
+DECLARE_STDCALL_P(char *) inet_ntoa(struct in_addr in);
+/**
+ * Puts a bound stream socket into listening mode.
+ *
+ * Accept the connections with accept. Connections arriving when the queue
+ * is full are refused.
+ *
+ * @param s Bound, unconnected SOCK_STREAM socket.
+ * @param backlog Maximum queue of pending connections. Silently clamped
+ *        to 1 to 5, or to 2 for IrDA sockets.
+ * @return 0 on success, or SOCKET_ERROR (see WSAGetLastError).
+ */
+int PASCAL listen(SOCKET s,int backlog);
+/**
+ * Receives data from a connected socket.
+ *
+ * Blocks until data arrives unless the socket is nonblocking
+ * (WSAEWOULDBLOCK). A stream socket returns what is available, up to len.
+ * A datagram larger than buf is truncated, the rest is lost, and the call
+ * fails with WSAEMSGSIZE.
+ *
+ * @param s Connected socket.
+ * @param buf Receives the data.
+ * @param len Size of buf in bytes.
+ * @param flags 0, or MSG_PEEK (leave the data queued) and/or MSG_OOB.
+ * @return Bytes received, 0 if the peer closed the connection gracefully,
+ *         or SOCKET_ERROR (see WSAGetLastError, e.g. WSAECONNRESET).
+ */
+int PASCAL recv(SOCKET s,char*buf,int len,int flags);
+/**
+ * Receives a datagram and the address it came from.
+ *
+ * Blocks until data arrives unless the socket is nonblocking
+ * (WSAEWOULDBLOCK). A datagram larger than buf is truncated, the rest is
+ * lost, and the call fails with WSAEMSGSIZE. On stream sockets it works
+ * like recv and from is ignored.
+ *
+ * @param s Bound socket.
+ * @param buf Receives the data.
+ * @param len Size of buf in bytes.
+ * @param flags 0, or MSG_PEEK (leave the data queued) and/or MSG_OOB.
+ * @param from Receives the sender's address, or NULL.
+ * @param fromlen In: size of from in bytes. Out: size of the address
+ *        stored. NULL if from is NULL.
+ * @return Bytes received, 0 if the peer closed a stream connection, or
+ *         SOCKET_ERROR (see WSAGetLastError).
+ */
+int PASCAL recvfrom(SOCKET s,char*buf,int len,int flags,struct sockaddr*from,int*fromlen);
+/**
+ * Sends data on a connected socket.
+ *
+ * Success means the data was queued, not delivered. Blocks while there is
+ * no buffer space unless the socket is nonblocking (WSAEWOULDBLOCK).
+ * A nonblocking stream socket may send fewer bytes than requested. A
+ * datagram too large for the protocol fails with WSAEMSGSIZE and nothing
+ * is sent. For IrDA sockets, include af_irda.h.
+ *
+ * @param s Connected socket.
+ * @param buf The data.
+ * @param len Length of the data in bytes.
+ * @param flags 0, or MSG_DONTROUTE (may be ignored) and/or MSG_OOB
+ *        (SOCK_STREAM only).
+ * @return Bytes sent, which may be less than len, or SOCKET_ERROR (see
+ *         WSAGetLastError).
+ */
+int PASCAL send(SOCKET s,const char*buf,int len,int flags);
+/**
+ * Sends a datagram to a given address.
+ *
+ * Success means the data was queued, not delivered. On stream sockets,
+ * to and tolen are ignored and it works like send. To broadcast, enable
+ * SO_BROADCAST and send to INADDR_BROADCAST; keep broadcasts under 512
+ * bytes of data. A datagram too large for the protocol fails with
+ * WSAEMSGSIZE and nothing is sent.
+ *
+ * @param s The socket.
+ * @param buf The data.
+ * @param len Length of the data in bytes.
+ * @param flags 0, or MSG_DONTROUTE (may be ignored) and/or MSG_OOB
+ *        (SOCK_STREAM only).
+ * @param to Destination address, e.g. a SOCKADDR_IN.
+ * @param tolen Size of to in bytes.
+ * @return Bytes sent, which may be less than len, or SOCKET_ERROR (see
+ *         WSAGetLastError).
+ */
+int PASCAL sendto(SOCKET s,const char*buf,int len,int flags,const struct sockaddr*to,int tolen);
+/**
+ * Sets a socket option.
+ *
+ * For BOOL options, optval points to an int: nonzero to enable, 0 to
+ * disable. SO_REUSEADDR only takes effect if set before bind. Not
+ * supported: SO_ACCEPTCONN, SO_ERROR, SO_TYPE, SO_RCVLOWAT, SO_RCVTIMEO,
+ * SO_SNDLOWAT, SO_SNDTIMEO and IP_OPTIONS. Windows CE 2.0 doesn't support
+ * SO_RCVBUF (WSAEOPNOTSUPP), and adds SO_SECURE: pass a DWORD set to
+ * SO_SEC_SSL at SOL_SOCKET, before connecting, to use SSL (WSAEISCONN if
+ * already connected). For IrDA, include af_irda.h: IRLMP_IAS_SET sets a
+ * local IAS attribute, IRLMP_IRLPT_MODE (nonzero int) enables IrLPT
+ * printing mode, and IRLMP_RAW_MODE selects unreliable IrLMP instead of
+ * TinyTP, straight after socket. Of the SOL_SOCKET options, IrDA supports
+ * only SO_LINGER.
+ *
+ * @param s The socket.
+ * @param level SOL_SOCKET, IPPROTO_TCP (for TCP_NODELAY only) or
+ *        SOL_IRLMP.
+ * @param optname Option, e.g. SO_BROADCAST, SO_DEBUG, SO_DONTLINGER,
+ *        SO_DONTROUTE, SO_KEEPALIVE, SO_LINGER, SO_OOBINLINE,
+ *        SO_REUSEADDR, SO_SNDBUF or TCP_NODELAY (disables Nagle).
+ * @param optval The value: a struct linger for SO_LINGER (l_onoff,
+ *        l_linger in seconds), otherwise usually an int.
+ * @param optlen Size of optval in bytes.
+ * @return 0 on success, or SOCKET_ERROR (see WSAGetLastError;
+ *         WSAENOPROTOOPT for an unsupported option).
+ */
+int PASCAL setsockopt(SOCKET s,int level,int optname,const char*optval,int optlen);
+/**
+ * Stops sends, receives or both on a socket.
+ *
+ * Doesn't close the socket or free its resources: call closesocket after.
+ * Doesn't block, whatever SO_LINGER says. Don't reuse the socket after
+ * shutdown.
+ *
+ * @param s The socket.
+ * @param how 0 (SD_RECEIVE) to stop receiving, 1 (SD_SEND) to stop sending
+ *        (TCP sends a FIN), or 2 (SD_BOTH) for both.
+ * @return 0 on success, or SOCKET_ERROR (see WSAGetLastError).
+ */
+int PASCAL shutdown(SOCKET s,int how);
+/**
+ * Creates a socket.
+ *
+ * Call WSAStartup first. Close with closesocket.
+ *
+ * @param af Address family: AF_INET (PF_INET), or AF_IRDA for infrared
+ *        (include af_irda.h).
+ * @param type SOCK_STREAM (TCP) or SOCK_DGRAM (UDP). IrDA supports only
+ *        SOCK_STREAM.
+ * @param protocol 0 for the default for af and type. Must be 0 for IrDA.
+ * @return The new socket, or INVALID_SOCKET on failure (see
+ *         WSAGetLastError; WSAEBADF for IrDA if the shared serial port is
+ *         busy).
+ */
+SOCKET PASCAL socket(int af,int type,int protocol);
+/**
+ * Looks up a host by its IP address.
+ *
+ * The result belongs to Winsock, one per thread: don't modify or free it,
+ * and copy what you need before the next Winsock call.
+ *
+ * @param addr The address, in network byte order (e.g. a struct in_addr
+ *        cast to const char *).
+ * @param len Length of addr: 4.
+ * @param type Address family: PF_INET (AF_INET).
+ * @return The host entry, or NULL on failure (see WSAGetLastError, e.g.
+ *         WSAHOST_NOT_FOUND).
+ */
+DECLARE_STDCALL_P(struct hostent *) gethostbyaddr(const char*addr,int len,int type);
+/**
+ * Looks up a host by name.
+ *
+ * The result belongs to Winsock, one per thread: don't modify or free it,
+ * and copy what you need before the next Winsock call. Dotted IP strings
+ * aren't resolved: use inet_addr instead. Lookups by a host name in
+ * Japanese characters fail on the Japanese version of Windows CE.
+ *
+ * @param name Host name.
+ * @return The host entry, or NULL on failure (see WSAGetLastError, e.g.
+ *         WSAHOST_NOT_FOUND).
+ */
+DECLARE_STDCALL_P(struct hostent *) gethostbyname(const char*name);
+/**
+ * Looks up a service by port and protocol.
+ *
+ * The result belongs to Winsock: don't modify or free it, and copy what
+ * you need before the next Winsock call.
+ *
+ * @param port Port number, in network byte order.
+ * @param proto Protocol name, e.g. "tcp", or NULL to match any.
+ * @return The service entry, or NULL on failure (see WSAGetLastError).
+ *
+ * @note Windows CE 1.0 only.
+ */
+DECLARE_STDCALL_P(struct servent *) getservbyport(int port,const char*proto);
+/**
+ * Looks up a service's port by name and protocol.
+ *
+ * The result belongs to Winsock: don't modify or free it, and copy what
+ * you need before the next Winsock call. s_port is in network byte order.
+ *
+ * @param name Service name, e.g. "http".
+ * @param proto Protocol name, e.g. "tcp", or NULL to match any.
+ * @return The service entry, or NULL on failure (see WSAGetLastError).
+ *
+ * @note Windows CE 1.0 only.
+ */
+DECLARE_STDCALL_P(struct servent *) getservbyname(const char*name,const char*proto);
+/**
+ * Looks up a protocol by number.
+ *
+ * The result belongs to Winsock: don't modify or free it, and copy what
+ * you need before the next Winsock call.
+ *
+ * @param number Protocol number in host byte order, e.g. IPPROTO_TCP.
+ * @return The protocol entry, or NULL on failure (see WSAGetLastError).
+ *
+ * @note Windows CE 1.0 only.
+ */
+DECLARE_STDCALL_P(struct protoent *) getprotobynumber(int number);
+/**
+ * Looks up a protocol by name.
+ *
+ * The result belongs to Winsock: don't modify or free it, and copy what
+ * you need before the next Winsock call.
+ *
+ * @param name Protocol name, e.g. "tcp" or "udp".
+ * @return The protocol entry, or NULL on failure (see WSAGetLastError).
+ *
+ * @note Windows CE 1.0 only.
+ */
+DECLARE_STDCALL_P(struct protoent *) getprotobyname(const char*name);
 int PASCAL WSAStartup(WORD,LPWSADATA);
 int PASCAL WSACleanup(void);
 #ifdef _WIN32_WCE
@@ -510,12 +862,68 @@ HANDLE PASCAL WSAAsyncGetHostByAddr(HWND,u_int,const char*,int,int,char*,int);
 int PASCAL WSACancelAsyncRequest(HANDLE);
 int PASCAL WSAAsyncSelect(SOCKET,HWND,u_int,long);
 #if !(defined (__INSIDE_CYGWIN__) || defined (__INSIDE_MSYS__))
-u_long PASCAL htonl(u_long);
-u_long PASCAL ntohl(u_long);
-u_short PASCAL htons(u_short);
-u_short PASCAL ntohs(u_short);
-int PASCAL select(int nfds,fd_set*,fd_set*,fd_set*,const struct timeval*);
-int PASCAL gethostname(char*,int);
+/**
+ * Converts a 32-bit value from host to network (big-endian) byte order.
+ *
+ * @param hostlong Value in host byte order.
+ * @return The value in network byte order.
+ */
+u_long PASCAL htonl(u_long hostlong);
+/**
+ * Converts a 32-bit value from network (big-endian) to host byte order.
+ *
+ * @param netlong Value in network byte order.
+ * @return The value in host byte order.
+ */
+u_long PASCAL ntohl(u_long netlong);
+/**
+ * Converts a 16-bit value from host to network (big-endian) byte order.
+ *
+ * @param hostshort Value in host byte order.
+ * @return The value in network byte order.
+ */
+u_short PASCAL htons(u_short hostshort);
+/**
+ * Converts a 16-bit value from network (big-endian) to host byte order.
+ *
+ * @param netshort Value in network byte order.
+ * @return The value in host byte order.
+ */
+u_short PASCAL ntohs(u_short netshort);
+/**
+ * Waits until one or more sockets are readable, writable or have an
+ * error.
+ *
+ * Each set is updated in place to hold only the sockets that are ready.
+ * Build sets with FD_ZERO and FD_SET and test them with FD_ISSET. An
+ * fd_set holds up to FD_SETSIZE (64 by default) sockets. Readable covers
+ * a pending connection on a listening socket and a closed connection
+ * (recv returns 0). Writable covers completion of a nonblocking connect;
+ * a failed connect shows in exceptfds.
+ *
+ * @param nfds Ignored. Pass 0.
+ * @param readfds Sockets to check for readability, or NULL.
+ * @param writefds Sockets to check for writability, or NULL.
+ * @param exceptfds Sockets to check for errors and out-of-band data, or
+ *        NULL.
+ * @param timeout Maximum wait, NULL to wait indefinitely, or {0, 0} to
+ *        poll.
+ * @return The number of ready sockets, 0 on timeout, or SOCKET_ERROR (see
+ *         WSAGetLastError).
+ */
+int PASCAL select(int nfds,fd_set*readfds,fd_set*writefds,fd_set*exceptfds,const struct timeval*timeout);
+/**
+ * Returns the local host name.
+ *
+ * The name may be a plain name or fully qualified, but always resolves
+ * with gethostbyname.
+ *
+ * @param name Receives the null-terminated host name.
+ * @param namelen Size of name in bytes.
+ * @return 0 on success, or SOCKET_ERROR (see WSAGetLastError; WSAEFAULT if
+ *         the buffer is too small).
+ */
+int PASCAL gethostname(char*name,int namelen);
 #endif /* ! (__INSIDE_CYGWIN__ || __INSIDE_MSYS__) */
 
 #define WSAMAKEASYNCREPLY(b,e)	MAKELONG(b,e)

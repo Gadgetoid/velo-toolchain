@@ -300,7 +300,20 @@ HICON WINAPI ExtractAssociatedIconW(HINSTANCE,LPCWSTR,PWORD);
 HICON WINAPI ExtractIconA(HINSTANCE,LPCSTR,UINT);
 HICON WINAPI ExtractIconW(HINSTANCE,LPCWSTR,UINT);
 UINT WINAPI ExtractIconExA(LPCSTR,int,HICON*,HICON*,UINT);
-UINT WINAPI ExtractIconExW(LPCWSTR,int,HICON*,HICON*,UINT);
+/**
+ * Extracts an icon from an executable, DLL or icon file.
+ *
+ * Free the icons with DestroyIcon.
+ *
+ * @param lpszExeFileName Path of the file.
+ * @param nIconIndex 0 for the first icon, or -N for the icon with
+ *        resource ID N. Other indexes are not supported.
+ * @param phiconLarge Receives the large icon, or NULL.
+ * @param phiconSmall Receives the small icon, or NULL.
+ * @param nIcons Must be 1.
+ * @return Nonzero on success, 0 on failure.
+ */
+UINT WINAPI ExtractIconExW(LPCWSTR lpszExeFileName,int nIconIndex,HICON*phiconLarge,HICON*phiconSmall,UINT nIcons);
 HINSTANCE WINAPI FindExecutableA(LPCSTR,LPCSTR,LPSTR);
 HINSTANCE WINAPI FindExecutableW(LPCWSTR,LPCWSTR,LPWSTR);
 UINT WINAPI SHAppBarMessage(DWORD,PAPPBARDATA);
@@ -315,7 +328,22 @@ HINSTANCE WINAPI ShellExecuteW(HWND,LPCWSTR,LPCWSTR,LPCWSTR,LPCWSTR,INT);
 BOOL WINAPI ShellExecuteExA(LPSHELLEXECUTEINFOA);
 BOOL WINAPI _WNAME(ShellExecuteEx)(LPSHELLEXECUTEINFOW);
 int WINAPI SHFileOperationA(LPSHFILEOPSTRUCTA);
-int WINAPI SHFileOperationW(LPSHFILEOPSTRUCTW);
+/**
+ * Copies, moves, renames or deletes files, with optional progress and
+ * confirmation UI.
+ *
+ * Paths in pFrom and pTo are lists of null-terminated strings ending with
+ * an extra null.
+ *
+ * @param lpFileOp SHFILEOPSTRUCT with the operation (FO_COPY, FO_MOVE,
+ *        FO_RENAME or FO_DELETE), source and destination lists and
+ *        FOF_* flags.
+ * @return 0 on success, or nonzero on failure. fAnyOperationsAborted is
+ *         set if the user cancelled.
+ *
+ * @note Windows CE 2.0 only.
+ */
+int WINAPI SHFileOperationW(LPSHFILEOPSTRUCTW lpFileOp);
 void WINAPI SHFreeNameMappings(HANDLE);
 DWORD WINAPI SHGetFileInfoA(LPCSTR,DWORD,SHFILEINFOA*,UINT,UINT);
 DWORD WINAPI _WNAME(SHGetFileInfo)(LPCWSTR,DWORD,SHFILEINFOW*,UINT,UINT);
@@ -325,9 +353,32 @@ HRESULT WINAPI SHEmptyRecycleBinA(HWND,LPCSTR,DWORD);
 HRESULT WINAPI SHEmptyRecycleBinW(HWND,LPCWSTR,DWORD);
 
 #ifdef _WIN32_WCE
-BOOL WINAPI SHGetShortcutTarget(LPCTSTR,LPTSTR,int); 
-DWORD WINAPI SHCreateShortcut(LPTSTR,LPTSTR);
-HBITMAP WINAPI SHLoadDIBitmap(LPCTSTR);
+/**
+ * Returns the target path of a shortcut file.
+ *
+ * @param szShortcut Path of the shortcut.
+ * @param szTarget Receives the target path.
+ * @param cbMax Size of szTarget in characters.
+ * @return TRUE on success, FALSE on failure.
+ */
+BOOL WINAPI SHGetShortcutTarget(LPCTSTR szShortcut,LPTSTR szTarget,int cbMax); 
+/**
+ * Creates a shortcut file pointing at a target path.
+ *
+ * @param szShortcut Path of the shortcut to create. Must not be NULL.
+ * @param szTarget Target path, up to 256 characters.
+ * @return TRUE on success, FALSE on failure.
+ */
+DWORD WINAPI SHCreateShortcut(LPTSTR szShortcut,LPTSTR szTarget);
+/**
+ * Loads a .bmp file into a bitmap.
+ *
+ * Free with DeleteObject.
+ *
+ * @param szFileName Full path of the file.
+ * @return The bitmap, or NULL on failure.
+ */
+HBITMAP WINAPI SHLoadDIBitmap(LPCTSTR szFileName);
 #if (_WIN32_WCE >= 0x300)
 BOOL WINAPI SHGetSpecialFolderPath(HWND,LPWSTR,int,BOOL);
 #endif
@@ -354,12 +405,40 @@ typedef SHFILEINFOW SHFILEINFO;
 #define DragQueryFile DragQueryFileW
 #define ExtractAssociatedIcon ExtractAssociatedIconW
 #define ExtractIcon ExtractIconW
+/**
+ * Extracts an icon from an executable, DLL or icon file.
+ *
+ * Free the icons with DestroyIcon.
+ *
+ * @param lpszExeFileName Path of the file.
+ * @param nIconIndex 0 for the first icon, or -N for the icon with
+ *        resource ID N. Other indexes are not supported.
+ * @param phiconLarge Receives the large icon, or NULL.
+ * @param phiconSmall Receives the small icon, or NULL.
+ * @param nIcons Must be 1.
+ * @return Nonzero on success, 0 on failure.
+ */
 #define ExtractIconEx ExtractIconExW
 #define FindExecutable FindExecutableW
 #define Shell_NotifyIcon _WNAME(Shell_NotifyIcon)
 #define ShellAbout ShellAboutW
 #define ShellExecute ShellExecuteW
 #define ShellExecuteEx _WNAME(ShellExecuteEx)
+/**
+ * Copies, moves, renames or deletes files, with optional progress and
+ * confirmation UI.
+ *
+ * Paths in pFrom and pTo are lists of null-terminated strings ending with
+ * an extra null.
+ *
+ * @param lpFileOp SHFILEOPSTRUCT with the operation (FO_COPY, FO_MOVE,
+ *        FO_RENAME or FO_DELETE), source and destination lists and
+ *        FOF_* flags.
+ * @return 0 on success, or nonzero on failure. fAnyOperationsAborted is
+ *         set if the user cancelled.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define SHFileOperation SHFileOperationW
 #define SHGetFileInfo _WNAME(SHGetFileInfo)
 #define SHQueryRecycleBin SHQueryRecycleBinW

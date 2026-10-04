@@ -3026,9 +3026,61 @@ typedef struct tagNMLINK {
 #define Animate_Seek(w,f)	Animate_Play(w,f,f,1)
 HBITMAP WINAPI CreateMappedBitmap(HINSTANCE,int,UINT,LPCOLORMAP,int);
 HWND WINAPI CreateStatusWindowA(LONG,LPCSTR,HWND,UINT);
-HWND WINAPI CreateStatusWindowW(LONG,LPCWSTR,HWND,UINT);
-HWND WINAPI CreateToolbarEx(HWND,DWORD,UINT,int,HINSTANCE,UINT,LPCTBBUTTON,int,int,int,int,int,UINT);
-HWND WINAPI CreateUpDownControl(DWORD,int,int,int,int,HWND,int,HINSTANCE,HWND,int,int,int);
+/**
+ * Creates a status bar, normally along the bottom of the parent window.
+ *
+ * A wrapper for CreateWindow with default position and size.
+ *
+ * @param style Window styles. Must include WS_CHILD and normally WS_VISIBLE.
+ * @param lpszText Text for the first part.
+ * @param hwndParent Parent window.
+ * @param wID Control identifier, used in notifications to the parent.
+ * @return The status bar, or NULL on failure.
+ */
+HWND WINAPI CreateStatusWindowW(LONG style,LPCWSTR lpszText,HWND hwndParent,UINT wID);
+/**
+ * Creates a toolbar and adds buttons and their images to it.
+ *
+ * @param hwnd Parent window.
+ * @param ws Window and toolbar styles. Include WS_CHILD.
+ * @param wID Control identifier.
+ * @param nBitmaps Number of images in the bitmap.
+ * @param hBMInst Module containing the bitmap resource, HINST_COMMCTRL for
+ *        the system images, or NULL if wBMID is an HBITMAP.
+ * @param wBMID Bitmap resource identifier, or a bitmap handle.
+ * @param lpButtons Array of TBBUTTON structures.
+ * @param iNumButtons Number of entries in lpButtons.
+ * @param dxButton Button width, in pixels, or 0 for the default.
+ * @param dyButton Button height, in pixels, or 0 for the default.
+ * @param dxBitmap Image width, in pixels, or 0 for the default.
+ * @param dyBitmap Image height, in pixels, or 0 for the default.
+ * @param uStructSize sizeof(TBBUTTON).
+ * @return The toolbar, or NULL on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+HWND WINAPI CreateToolbarEx(HWND hwnd,DWORD ws,UINT wID,int nBitmaps,HINSTANCE hBMInst,UINT wBMID,LPCTBBUTTON lpButtons,int iNumButtons,int dxButton,int dyButton,int dxBitmap,int dyBitmap,UINT uStructSize);
+/**
+ * Creates an up-down (spin) control.
+ *
+ * On Windows CE the buddy window can only be an edit control.
+ *
+ * @param dwStyle Window styles, normally WS_CHILD, WS_BORDER and WS_VISIBLE,
+ *        plus UDS_* styles.
+ * @param x Left edge, in client coordinates.
+ * @param y Top edge, in client coordinates.
+ * @param cx Width, in pixels.
+ * @param cy Height, in pixels.
+ * @param hwndParent Parent window.
+ * @param nID Control identifier.
+ * @param hinst Application instance.
+ * @param hwndBuddy Edit control to pair it with, or NULL for none.
+ * @param nUpper Upper limit of the range.
+ * @param nLower Lower limit of the range.
+ * @param nPos Initial position.
+ * @return The control, or NULL on failure.
+ */
+HWND WINAPI CreateUpDownControl(DWORD dwStyle,int x,int y,int cx,int cy,HWND hwndParent,int nID,HINSTANCE hinst,HWND hwndBuddy,int nUpper,int nLower,int nPos);
 #define DateTime_GetMonthCal(hwnd) SNDMSG(hwnd, DTM_GETMONTHCAL, 0, 0)
 #define DateTime_GetMonthCalColor(hwnd, icolor) SNDMSG(hwnd, DTM_GETMONTHCAL, (WPARAM)icolor,0)
 #define DateTime_GetMonthCalFont(hwnd) SNDMSG(hwnd,DTM_GETMCFONT,0,0)
@@ -3041,7 +3093,19 @@ HWND WINAPI CreateUpDownControl(DWORD,int,int,int,int,HWND,int,HINSTANCE,HWND,in
 #define DateTime_SetSystemtime(hwnd,flag,lpsystime) SNDMSG(hwnd,DTM_SETSYSTEMTIME,(WPARAM)flag,(LPARAM)lpsystime)
 void WINAPI DrawInsert(HWND,HWND,int);
 void WINAPI DrawStatusTextA(HDC,LPRECT,LPCSTR,UINT);
-void WINAPI DrawStatusTextW(HDC,LPRECT,LPCWSTR,UINT);
+/**
+ * Draws text with a border, in the style of a status bar.
+ *
+ * A tab in the text centres what follows it; two tabs right-align it.
+ *
+ * @param hdc Device context to draw into.
+ * @param lprc Rectangle to draw in, in client coordinates. The border is
+ *        drawn just inside it.
+ * @param szText The text.
+ * @param uFlags 0, SBT_NOBORDERS for no border, or SBT_POPOUT for a raised
+ *        border.
+ */
+void WINAPI DrawStatusTextW(HDC hdc,LPRECT lprc,LPCWSTR szText,UINT uFlags);
 void WINAPI GetEffectiveClientRect(HWND,LPRECT,LPINT);
 #if (_WIN32_IE >= 0x0500)
 LANGID WINAPI GetMUILanguage(VOID);
@@ -3065,23 +3129,92 @@ LANGID WINAPI GetMUILanguage(VOID);
 #define Header_GetUnicodeFormat(w) (BOOL)SNDMSG((w),HDM_GETUNICODEFORMAT,0,0)
 #define Header_SetUnicodeFormat(w,f) (BOOL)SNDMSG((w),HDM_SETUNICODEFORMAT,(WPARAM)(f),0)
 #endif
-HDSA WINAPI DSA_Create(INT,INT);
-BOOL WINAPI DSA_Destroy(HDSA);
+/**
+ * Creates a dynamic structure array, holding fixed-size items by value.
+ *
+ * Undocumented in the Windows CE SDK. Free with DSA_Destroy.
+ *
+ * @param cbItem Size of each item, in bytes.
+ * @param cItemGrow Number of items to grow by when the array is full.
+ * @return The array, or NULL on failure.
+ */
+HDSA WINAPI DSA_Create(INT cbItem,INT cItemGrow);
+/**
+ * Frees a dynamic structure array and the items it holds.
+ *
+ * Undocumented in the Windows CE SDK.
+ *
+ * @param hdsa The array.
+ * @return TRUE on success, FALSE on failure.
+ */
+BOOL WINAPI DSA_Destroy(HDSA hdsa);
 VOID WINAPI DSA_DestroyCallback(HDSA,PFNDSAENUMCALLBACK,PVOID);
-PVOID WINAPI DSA_GetItemPtr(HDSA,INT);
-INT WINAPI DSA_InsertItem(HDSA,INT,PVOID);
+/**
+ * Returns a pointer to an item in a dynamic structure array.
+ *
+ * Undocumented in the Windows CE SDK. The pointer becomes invalid when the
+ * array grows or shrinks.
+ *
+ * @param hdsa The array.
+ * @param i Zero-based index of the item.
+ * @return Pointer to the item, or NULL if i is out of range.
+ */
+PVOID WINAPI DSA_GetItemPtr(HDSA hdsa,INT i);
+/**
+ * Inserts a copy of an item into a dynamic structure array.
+ *
+ * Undocumented in the Windows CE SDK.
+ *
+ * @param hdsa The array.
+ * @param i Index to insert at. An index past the end, such as DA_LAST,
+ *        appends.
+ * @param pitem The item to copy in.
+ * @return Index of the new item, or -1 on failure.
+ */
+INT WINAPI DSA_InsertItem(HDSA hdsa,INT i,PVOID pitem);
 HDPA WINAPI DPA_Create(INT);
-BOOL WINAPI DPA_Destroy(HDPA);
+/**
+ * Frees a dynamic pointer array.
+ *
+ * Undocumented in the Windows CE SDK. Frees only the array: free the items
+ * it points to first.
+ *
+ * @param hdpa The array.
+ * @return TRUE on success, FALSE on failure.
+ */
+BOOL WINAPI DPA_Destroy(HDPA hdpa);
 PVOID WINAPI DPA_DeletePtr(HDPA,INT);
 BOOL WINAPI DPA_DeleteAllPtrs(HDPA);
 VOID WINAPI DPA_EnumCallback(HDPA,PFNDPAENUMCALLBACK,PVOID);
 VOID WINAPI DPA_DestroyCallback(HDPA,PFNDPAENUMCALLBACK,PVOID);
 BOOL WINAPI DPA_SetPtr(HDPA,INT,PVOID);
 INT WINAPI DPA_InsertPtr(HDPA,INT,PVOID);
-PVOID WINAPI DPA_GetPtr(HDPA,INT_PTR);
+/**
+ * Returns an item from a dynamic pointer array.
+ *
+ * Undocumented in the Windows CE SDK.
+ *
+ * @param hdpa The array.
+ * @param i Zero-based index of the item.
+ * @return The item, or NULL if i is out of range.
+ */
+PVOID WINAPI DPA_GetPtr(HDPA hdpa,INT_PTR i);
 BOOL WINAPI DPA_Sort(HDPA,PFNDPACOMPARE,LPARAM);
 INT WINAPI DPA_Search(HDPA,PVOID,INT,PFNDPACOMPARE,LPARAM,UINT);
-BOOL WINAPI Str_SetPtrW(LPWSTR*,LPCWSTR);
+/**
+ * Replaces a dynamically allocated string with a newly allocated copy of
+ * another.
+ *
+ * Undocumented in the Windows CE SDK. In desktop comctl32 the old string
+ * is freed, so passing NULL for psz frees the string and sets *ppsz to
+ * NULL.
+ *
+ * @param ppsz The string pointer to update. Must be NULL or a string
+ *        previously set by Str_SetPtrW.
+ * @param psz The string to copy, or NULL.
+ * @return TRUE on success, FALSE if allocation fails.
+ */
+BOOL WINAPI Str_SetPtrW(LPWSTR*ppsz,LPCWSTR psz);
 #if (_WIN32_IE >= 0x0400)
 BOOL WINAPI FlatSB_EnableScrollBar(HWND,INT,UINT);
 BOOL WINAPI FlatSB_ShowScrollBar(HWND,INT,BOOL);
@@ -3109,48 +3242,346 @@ BOOL WINAPI RemoveWindowSubclass(HWND,SUBCLASSPROC,UINT_PTR);
 LRESULT WINAPI DefSubclassProc(HWND,UINT,WPARAM,LPARAM);
 INT WINAPI DrawShadowText(HDC,LPCWSTR,UINT,RECT*,DWORD,COLORREF,COLORREF,INT,INT);
 #endif /* _WIN32_WINNT >= 0x0501 */
-int WINAPI ImageList_Add(HIMAGELIST,HBITMAP,HBITMAP);
+/**
+ * Adds one or more images to an image list.
+ *
+ * The bitmaps are copied, so delete them with DeleteObject afterwards.
+ *
+ * @param himl The image list.
+ * @param hbmImage Bitmap with the images side by side. The number of images
+ *        comes from its width.
+ * @param hbmMask Mask bitmap. Ignored if the list has no mask.
+ * @return Index of the first new image, or -1 on failure.
+ */
+int WINAPI ImageList_Add(HIMAGELIST himl,HBITMAP hbmImage,HBITMAP hbmMask);
 #define ImageList_AddIcon(l,i) ImageList_ReplaceIcon(l,-1,i)
-int WINAPI ImageList_AddMasked(HIMAGELIST,HBITMAP,COLORREF);
-BOOL WINAPI ImageList_BeginDrag(HIMAGELIST,int,int,int);
-HIMAGELIST WINAPI ImageList_Create(int,int,UINT,int,int);
-BOOL WINAPI ImageList_Destroy(HIMAGELIST);
-BOOL WINAPI ImageList_DragEnter(HWND,int,int);
-BOOL WINAPI ImageList_DragLeave(HWND);
-BOOL WINAPI ImageList_DragMove(int,int);
-BOOL WINAPI ImageList_DragShowNolock(BOOL);
-BOOL WINAPI ImageList_Draw(HIMAGELIST,int,HDC,int,int,UINT);
-BOOL WINAPI ImageList_DrawEx(HIMAGELIST,int,HDC,int,int,int,int,COLORREF,COLORREF,UINT);
+/**
+ * Adds one or more images to an image list, making the mask from a colour.
+ *
+ * Pixels of crMask colour are set to black in the image and transparent in
+ * the mask. The bitmap is copied, so delete it with DeleteObject afterwards.
+ *
+ * @param himl The image list.
+ * @param hbmImage Bitmap with the images side by side. The number of images
+ *        comes from its width.
+ * @param crMask The transparent colour.
+ * @return Index of the first new image, or -1 on failure.
+ */
+int WINAPI ImageList_AddMasked(HIMAGELIST himl,HBITMAP hbmImage,COLORREF crMask);
+/**
+ * Starts dragging an image.
+ *
+ * Creates a temporary drag image list. Show it with ImageList_DragEnter, move
+ * it with ImageList_DragMove on WM_MOUSEMOVE and finish with
+ * ImageList_EndDrag.
+ *
+ * @param himlTrack The image list.
+ * @param iTrack Index of the image to drag.
+ * @param dxHotspot Hot spot x, relative to the image's top left.
+ * @param dyHotspot Hot spot y, relative to the image's top left.
+ * @return TRUE on success, FALSE on failure.
+ */
+BOOL WINAPI ImageList_BeginDrag(HIMAGELIST himlTrack,int iTrack,int dxHotspot,int dyHotspot);
+/**
+ * Creates an image list.
+ *
+ * Destroy with ImageList_Destroy.
+ *
+ * @param cx Width of each image, in pixels.
+ * @param cy Height of each image, in pixels.
+ * @param flags ILC_COLOR or ILC_COLORDDB, optionally with ILC_MASK for a
+ *        mask. ILC_COLOR on Windows CE 1.0 is a 2bpp DIB. Windows CE 2.0
+ *        doesn't support ILC_COLOR4, ILC_COLOR8, ILC_COLOR16, ILC_COLOR24 or
+ *        ILC_COLOR32.
+ * @param cInitial Number of images to allocate space for initially.
+ * @param cGrow Number of images to grow by when the list is full.
+ * @return The image list, or NULL on failure.
+ */
+HIMAGELIST WINAPI ImageList_Create(int cx,int cy,UINT flags,int cInitial,int cGrow);
+/**
+ * Destroys an image list.
+ *
+ * @param himl The image list.
+ * @return TRUE on success, FALSE on failure.
+ */
+BOOL WINAPI ImageList_Destroy(HIMAGELIST himl);
+/**
+ * Locks a window against updates during a drag and shows the drag image in
+ * it.
+ *
+ * Start the drag with ImageList_BeginDrag first.
+ *
+ * @param hwndLock Window to show the drag image in.
+ * @param x Position of the drag image, relative to the window's top left,
+ *        not its client area.
+ * @param y Position of the drag image, relative to the window's top left,
+ *        not its client area.
+ * @return TRUE on success, FALSE on failure.
+ */
+BOOL WINAPI ImageList_DragEnter(HWND hwndLock,int x,int y);
+/**
+ * Hides the drag image and unlocks the window so it can update.
+ *
+ * @param hwndLock Window passed to ImageList_DragEnter.
+ * @return TRUE on success, FALSE on failure.
+ */
+BOOL WINAPI ImageList_DragLeave(HWND hwndLock);
+/**
+ * Moves the drag image, typically on WM_MOUSEMOVE.
+ *
+ * @param x New x position, as for ImageList_DragEnter.
+ * @param y New y position, as for ImageList_DragEnter.
+ * @return TRUE on success, FALSE on failure.
+ */
+BOOL WINAPI ImageList_DragMove(int x,int y);
+/**
+ * Shows or hides the drag image without locking the window.
+ *
+ * @param fShow TRUE to show, FALSE to hide.
+ * @return TRUE on success, FALSE on failure.
+ */
+BOOL WINAPI ImageList_DragShowNolock(BOOL fShow);
+/**
+ * Draws an image from an image list.
+ *
+ * @param himl The image list.
+ * @param iDraw Index of the image.
+ * @param hdcDst Destination device context.
+ * @param x Left edge in hdcDst.
+ * @param y Top edge in hdcDst.
+ * @param fStyle ILD_NORMAL, ILD_TRANSPARENT, ILD_BLEND25 (ILD_FOCUS),
+ *        ILD_BLEND50 (ILD_SELECTED), ILD_MASK or ILD_IMAGE, optionally with
+ *        an overlay from INDEXTOOVERLAYMASK. Blending and transparency need
+ *        a masked list.
+ * @return TRUE on success, FALSE on failure.
+ */
+BOOL WINAPI ImageList_Draw(HIMAGELIST himl,int iDraw,HDC hdcDst,int x,int y,UINT fStyle);
+/**
+ * Draws an image from an image list, with given background and blend
+ * colours.
+ *
+ * @param himl The image list.
+ * @param iDraw Index of the image.
+ * @param hdcDst Destination device context.
+ * @param x Left edge in hdcDst.
+ * @param y Top edge in hdcDst.
+ * @param cx Width of the part of the image to draw, or 0 for all of it.
+ *        Not validated.
+ * @param cy Height of the part of the image to draw, or 0 for all of it.
+ *        Not validated.
+ * @param rgbBk Background colour, CLR_NONE for transparent or CLR_DEFAULT
+ *        for the list's background colour. Only used with ILC_MASK lists.
+ * @param rgbFg Blend colour, CLR_NONE to blend with the destination, or
+ *        CLR_DEFAULT (CLR_HILIGHT) for the highlight colour. Only used with
+ *        ILD_BLEND25 or ILD_BLEND50.
+ * @param fStyle Drawing style, as for ImageList_Draw.
+ * @return TRUE on success, FALSE on failure.
+ */
+BOOL WINAPI ImageList_DrawEx(HIMAGELIST himl,int iDraw,HDC hdcDst,int x,int y,int cx,int cy,COLORREF rgbBk,COLORREF rgbFg,UINT fStyle);
+/**
+ * Ends a drag started with ImageList_BeginDrag.
+ */
 void WINAPI ImageList_EndDrag(VOID);
 #define ImageList_ExtractIcon(h,l,i) ImageList_GetIcon(l,i,0)
-COLORREF WINAPI ImageList_GetBkColor(HIMAGELIST);
-HIMAGELIST WINAPI ImageList_GetDragImage(LPPOINT,LPPOINT);
-HICON WINAPI ImageList_GetIcon(HIMAGELIST,int,UINT);
-BOOL WINAPI ImageList_GetIconSize(HIMAGELIST,int*,int*);
-int WINAPI ImageList_GetImageCount(HIMAGELIST);
-BOOL WINAPI ImageList_GetImageInfo(HIMAGELIST,int,IMAGEINFO*);
+/**
+ * Returns the background color of an image list.
+ *
+ * @param himl The image list.
+ * @return The background color, or CLR_NONE if images are drawn
+ *         transparently using the mask.
+ */
+COLORREF WINAPI ImageList_GetBkColor(HIMAGELIST himl);
+/**
+ * Returns the temporary image list used for the current drag image, and
+ * the drag position and hot spot offset.
+ *
+ * The image list is destroyed by ImageList_EndDrag. Don't destroy it
+ * yourself.
+ *
+ * @param ppt Receives the current drag position, or NULL.
+ * @param pptHotspot Receives the offset of the drag image from the drag
+ *        position, or NULL.
+ * @return The drag image list, or NULL if no drag is in progress.
+ */
+HIMAGELIST WINAPI ImageList_GetDragImage(LPPOINT ppt,LPPOINT pptHotspot);
+/**
+ * Creates an icon from an image and its mask in an image list.
+ *
+ * Windows CE can create only icons this way, not cursors. Destroy the
+ * result with DestroyIcon.
+ *
+ * @param himl The image list.
+ * @param iImage Index of the image.
+ * @param fStyle Drawing style, ILD_* as for ImageList_Draw.
+ * @return The new icon, or NULL on failure.
+ */
+HICON WINAPI ImageList_GetIcon(HIMAGELIST himl,int iImage,UINT fStyle);
+/**
+ * Gets the width and height of the images in an image list.
+ *
+ * All images in a list are the same size.
+ *
+ * @param himl The image list.
+ * @param cx Receives the width, in pixels.
+ * @param cy Receives the height, in pixels.
+ * @return TRUE on success, FALSE on failure.
+ */
+BOOL WINAPI ImageList_GetIconSize(HIMAGELIST himl,int*cx,int*cy);
+/**
+ * Returns the number of images in an image list.
+ *
+ * @param himl The image list.
+ * @return The number of images.
+ */
+int WINAPI ImageList_GetImageCount(HIMAGELIST himl);
+/**
+ * Gets the bitmaps and bounding rectangle of an image.
+ *
+ * The returned bitmaps belong to the image list. They can be used to draw
+ * or modify the image directly, but don't delete them.
+ *
+ * @param himl The image list.
+ * @param iImage Index of the image.
+ * @param pImageInfo Receives the image and mask bitmaps and the image's
+ *        rectangle within them.
+ * @return TRUE on success, FALSE on failure.
+ */
+BOOL WINAPI ImageList_GetImageInfo(HIMAGELIST himl,int iImage,IMAGEINFO*pImageInfo);
 #define ImageList_LoadBitmap(h,l,x,G,M) ImageList_LoadImage(h,l,x,G,M,IMAGE_BITMAP,0)
 HIMAGELIST WINAPI ImageList_LoadImageA(HINSTANCE,LPCSTR,int,int,COLORREF,UINT,UINT);
 HIMAGELIST WINAPI _WNAME(ImageList_LoadImage)(HINSTANCE,LPCWSTR,int,int,COLORREF,UINT,UINT);
-HIMAGELIST WINAPI ImageList_Merge(HIMAGELIST,int,HIMAGELIST,int,int,int);
-BOOL WINAPI ImageList_Remove(HIMAGELIST,int);
+/**
+ * Creates a new image list holding one image made by drawing one image
+ * transparently over another.
+ *
+ * The new mask is the OR of the two source masks. Destroy the result with
+ * ImageList_Destroy.
+ *
+ * @param himl1 Image list holding the background image.
+ * @param iImage1 Index of the background image.
+ * @param himl2 Image list holding the image to draw on top.
+ * @param iImage2 Index of the image to draw on top.
+ * @param dx Horizontal offset of the second image from the first.
+ * @param dy Vertical offset of the second image from the first.
+ * @return The new image list, or NULL on failure.
+ */
+HIMAGELIST WINAPI ImageList_Merge(HIMAGELIST himl1,int iImage1,HIMAGELIST himl2,int iImage2,int dx,int dy);
+/**
+ * Removes an image, or all images, from an image list.
+ *
+ * Images after the removed one move down an index.
+ *
+ * @param himl The image list.
+ * @param iRemove Index of the image, or -1 for all images.
+ * @return TRUE on success, FALSE on failure.
+ */
+BOOL WINAPI ImageList_Remove(HIMAGELIST himl,int iRemove);
 #define ImageList_RemoveAll(l) ImageList_Remove(l,-1)
-BOOL WINAPI ImageList_Replace(HIMAGELIST,int,HBITMAP,HBITMAP);
-int WINAPI ImageList_ReplaceIcon(HIMAGELIST,int,HICON);
-COLORREF WINAPI ImageList_SetBkColor(HIMAGELIST,COLORREF);
-BOOL WINAPI ImageList_SetDragCursorImage(HIMAGELIST,int,int,int);
-BOOL WINAPI ImageList_SetIconSize(HIMAGELIST,int,int);
-BOOL WINAPI ImageList_SetOverlayImage(HIMAGELIST,int,int);
+/**
+ * Replaces an image in an image list with new image and mask bitmaps.
+ *
+ * The bitmaps are copied, so delete them with DeleteObject afterwards.
+ *
+ * @param himl The image list.
+ * @param iReplace Index of the image to replace.
+ * @param hbmImage The new image bitmap.
+ * @param hbmMask The new mask bitmap. Ignored if the list has no mask.
+ * @return TRUE on success, FALSE on failure.
+ */
+BOOL WINAPI ImageList_Replace(HIMAGELIST himl,int iReplace,HBITMAP hbmImage,HBITMAP hbmMask);
+/**
+ * Replaces an image with an icon, or appends the icon to the list.
+ *
+ * Takes icons only, not cursors. The icon is copied, so an icon you
+ * created can be destroyed afterwards. Icons from LoadIcon needn't be.
+ *
+ * @param himl The image list.
+ * @param iReplace Index of the image to replace, or -1 to append.
+ * @param hicon The icon, providing both the image and mask.
+ * @return Index of the image, or -1 on failure.
+ */
+int WINAPI ImageList_ReplaceIcon(HIMAGELIST himl,int iReplace,HICON hicon);
+/**
+ * Sets the background color used when drawing an image list's images.
+ *
+ * @param himl The image list.
+ * @param clrBk The background color, or CLR_NONE to draw images
+ *        transparently using the mask.
+ * @return The previous background color, or CLR_NONE on failure.
+ */
+COLORREF WINAPI ImageList_SetBkColor(HIMAGELIST himl,COLORREF clrBk);
+/**
+ * Combines an image with the current drag image to make a new drag
+ * image.
+ *
+ * Typically used to add a cursor-like image to the drag image during a
+ * drag started with ImageList_BeginDrag.
+ *
+ * @param himlDrag Image list holding the image to combine.
+ * @param iDrag Index of the image to combine.
+ * @param dxHotspot Horizontal position of the hot spot within the image.
+ * @param dyHotspot Vertical position of the hot spot within the image.
+ * @return TRUE on success, FALSE on failure.
+ */
+BOOL WINAPI ImageList_SetDragCursorImage(HIMAGELIST himlDrag,int iDrag,int dxHotspot,int dyHotspot);
+/**
+ * Sets the size of the images in an image list, removing all images.
+ *
+ * @param himl The image list.
+ * @param cx New image width, in pixels.
+ * @param cy New image height, in pixels.
+ * @return TRUE on success, FALSE on failure.
+ */
+BOOL WINAPI ImageList_SetIconSize(HIMAGELIST himl,int cx,int cy);
+/**
+ * Makes an image available as one of up to four overlay masks.
+ *
+ * To draw an image with an overlay, pass INDEXTOOVERLAYMASK(iOverlay) in
+ * the style flags of ImageList_Draw or ImageList_DrawEx.
+ *
+ * @param himl The image list.
+ * @param iImage Index of the image to use as an overlay.
+ * @param iOverlay Overlay number, 1 to 4.
+ * @return TRUE on success, FALSE on failure.
+ */
+BOOL WINAPI ImageList_SetOverlayImage(HIMAGELIST himl,int iImage,int iOverlay);
 #ifdef _OBJIDL_H
 HIMAGELIST WINAPI ImageList_Read(LPSTREAM);
 BOOL WINAPI ImageList_Write(HIMAGELIST,LPSTREAM);
 #endif
 #if (_WIN32_IE >= 0x0400) || (_WIN32_WCE >= 0x0200)
+/**
+ * Creates a copy of an image list, with all its images and settings.
+ *
+ * @param himl The image list to copy.
+ * @return The new image list, or NULL on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
 HIMAGELIST WINAPI ImageList_Duplicate(HIMAGELIST himl);
 #endif
+/**
+ * Loads the common controls DLL and registers its window classes.
+ *
+ * Call it before creating any common control, or use InitCommonControlsEx
+ * to register only the classes you need.
+ */
 void WINAPI InitCommonControls(void);
 #if (_WIN32_IE >= 0x0300)
-BOOL WINAPI InitCommonControlsEx(LPINITCOMMONCONTROLSEX);
+/**
+ * Registers chosen common control window classes.
+ *
+ * @param lpInitCtrls Structure with dwSize set and dwICC holding ICC_*
+ *        flags: ICC_BAR_CLASSES (toolbar, status bar, trackbar, command
+ *        bar), ICC_COOL_CLASSES, ICC_DATE_CLASSES, ICC_LISTVIEW_CLASSES,
+ *        ICC_PROGRESS_CLASS, ICC_TAB_CLASSES, ICC_TREEVIEW_CLASSES and
+ *        ICC_UPDOWN_CLASS. Windows CE doesn't support ICC_ANIMATE_CLASS,
+ *        ICC_HOTKEY_CLASS, ICC_INTERNET_CLASSES or ICC_USEREX_CLASSES.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+BOOL WINAPI InitCommonControlsEx(LPINITCOMMONCONTROLSEX lpInitCtrls);
 #endif
 #if (_WIN32_IE >= 0x0500)
 VOID WINAPI InitMUILanguage(LANGID);
@@ -3377,9 +3808,40 @@ BOOL WINAPI _TrackMouseEvent(LPTRACKMOUSEEVENT);
 #define ListView_SetItemCountEx(w,i,f) (void)SNDMSG((w),LVM_SETITEMCOUNT,(WPARAM)(i),(LPARAM)(f))
 #endif
 #if (_WIN32_IE >= 0x0300) || (_WIN32_WCE >= 0x200)
-WINBOOL WINAPI ImageList_SetImageCount(HIMAGELIST,UINT);
-WINBOOL WINAPI ImageList_Copy(HIMAGELIST,int,HIMAGELIST,int,UINT);
-WINBOOL WINAPI ImageList_DrawIndirect(IMAGELISTDRAWPARAMS*);
+/**
+ * Grows or shrinks an image list to a given number of images.
+ *
+ * Images cut off by shrinking are freed. New slots made by growing hold
+ * no valid image: fill them with ImageList_Replace before drawing them.
+ *
+ * @param himl The image list.
+ * @param uNewCount The new number of images.
+ * @return Nonzero on success, zero on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBOOL WINAPI ImageList_SetImageCount(HIMAGELIST himl,UINT uNewCount);
+/**
+ * Copies or swaps images within an image list.
+ *
+ * @param himlDst The image list. Must be the same as himlSrc.
+ * @param iDst Zero-based index of the destination image.
+ * @param himlSrc The image list. Must be the same as himlDst.
+ * @param iSrc Zero-based index of the source image.
+ * @param uFlags ILCF_MOVE to copy the source over the destination, or
+ *        ILCF_SWAP to exchange them.
+ * @return Nonzero on success, zero on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBOOL WINAPI ImageList_Copy(HIMAGELIST himlDst,int iDst,HIMAGELIST himlSrc,int iSrc,UINT uFlags);
+/**
+ * Draws an image from an image list, with the settings in a structure.
+ *
+ * @param pimldp The draw settings. Set cbSize first.
+ * @return Nonzero on success, zero on failure.
+ */
+WINBOOL WINAPI ImageList_DrawIndirect(IMAGELISTDRAWPARAMS*pimldp);
 #endif
 #if (_WIN32_IE >= 0x0300)
 #define TabCtrl_SetMinTabWidth(hwnd,x) SNDMSG((hwnd),TCM_SETMINTABWIDTH,0,x)
@@ -3600,7 +4062,30 @@ typedef NMHDDISPINFOW NMHDDISPINFO, *LPNMHDDISPINFO;
 #define TCM_GETITEM TCM_GETITEMW
 #define TCM_SETITEM TCM_SETITEMW
 #define TCM_INSERTITEM TCM_INSERTITEMW
+/**
+ * Creates a status bar, normally along the bottom of the parent window.
+ *
+ * A wrapper for CreateWindow with default position and size.
+ *
+ * @param style Window styles. Must include WS_CHILD and normally WS_VISIBLE.
+ * @param lpszText Text for the first part.
+ * @param hwndParent Parent window.
+ * @param wID Control identifier, used in notifications to the parent.
+ * @return The status bar, or NULL on failure.
+ */
 #define CreateStatusWindow CreateStatusWindowW
+/**
+ * Draws text with a border, in the style of a status bar.
+ *
+ * A tab in the text centres what follows it; two tabs right-align it.
+ *
+ * @param hdc Device context to draw into.
+ * @param lprc Rectangle to draw in, in client coordinates. The border is
+ *        drawn just inside it.
+ * @param szText The text.
+ * @param uFlags 0, SBT_NOBORDERS for no border, or SBT_POPOUT for a raised
+ *        border.
+ */
 #define DrawStatusText DrawStatusTextW
 #define ImageList_LoadImage _WNAME(ImageList_LoadImage)
 #define DTM_SETFORMAT DTM_SETFORMATW
@@ -3811,15 +4296,138 @@ typedef struct tagCOMMANDBANDSRESTOREINFO {
 
 #ifdef _WIN32_WCE               /* these are PPC only */
 
-COMMCTRLAPI HWND WINAPI CommandBar_Create(HINSTANCE, HWND, int); 
-COMMCTRLAPI BOOL WINAPI CommandBar_Show(HWND, BOOL); 
-COMMCTRLAPI int WINAPI CommandBar_AddBitmap(HWND, HINSTANCE, int, int, int, int); 
-COMMCTRLAPI HWND WINAPI CommandBar_InsertComboBox(HWND, HINSTANCE, int, UINT, WORD, WORD); 
-COMMCTRLAPI BOOL WINAPI CommandBar_InsertMenubar(HWND, HINSTANCE, WORD, WORD );
-COMMCTRLAPI BOOL WINAPI CommandBar_InsertMenubarEx(HWND, HINSTANCE, LPTSTR, WORD);
-COMMCTRLAPI BOOL WINAPI CommandBar_DrawMenuBar(HWND, WORD); 
-COMMCTRLAPI HMENU WINAPI CommandBar_GetMenu(HWND, WORD); 
-COMMCTRLAPI BOOL WINAPI CommandBar_AddAdornments(HWND, DWORD, DWORD); 
+/**
+ * Creates an empty command bar along the top of a window.
+ *
+ * The command bar takes the place of the menu bar and sits inside the
+ * parent's client area: offset your layout by CommandBar_Height. Destroy with
+ * CommandBar_Destroy.
+ *
+ * @param hInst Application instance.
+ * @param hwndParent Parent window.
+ * @param idCmdBar Control identifier.
+ * @return The command bar, or NULL on failure.
+ */
+COMMCTRLAPI HWND WINAPI CommandBar_Create(HINSTANCE hInst, HWND hwndParent, int idCmdBar); 
+/**
+ * Shows or hides a command bar.
+ *
+ * Command bars start visible. To hide one before the window first appears,
+ * call this before ShowWindow on the parent.
+ *
+ * @param hwndCB The command bar.
+ * @param fShow TRUE to show, FALSE to hide.
+ * @return TRUE if the command bar was visible before, FALSE if hidden.
+ */
+COMMCTRLAPI BOOL WINAPI CommandBar_Show(HWND hwndCB, BOOL fShow); 
+/**
+ * Adds button images to a command bar from a bitmap.
+ *
+ * Images should be 16x16. For the system images, pass HINST_COMMCTRL with
+ * IDB_STD_SMALL_COLOR or IDB_VIEW_SMALL_COLOR, then index them with STD_* or
+ * VIEW_* offset by the returned index. On Windows CE 1.0 the display is 2bpp
+ * greyscale, so images aren't shown in colour.
+ *
+ * @param hwndCB The command bar.
+ * @param hInst Module containing the bitmap, HINST_COMMCTRL, or NULL if
+ *        idBitmap is an HBITMAP.
+ * @param idBitmap Bitmap resource identifier, IDB_* for HINST_COMMCTRL, or
+ *        a bitmap handle.
+ * @param iNumImages Number of images in the bitmap. May be 0 for the system
+ *        bitmaps.
+ * @param iImageWidth Width of each image: 16. The CE 1.0 reference marks
+ *        this reserved.
+ * @param iImageHeight Height of each image: 16. The CE 1.0 reference marks
+ *        this reserved.
+ * @return Index of the first new image, or -1 on failure.
+ */
+COMMCTRLAPI int WINAPI CommandBar_AddBitmap(HWND hwndCB, HINSTANCE hInst, int idBitmap, int iNumImages, int iImageWidth, int iImageHeight); 
+/**
+ * Inserts a combo box into a command bar.
+ *
+ * @param hwndCB The command bar.
+ * @param hInst Application instance.
+ * @param iWidth Width, in pixels.
+ * @param dwStyle Combo box and window styles. WS_CHILD and WS_VISIBLE are
+ *        added automatically. On Windows CE 1.0, only CBS_DROPDOWNLIST and
+ *        WS_VSCROLL are supported.
+ * @param idComboBox Control identifier.
+ * @param iButton Zero-based index of the button to insert it before.
+ * @return The combo box, or NULL on failure.
+ */
+COMMCTRLAPI HWND WINAPI CommandBar_InsertComboBox(HWND hwndCB, HINSTANCE hInst, int iWidth, UINT dwStyle, WORD idComboBox, WORD iButton); 
+/**
+ * Inserts a menu bar, loaded from a resource, into a command bar.
+ *
+ * Use the same kind of menu resource as a desktop application's main menu.
+ * Get the menu afterwards with CommandBar_GetMenu.
+ *
+ * @param hwndCB The command bar.
+ * @param hInst Module containing the menu resource.
+ * @param idMenu Menu resource identifier.
+ * @param iButton Zero-based index of the button to insert it before.
+ * @return TRUE on success, FALSE on failure.
+ */
+COMMCTRLAPI BOOL WINAPI CommandBar_InsertMenubar(HWND hwndCB, HINSTANCE hInst, WORD idMenu, WORD iButton);
+/**
+ * Inserts a menu bar into a command bar, from a resource or a menu handle.
+ *
+ * @param hwndCB The command bar.
+ * @param hInst Module containing the menu resource, or NULL if pszMenu is a
+ *        menu handle.
+ * @param pszMenu Menu resource name (or MAKEINTRESOURCE identifier), or an
+ *        HMENU.
+ * @param iButton Zero-based index of the button to insert it before.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+COMMCTRLAPI BOOL WINAPI CommandBar_InsertMenubarEx(HWND hwndCB, HINSTANCE hInst, LPTSTR pszMenu, WORD iButton);
+/**
+ * Repositions and redraws a command bar after one of its menus has changed.
+ *
+ * Call it after modifying a command bar menu, instead of DrawMenuBar. Don't
+ * use 0xFFFFFFFF as a button or separator command identifier: the command bar
+ * reserves it.
+ *
+ * @param hwndCB The command bar.
+ * @param iButton Zero-based index of the menu bar within the command bar.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+COMMCTRLAPI BOOL WINAPI CommandBar_DrawMenuBar(HWND hwndCB, WORD iButton); 
+/**
+ * Returns the menu held by a command bar's menu bar.
+ *
+ * @param hwndCB The command bar.
+ * @param iButton Zero-based index of the button holding the menu bar.
+ * @return The menu, or NULL on failure, including when the button has no
+ *         menu.
+ */
+COMMCTRLAPI HMENU WINAPI CommandBar_GetMenu(HWND hwndCB, WORD iButton); 
+/**
+ * Adds the Close button, and optionally Help and OK buttons, to a command
+ * bar.
+ *
+ * Close posts WM_CLOSE, Help posts WM_HELP and OK posts WM_COMMAND with IDOK.
+ * Call it after adding everything else (menus, buttons, combo boxes).
+ *
+ * @param hwndCB The command bar.
+ * @param dwFlags 0, or CMDBAR_HELP and/or CMDBAR_OK.
+ * @param dwReserved Reserved; must be zero.
+ * @return TRUE on success, FALSE on failure.
+ */
+COMMCTRLAPI BOOL WINAPI CommandBar_AddAdornments(HWND hwndCB, DWORD dwFlags, DWORD dwReserved); 
+/**
+ * Returns the height of a command bar.
+ *
+ * The command bar covers the top of the parent's client area, so use this to
+ * find where the usable client area starts.
+ *
+ * @param hwndCB The command bar.
+ * @return The height, in pixels.
+ */
 COMMCTRLAPI int WINAPI CommandBar_Height(HWND hwndCB); 
 
 /* These two are not in the DLL */
@@ -3837,12 +4445,93 @@ COMMCTRLAPI int WINAPI CommandBar_Height(HWND hwndCB);
 
 #if (_WIN32_WCE >= 0x0200)
 
-COMMCTRLAPI BOOL WINAPI CommandBands_AddAdornments(HWND,HINSTANCE,DWORD,LPREBARBANDINFO);
-COMMCTRLAPI BOOL WINAPI CommandBands_AddBands(HWND,HINSTANCE,UINT,LPREBARBANDINFO);
-COMMCTRLAPI HWND WINAPI CommandBands_Create(HINSTANCE,HWND,UINT,DWORD,HIMAGELIST);
-COMMCTRLAPI HWND WINAPI CommandBands_GetCommandBar(HWND,UINT);
-COMMCTRLAPI BOOL WINAPI CommandBands_GetRestoreInformation(HWND,UINT,LPCOMMANDBANDSRESTOREINFO);
-COMMCTRLAPI BOOL WINAPI CommandBands_Show(HWND,BOOL);
+/**
+ * Adds a band holding the Close button, and optionally Help and OK buttons,
+ * to a command bands control.
+ *
+ * Close posts WM_CLOSE, Help posts WM_HELP and OK posts WM_COMMAND with IDOK.
+ * The band's identifier is 0xFFFFFFFF unless prbbi sets another.
+ *
+ * @param hwndCmdBands The control, from CommandBands_Create.
+ * @param hinst Application instance.
+ * @param dwFlags 0, or CMDBAR_HELP and/or CMDBAR_OK.
+ * @param prbbi Settings for the adornments band, or NULL.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+COMMCTRLAPI BOOL WINAPI CommandBands_AddAdornments(HWND hwndCmdBands,HINSTANCE hinst,DWORD dwFlags,LPREBARBANDINFO prbbi);
+/**
+ * Adds bands to a command bands control.
+ *
+ * Each band gets a command bar, which CommandBands_GetCommandBar returns. To
+ * put another control in a band, set RBBIM_CHILD in fMask and the control in
+ * hwndChild.
+ *
+ * @param hwndCmdBands The control, from CommandBands_Create.
+ * @param hinst Application instance.
+ * @param cBands Number of bands to add.
+ * @param prbbi Array of cBands REBARBANDINFO structures.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+COMMCTRLAPI BOOL WINAPI CommandBands_AddBands(HWND hwndCmdBands,HINSTANCE hinst,UINT cBands,LPREBARBANDINFO prbbi);
+/**
+ * Creates a command bands control: a rebar whose bands hold command bars.
+ *
+ * Add bands with CommandBands_AddBands, then CommandBands_AddAdornments.
+ *
+ * @param hinst Application instance.
+ * @param hwndParent Parent window.
+ * @param wID Control identifier, used in rebar notifications.
+ * @param dwStyles Rebar styles, RBS_*.
+ * @param himl Image list for band images, or NULL.
+ * @return The control, or NULL on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+COMMCTRLAPI HWND WINAPI CommandBands_Create(HINSTANCE hinst,HWND hwndParent,UINT wID,DWORD dwStyles,HIMAGELIST himl);
+/**
+ * Returns the command bar in a band of a command bands control.
+ *
+ * The user may have moved the bands, so get the index from the band's
+ * identifier with RB_IDTOINDEX.
+ *
+ * @param hwndCmdBands The control, from CommandBands_Create.
+ * @param uBand Zero-based index of the band.
+ * @return The command bar, or NULL on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+COMMCTRLAPI HWND WINAPI CommandBands_GetCommandBar(HWND hwndCmdBands,UINT uBand);
+/**
+ * Retrieves a band's current state, to restore the layout next time the
+ * application runs.
+ *
+ * Save the result, for example in the registry, before the window closes.
+ * When restoring, pass its fStyle and cxRestored to CommandBands_AddBands in
+ * REBARBANDINFO's fStyle and cx, then send RB_MAXIMIZEBAND for any band with
+ * fMaximized set.
+ *
+ * @param hwndCmdBands The control, from CommandBands_Create.
+ * @param uBand Zero-based index of the band. Use RB_IDTOINDEX to find it.
+ * @param pcbr Receives the state. Set cbSize first.
+ * @return TRUE on success, FALSE on failure.
+ *
+ * @note Windows CE 2.0 only.
+ */
+COMMCTRLAPI BOOL WINAPI CommandBands_GetRestoreInformation(HWND hwndCmdBands,UINT uBand,LPCOMMANDBANDSRESTOREINFO pcbr);
+/**
+ * Shows or hides a command bands control.
+ *
+ * @param hwndCmdBands The control, from CommandBands_Create.
+ * @param fShow TRUE to show, FALSE to hide.
+ * @return The previous visibility.
+ *
+ * @note Windows CE 2.0 only.
+ */
+COMMCTRLAPI BOOL WINAPI CommandBands_Show(HWND hwndCmdBands,BOOL fShow);
 
 #define CommandBands_Height(hwnd) ((UINT)SendMessage((hwnd),RB_GETBARHEIGHT,0,0))
 

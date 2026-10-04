@@ -577,66 +577,473 @@ typedef struct _numberfmtW {
 } NUMBERFMTW,*LPNUMBERFMTW;
 
 WINBASEAPI int WINAPI CompareStringA(LCID,DWORD,LPCSTR,int,LPCSTR,int);
-WINBASEAPI int WINAPI CompareStringW(LCID,DWORD,LPCWSTR,int,LPCWSTR,int);
-WINBASEAPI LCID WINAPI ConvertDefaultLocale(LCID);
+/**
+ * Compares two strings using a locale's collation rules.
+ *
+ * Windows CE always uses a string sort (SORT_STRINGSORT), so hyphens and
+ * apostrophes sort with the other symbols. Subtract 2 from a nonzero result
+ * to get a C-style comparison. "Equal" means equal for sorting, not
+ * necessarily identical.
+ *
+ * @param Locale LOCALE_SYSTEM_DEFAULT, LOCALE_USER_DEFAULT or a MAKELCID
+ *        value.
+ * @param dwCmpFlags 0 or NORM_IGNORECASE. Windows CE doesn't support
+ *        NORM_IGNOREKANATYPE, NORM_IGNORENONSPACE, NORM_IGNORESYMBOLS or
+ *        NORM_IGNOREWIDTH.
+ * @param lpString1 First string.
+ * @param cchCount1 Length of lpString1 in characters, or -1 if
+ *        null-terminated.
+ * @param lpString2 Second string.
+ * @param cchCount2 Length of lpString2 in characters, or -1 if
+ *        null-terminated.
+ * @return 1 (less than), 2 (equal) or 3 (greater than), or 0 on failure
+ *         (see GetLastError).
+ */
+WINBASEAPI int WINAPI CompareStringW(LCID Locale,DWORD dwCmpFlags,LPCWSTR lpString1,int cchCount1,LPCWSTR lpString2,int cchCount2);
+/**
+ * Converts a special default locale value into a real locale identifier.
+ *
+ * @param Locale LOCALE_SYSTEM_DEFAULT, LOCALE_USER_DEFAULT, 0 (language
+ *        neutral) or a MAKELCID value with SUBLANG_NEUTRAL.
+ * @return The locale identifier, or Locale unchanged if it isn't one of the
+ *         special values.
+ */
+WINBASEAPI LCID WINAPI ConvertDefaultLocale(LCID Locale);
 WINBASEAPI BOOL WINAPI EnumCalendarInfoA(CALINFO_ENUMPROCA,LCID,CALID,CALTYPE);
-WINBASEAPI BOOL WINAPI EnumCalendarInfoW(CALINFO_ENUMPROCW,LCID,CALID,CALTYPE);
+/**
+ * Enumerates one item of calendar information for a locale's calendars.
+ *
+ * Calls lpCalInfoEnumProc with each string until it returns FALSE or the
+ * calendars run out.
+ *
+ * @param lpCalInfoEnumProc Callback receiving each string.
+ * @param Locale LOCALE_SYSTEM_DEFAULT, LOCALE_USER_DEFAULT or a MAKELCID
+ *        value.
+ * @param Calendar A calendar identifier (CAL_GREGORIAN and so on), or
+ *        ENUM_ALL_CALENDARS.
+ * @param CalType The item to return, a CAL_* value such as CAL_SERASTRING
+ *        or CAL_SLONGDATE.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI EnumCalendarInfoW(CALINFO_ENUMPROCW lpCalInfoEnumProc,LCID Locale,CALID Calendar,CALTYPE CalType);
 WINBASEAPI BOOL WINAPI EnumDateFormatsA(DATEFMT_ENUMPROCA,LCID,DWORD);
-WINBASEAPI BOOL WINAPI EnumDateFormatsW(DATEFMT_ENUMPROCW,LCID,DWORD);
+/**
+ * Enumerates a locale's short or long date formats, including those of any
+ * alternate calendars.
+ *
+ * Calls lpDateFmtEnumProc with each format picture until it returns FALSE or
+ * the formats run out.
+ *
+ * @param lpDateFmtEnumProc Callback receiving each format string.
+ * @param Locale LOCALE_SYSTEM_DEFAULT, LOCALE_USER_DEFAULT or a MAKELCID
+ *        value.
+ * @param dwFlags DATE_SHORTDATE or DATE_LONGDATE, not both.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI EnumDateFormatsW(DATEFMT_ENUMPROCW lpDateFmtEnumProc,LCID Locale,DWORD dwFlags);
 WINBASEAPI BOOL WINAPI EnumSystemCodePagesA(CODEPAGE_ENUMPROCA,DWORD);
-WINBASEAPI BOOL WINAPI EnumSystemCodePagesW(CODEPAGE_ENUMPROCW,DWORD);
+/**
+ * Enumerates the code pages installed on or supported by the system.
+ *
+ * Calls lpCodePageEnumProc with each code page identifier, as a string,
+ * until it returns FALSE or the code pages run out.
+ *
+ * @param lpCodePageEnumProc Callback receiving each code page.
+ * @param dwFlags CP_INSTALLED or CP_SUPPORTED, not both.
+ * @return Nonzero on success, zero on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI EnumSystemCodePagesW(CODEPAGE_ENUMPROCW lpCodePageEnumProc,DWORD dwFlags);
 WINBASEAPI BOOL WINAPI EnumSystemGeoID(GEOCLASS,GEOID,GEO_ENUMPROC);
 WINBASEAPI BOOL WINAPI EnumSystemLocalesA(LOCALE_ENUMPROCA,DWORD);
-WINBASEAPI BOOL WINAPI EnumSystemLocalesW(LOCALE_ENUMPROCW,DWORD);
+/**
+ * Enumerates the locales installed on or supported by the system.
+ *
+ * Calls lpLocaleEnumProc with each locale identifier, as a hex string, until
+ * it returns FALSE or the locales run out.
+ *
+ * @param lpLocaleEnumProc Callback receiving each locale.
+ * @param dwFlags LCID_INSTALLED or LCID_SUPPORTED, not both. Windows CE
+ *        doesn't support LCID_ALTERNATE_SORTS.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI EnumSystemLocalesW(LOCALE_ENUMPROCW lpLocaleEnumProc,DWORD dwFlags);
 WINBASEAPI BOOL WINAPI EnumTimeFormatsA(TIMEFMT_ENUMPROCA,LCID,DWORD);
-WINBASEAPI BOOL WINAPI EnumTimeFormatsW(TIMEFMT_ENUMPROCW,LCID,DWORD);
+/**
+ * Enumerates a locale's time formats.
+ *
+ * Calls lpTimeFmtEnumProc with each format picture until it returns FALSE or
+ * the formats run out.
+ *
+ * @param lpTimeFmtEnumProc Callback receiving each format string.
+ * @param Locale LOCALE_SYSTEM_DEFAULT, LOCALE_USER_DEFAULT or a MAKELCID
+ *        value.
+ * @param dwFlags Must be 0.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI EnumTimeFormatsW(TIMEFMT_ENUMPROCW lpTimeFmtEnumProc,LCID Locale,DWORD dwFlags);
 WINBASEAPI int WINAPI FoldStringA(DWORD,LPCSTR,int,LPSTR,int);
-WINBASEAPI int WINAPI FoldStringW(DWORD,LPCWSTR,int,LPWSTR,int);
+/**
+ * Maps a string to another, folding character variants as requested.
+ *
+ * The source and destination buffers must differ. The result is
+ * null-terminated if the source is.
+ *
+ * @param dwMapFlags One or more of MAP_FOLDCZONE (compatibility zone
+ *        characters to standard Unicode), MAP_FOLDDIGITS (all digits to
+ *        0-9), MAP_PRECOMPOSED or MAP_COMPOSITE (not both), and
+ *        MAP_EXPAND_LIGATURES (not with MAP_PRECOMPOSED or MAP_COMPOSITE).
+ * @param lpSrcStr The source string.
+ * @param cchSrc Length of lpSrcStr in characters, or -1 if null-terminated.
+ * @param lpDestStr Receives the mapped string.
+ * @param cchDest Size of lpDestStr in characters, or 0 to query the size
+ *        needed.
+ * @return Characters written, or the size needed if cchDest is 0, or 0 on
+ *         failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI int WINAPI FoldStringW(DWORD dwMapFlags,LPCWSTR lpSrcStr,int cchSrc,LPWSTR lpDestStr,int cchDest);
+/**
+ * Returns the system's ANSI code page identifier, e.g. 1252.
+ *
+ * @return The code page identifier.
+ *
+ * @note Windows CE 2.0 only.
+ */
 WINBASEAPI UINT WINAPI GetACP(void);
 WINBASEAPI int WINAPI GetCalendarInfoA(LCID,CALID,CALTYPE,LPSTR,int,LPDWORD);
 WINBASEAPI int WINAPI GetCalendarInfoW(LCID,CALID,CALTYPE,LPWSTR,int,LPDWORD);
-WINBASEAPI BOOL WINAPI GetCPInfo(UINT,LPCPINFO);
+/**
+ * Gets information about a code page: maximum character size, default
+ * character and lead byte ranges.
+ *
+ * @param CodePage A code page identifier, or CP_ACP or CP_OEMCP.
+ * @param lpCPInfo Receives the information.
+ * @return Nonzero on success, zero on failure, with ERROR_INVALID_PARAMETER
+ *         if the code page isn't available.
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI GetCPInfo(UINT CodePage,LPCPINFO lpCPInfo);
 WINBASEAPI BOOL WINAPI GetCPInfoExA(UINT,DWORD,LPCPINFOEXA);
 WINBASEAPI BOOL WINAPI GetCPInfoExW(UINT,DWORD,LPCPINFOEXW);
 WINBASEAPI int WINAPI GetCurrencyFormatA(LCID,DWORD,LPCSTR,const CURRENCYFMTA*,LPSTR,int);
-WINBASEAPI int WINAPI GetCurrencyFormatW(LCID,DWORD,LPCWSTR,const CURRENCYFMTW*,LPWSTR,int);
+/**
+ * Formats a number string as currency.
+ *
+ * Windows CE ignores Locale and always uses the system locale.
+ *
+ * @param Locale Pass LOCALE_SYSTEM_DEFAULT.
+ * @param dwFlags Must be 0.
+ * @param lpValue The number: digits, an optional leading minus sign and at
+ *        most one decimal point.
+ * @param lpFormat Currency format, with every member set, or NULL for the
+ *        locale's format.
+ * @param lpCurrencyStr Receives the formatted string.
+ * @param cchCurrency Size of lpCurrencyStr in characters, or 0 to query the
+ *        size needed.
+ * @return Characters written, or the size needed if cchCurrency is 0, or 0
+ *         on failure (see GetLastError).
+ */
+WINBASEAPI int WINAPI GetCurrencyFormatW(LCID Locale,DWORD dwFlags,LPCWSTR lpValue,const CURRENCYFMTW*lpFormat,LPWSTR lpCurrencyStr,int cchCurrency);
 WINBASEAPI int WINAPI GetDateFormatA(LCID,DWORD,const SYSTEMTIME*,LPCSTR,LPSTR,int);
-WINBASEAPI int WINAPI GetDateFormatW(LCID,DWORD,const SYSTEMTIME*,LPCWSTR,LPWSTR,int);
+/**
+ * Formats a date as a string.
+ *
+ * Windows CE ignores Locale and always uses the system locale. The time
+ * fields of lpDate are ignored. A wrong wDayOfWeek is corrected; other
+ * invalid fields fail with ERROR_INVALID_PARAMETER. Bad format pictures
+ * don't fail: the function does its best.
+ *
+ * @param Locale Pass LOCALE_SYSTEM_DEFAULT.
+ * @param dwFlags DATE_SHORTDATE (default) or DATE_LONGDATE if lpFormat is
+ *        NULL, otherwise 0. Windows CE doesn't support LOCALE_NOUSEROVERRIDE
+ *        or DATE_USE_ALT_CALENDAR.
+ * @param lpDate The date, or NULL for today's local date.
+ * @param lpFormat Format picture built from d, dd, ddd, dddd, M, MM, MMM,
+ *        MMMM, y, yy, yyyy and gg, with literal text in single quotes, or
+ *        NULL for the locale's format.
+ * @param lpDateStr Receives the formatted date.
+ * @param cchDate Size of lpDateStr in characters, or 0 to query the size
+ *        needed.
+ * @return Characters written, or the size needed if cchDate is 0, or 0 on
+ *         failure (see GetLastError).
+ */
+WINBASEAPI int WINAPI GetDateFormatW(LCID Locale,DWORD dwFlags,const SYSTEMTIME*lpDate,LPCWSTR lpFormat,LPWSTR lpDateStr,int cchDate);
 WINBASEAPI int WINAPI GetGeoInfoA(GEOID,GEOTYPE,LPSTR,int,LANGID);
 WINBASEAPI int WINAPI GetGeoInfoW(GEOID,GEOTYPE,LPWSTR,int,LANGID);
 WINBASEAPI int WINAPI GetLocaleInfoA(LCID,LCTYPE,LPSTR,int);
-WINBASEAPI int WINAPI GetLocaleInfoW(LCID,LCTYPE,LPWSTR,int);
+/**
+ * Gets one item of information about a locale, as a string.
+ *
+ * Numeric values are returned as decimal text.
+ *
+ * @param Locale LOCALE_SYSTEM_DEFAULT, LOCALE_USER_DEFAULT or a MAKELCID
+ *        value.
+ * @param LCType A LOCALE_* item, e.g. LOCALE_SDECIMAL or LOCALE_SSHORTDATE,
+ *        optionally OR'd with LOCALE_NOUSEROVERRIDE to ignore user settings.
+ * @param lpLCData Receives the data.
+ * @param cchData Size of lpLCData in characters, or 0 to query the size
+ *        needed.
+ * @return Characters written, or the size needed if cchData is 0, or 0 on
+ *         failure (see GetLastError).
+ */
+WINBASEAPI int WINAPI GetLocaleInfoW(LCID Locale,LCTYPE LCType,LPWSTR lpLCData,int cchData);
 WINBASEAPI BOOL WINAPI GetNLSVersion(NLS_FUNCTION,LCID,LPNLSVERSIONINFO);
 WINBASEAPI int WINAPI GetNumberFormatA(LCID,DWORD,LPCSTR,const NUMBERFMTA*,LPSTR,int);
-WINBASEAPI int WINAPI GetNumberFormatW(LCID,DWORD,LPCWSTR,const NUMBERFMTW*,LPWSTR,int);
+/**
+ * Formats a number string with a locale's separators, grouping and decimal
+ * places.
+ *
+ * Windows CE ignores Locale and always uses the system locale.
+ *
+ * @param Locale Pass LOCALE_SYSTEM_DEFAULT.
+ * @param dwFlags Must be 0.
+ * @param lpValue The number: digits, an optional leading minus sign and at
+ *        most one decimal point.
+ * @param lpFormat Number format, with every member set, or NULL for the
+ *        locale's format.
+ * @param lpNumberStr Receives the formatted string.
+ * @param cchNumber Size of lpNumberStr in characters, or 0 to query the size
+ *        needed.
+ * @return Characters written, or the size needed if cchNumber is 0, or 0 on
+ *         failure (see GetLastError).
+ */
+WINBASEAPI int WINAPI GetNumberFormatW(LCID Locale,DWORD dwFlags,LPCWSTR lpValue,const NUMBERFMTW*lpFormat,LPWSTR lpNumberStr,int cchNumber);
+/**
+ * Returns the system's OEM code page identifier, e.g. 437.
+ *
+ * @return The code page identifier.
+ *
+ * @note Windows CE 2.0 only.
+ */
 WINBASEAPI UINT WINAPI GetOEMCP(void);
 WINBASEAPI BOOL WINAPI GetStringTypeA(LCID,DWORD,LPCSTR,int,LPWORD);
-WINBASEAPI BOOL WINAPI GetStringTypeW(DWORD,LPCWSTR,int,LPWORD);
+/**
+ * Returns character-type flags for each character in a Unicode string.
+ *
+ * This is the Unicode form, with no locale parameter, unlike desktop
+ * GetStringTypeA. GetStringTypeExW has the same behaviour and a portable
+ * signature.
+ *
+ * @param dwInfoType CT_CTYPE1, CT_CTYPE2 or CT_CTYPE3.
+ * @param lpSrcStr The string. Must not be the same buffer as lpCharType.
+ * @param cchSrc Length in characters, or -1 if null-terminated.
+ * @param lpCharType Receives one WORD of flags per character.
+ * @return Nonzero on success, or 0 on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI GetStringTypeW(DWORD dwInfoType,LPCWSTR lpSrcStr,int cchSrc,LPWORD lpCharType);
 WINBASEAPI BOOL WINAPI GetStringTypeExA(LCID,DWORD,LPCSTR,int,LPWORD);
-WINBASEAPI BOOL WINAPI GetStringTypeExW(LCID,DWORD,LPCWSTR,int,LPWORD);
+/**
+ * Returns character-type flags for each character in a string.
+ *
+ * Fills one WORD per character. The types depend only on the Unicode code
+ * point, not the locale.
+ *
+ * @param Locale Ignored on Windows CE. Pass LOCALE_SYSTEM_DEFAULT or
+ *        LOCALE_USER_DEFAULT.
+ * @param dwInfoType CT_CTYPE1 (C1_UPPER, C1_DIGIT, C1_ALPHA and so on),
+ *        CT_CTYPE2 (bidirectional layout, C2_*) or CT_CTYPE3 (text
+ *        processing, C3_*).
+ * @param lpSrcStr The string. Must not be the same buffer as lpCharType.
+ * @param cchSrc Length in characters, or -1 if null-terminated. A count
+ *        that includes the terminator also returns its type.
+ * @param lpCharType Receives one WORD of flags per character.
+ * @return Nonzero on success, or 0 on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI GetStringTypeExW(LCID Locale,DWORD dwInfoType,LPCWSTR lpSrcStr,int cchSrc,LPWORD lpCharType);
+/**
+ * Returns the system default language identifier.
+ *
+ * @return The system default LANGID.
+ */
 WINBASEAPI LANGID WINAPI GetSystemDefaultLangID(void);
+/**
+ * Returns the system default locale identifier.
+ *
+ * @return The system default LCID.
+ */
 WINBASEAPI LCID WINAPI GetSystemDefaultLCID(void);
 WINBASEAPI LCID WINAPI GetThreadLocale(void);
 WINBASEAPI int WINAPI GetTimeFormatA(LCID,DWORD,const SYSTEMTIME*,LPCSTR,LPSTR,int);
-WINBASEAPI int WINAPI GetTimeFormatW(LCID,DWORD,const SYSTEMTIME*,LPCWSTR,LPWSTR,int);
+/**
+ * Formats a time as a string, using a format picture or the locale's
+ * default.
+ *
+ * The date fields of the SYSTEMTIME are ignored, and milliseconds are
+ * never shown. An out-of-range time field fails with
+ * ERROR_INVALID_PARAMETER, but a bad format picture doesn't fail.
+ *
+ * @param Locale Ignored: Windows CE always uses the system locale. Pass
+ *        LOCALE_SYSTEM_DEFAULT.
+ * @param dwFlags Zero or more of TIME_NOMINUTESORSECONDS, TIME_NOSECONDS,
+ *        TIME_NOTIMEMARKER and TIME_FORCE24HOURFORMAT. Windows CE doesn't
+ *        support LOCALE_NOUSEOVERRIDE.
+ * @param lpTime The time to format, or NULL for the current local time.
+ * @param lpFormat Format picture built from h, hh, H, HH, m, mm, s, ss, t
+ *        and tt, with literal text in single quotes, e.g.
+ *        L"hh':'mm':'ss tt". NULL for the locale's time format.
+ * @param lpTimeStr Receives the string.
+ * @param cchTime Buffer size in characters, or 0 to query the size needed.
+ * @return Characters written including the terminator, or the size needed
+ *         if cchTime is 0, or 0 on failure (see GetLastError).
+ */
+WINBASEAPI int WINAPI GetTimeFormatW(LCID Locale,DWORD dwFlags,const SYSTEMTIME*lpTime,LPCWSTR lpFormat,LPWSTR lpTimeStr,int cchTime);
+/**
+ * Returns the user default language identifier.
+ *
+ * @return The user default LANGID.
+ *
+ * @note Windows CE 2.0 only.
+ */
 WINBASEAPI LANGID WINAPI GetUserDefaultLangID(void);
+/**
+ * Returns the user default locale identifier.
+ *
+ * @return The user default LCID.
+ *
+ * @note Windows CE 2.0 only.
+ */
 WINBASEAPI LCID WINAPI GetUserDefaultLCID(void);
 WINBASEAPI GEOID WINAPI GetUserGeoID(GEOCLASS);
-WINBASEAPI BOOL WINAPI IsDBCSLeadByte(BYTE);
-WINBASEAPI BOOL WINAPI IsDBCSLeadByteEx(UINT,BYTE);
+/**
+ * Tests whether a byte is a lead byte of a double-byte character in the
+ * system ANSI code page.
+ *
+ * @param TestChar The byte to test.
+ * @return TRUE if it is a lead byte, otherwise FALSE.
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI IsDBCSLeadByte(BYTE TestChar);
+/**
+ * Tests whether a byte is a lead byte of a double-byte character in a given
+ * code page.
+ *
+ * @param CodePage Code page, or 0 or CP_ACP for the system ANSI code page,
+ *        or CP_OEMCP for the OEM code page.
+ * @param TestChar The byte to test.
+ * @return TRUE if it is a lead byte, otherwise FALSE (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI IsDBCSLeadByteEx(UINT CodePage,BYTE TestChar);
 WINBASEAPI BOOL WINAPI IsNLSDefinedString(NLS_FUNCTION,DWORD,LPNLSVERSIONINFO,LPCWSTR,int);
-WINBASEAPI BOOL WINAPI IsValidCodePage(UINT);
-WINBASEAPI BOOL WINAPI IsValidLocale(LCID,DWORD);
+/**
+ * Tests whether a code page is installed on the device.
+ *
+ * @param CodePage Code page number, e.g. 1252.
+ * @return Nonzero if the code page is installed, otherwise 0.
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI IsValidCodePage(UINT CodePage);
+/**
+ * Tests whether a locale identifier is supported or installed.
+ *
+ * @param Locale The LCID to test, e.g. from MAKELCID.
+ * @param dwFlags LCID_INSTALLED (supported and installed) or
+ *        LCID_SUPPORTED (supported, but maybe not installed).
+ * @return TRUE if the locale passes the test, otherwise FALSE.
+ */
+WINBASEAPI BOOL WINAPI IsValidLocale(LCID Locale,DWORD dwFlags);
 WINBASEAPI int WINAPI LCMapStringA(LCID,DWORD,LPCSTR,int,LPSTR,int);
-WINBASEAPI int WINAPI LCMapStringW(LCID,DWORD,LPCWSTR,int,LPWSTR,int);
-WINBASEAPI int WINAPI MultiByteToWideChar(UINT,DWORD,LPCSTR,int,LPWSTR,int);
+/**
+ * Transforms a string (case, width, kana) or generates a sort key for it.
+ *
+ * With LCMAP_SORTKEY, the output is a null-terminated array of bytes, not
+ * WCHARs, and sizes are in bytes; compare sort keys byte by byte.
+ *
+ * @param Locale Locale for the mapping, e.g. LOCALE_USER_DEFAULT.
+ * @param dwMapFlags LCMAP_LOWERCASE, LCMAP_UPPERCASE, LCMAP_HALFWIDTH,
+ *        LCMAP_FULLWIDTH, LCMAP_HIRAGANA, LCMAP_KATAKANA, LCMAP_BYTEREV or
+ *        LCMAP_SORTKEY, plus NORM_* and SORT_STRINGSORT flags for sort
+ *        keys. Opposing pairs are mutually exclusive, and LCMAP_SORTKEY
+ *        combines only with LCMAP_BYTEREV among the LCMAP_* flags.
+ *        Windows CE doesn't support LCMAP_LINGUISTIC_CASING,
+ *        LCMAP_SIMPLIFIED_CHINESE or LCMAP_TRADITIONAL_CHINESE.
+ * @param lpSrcStr The source string. Must not be the same buffer as
+ *        lpDestStr.
+ * @param cchSrc Length in characters, or -1 if null-terminated.
+ * @param lpDestStr Receives the mapped string or sort key.
+ * @param cchDest Buffer size in characters (bytes for a sort key), or 0 to
+ *        query the size needed.
+ * @return Characters (or bytes) written including the terminator, or the
+ *         size needed if cchDest is 0, or 0 on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI int WINAPI LCMapStringW(LCID Locale,DWORD dwMapFlags,LPCWSTR lpSrcStr,int cchSrc,LPWSTR lpDestStr,int cchDest);
+/**
+ * Converts a multibyte or single-byte string to a WCHAR string.
+ *
+ * @param CodePage Code page of the source, or CP_ACP, CP_OEMCP or
+ *        CP_MACCP. Windows CE doesn't support CP_UTF7 or CP_UTF8.
+ * @param dwFlags Zero, or MB_PRECOMPOSED or MB_COMPOSITE (mutually
+ *        exclusive), with MB_USEGLYPHCHARS and MB_ERR_INVALID_CHARS.
+ * @param lpMultiByteStr The source string. Must not overlap the output.
+ * @param cchMultiByte Source length in bytes, or -1 if null-terminated
+ *        (the terminator is then converted and counted too).
+ * @param lpWideCharStr Receives the converted string.
+ * @param cchWideChar Buffer size in WCHARs, or 0 to query the size needed.
+ * @return WCHARs written, or the size needed if cchWideChar is 0, or 0 on
+ *         failure (see GetLastError; ERROR_NO_UNICODE_TRANSLATION with
+ *         MB_ERR_INVALID_CHARS).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI int WINAPI MultiByteToWideChar(UINT CodePage,DWORD dwFlags,LPCSTR lpMultiByteStr,int cchMultiByte,LPWSTR lpWideCharStr,int cchWideChar);
 WINBASEAPI int WINAPI SetCalendarInfoA(LCID,CALID,CALTYPE,LPCSTR);
 WINBASEAPI int WINAPI SetCalendarInfoW(LCID,CALID,CALTYPE,LPCWSTR);
 WINBASEAPI BOOL WINAPI SetLocaleInfoA(LCID,LCTYPE,LPCSTR);
-WINBASEAPI BOOL WINAPI SetLocaleInfoW(LCID,LCTYPE,LPCWSTR);
+/**
+ * Sets one item of the user's locale settings.
+ *
+ * Changes the user override, not the system defaults. Numeric items are
+ * passed as text.
+ *
+ * @param Locale Locale to change.
+ * @param LCType One LOCALE_* item, e.g. LOCALE_SSHORTDATE, LOCALE_STIME,
+ *        LOCALE_SCURRENCY or LOCALE_ITIME. Windows CE adds
+ *        LOCALE_SYEARMONTH and doesn't support LOCALE_IPAPERSIZE.
+ * @param lpLCData The new value as a null-terminated string, in the
+ *        item's format.
+ * @return Nonzero on success, or 0 on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI SetLocaleInfoW(LCID Locale,LCTYPE LCType,LPCWSTR lpLCData);
 WINBASEAPI BOOL WINAPI SetThreadLocale(LCID);
 WINBASEAPI BOOL WINAPI SetUserGeoID(GEOID);
-WINBASEAPI int WINAPI WideCharToMultiByte(UINT,DWORD,LPCWSTR,int,LPSTR,int,LPCSTR,LPBOOL);
+/**
+ * Converts a WCHAR string to a multibyte or single-byte string.
+ *
+ * @param CodePage Target code page, or CP_ACP, CP_OEMCP or CP_MACCP.
+ *        Windows CE doesn't support CP_UTF7 or CP_UTF8.
+ * @param dwFlags Zero, or WC_COMPOSITECHECK optionally with one of
+ *        WC_DISCARDNS, WC_SEPCHARS or WC_DEFAULTCHAR. Windows CE doesn't
+ *        support WC_NO_BEST_FIT_CHARS.
+ * @param lpWideCharStr The source string. Must not overlap the output.
+ * @param cchWideChar Source length in WCHARs, or -1 if null-terminated
+ *        (the terminator is then converted and counted too).
+ * @param lpMultiByteStr Receives the converted string.
+ * @param cchMultiByte Buffer size in bytes, or 0 to query the size needed.
+ * @param lpDefaultChar Character for unmappable input, or NULL for the
+ *        system default. Faster if this and lpUsedDefaultChar are NULL.
+ * @param lpUsedDefaultChar Set to TRUE if the default character was used,
+ *        or NULL.
+ * @return Bytes written, or the size needed if cchMultiByte is 0, or 0 on
+ *         failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI int WINAPI WideCharToMultiByte(UINT CodePage,DWORD dwFlags,LPCWSTR lpWideCharStr,int cchWideChar,LPSTR lpMultiByteStr,int cchMultiByte,LPCSTR lpDefaultChar,LPBOOL lpUsedDefaultChar);
 #if (WINVER >= 0x0500)
 WINBASEAPI BOOL WINAPI EnumCalendarInfoExA(CALINFO_ENUMPROCEXA,LCID,CALID,CALTYPE);
 WINBASEAPI BOOL WINAPI EnumCalendarInfoExW(CALINFO_ENUMPROCEXW,LCID,CALID,CALTYPE);
@@ -670,23 +1077,269 @@ typedef CURRENCYFMTW CURRENCYFMT;
 typedef LPCURRENCYFMTW LPCURRENCYFMT;
 typedef NUMBERFMTW NUMBERFMT;
 typedef LPNUMBERFMTW LPNUMBERFMT;
+/**
+ * Compares two strings using a locale's collation rules.
+ *
+ * Windows CE always uses a string sort (SORT_STRINGSORT), so hyphens and
+ * apostrophes sort with the other symbols. Subtract 2 from a nonzero result
+ * to get a C-style comparison. "Equal" means equal for sorting, not
+ * necessarily identical.
+ *
+ * @param Locale LOCALE_SYSTEM_DEFAULT, LOCALE_USER_DEFAULT or a MAKELCID
+ *        value.
+ * @param dwCmpFlags 0 or NORM_IGNORECASE. Windows CE doesn't support
+ *        NORM_IGNOREKANATYPE, NORM_IGNORENONSPACE, NORM_IGNORESYMBOLS or
+ *        NORM_IGNOREWIDTH.
+ * @param lpString1 First string.
+ * @param cchCount1 Length of lpString1 in characters, or -1 if
+ *        null-terminated.
+ * @param lpString2 Second string.
+ * @param cchCount2 Length of lpString2 in characters, or -1 if
+ *        null-terminated.
+ * @return 1 (less than), 2 (equal) or 3 (greater than), or 0 on failure
+ *         (see GetLastError).
+ */
 #define CompareString CompareStringW
+/**
+ * Enumerates one item of calendar information for a locale's calendars.
+ *
+ * Calls lpCalInfoEnumProc with each string until it returns FALSE or the
+ * calendars run out.
+ *
+ * @param lpCalInfoEnumProc Callback receiving each string.
+ * @param Locale LOCALE_SYSTEM_DEFAULT, LOCALE_USER_DEFAULT or a MAKELCID
+ *        value.
+ * @param Calendar A calendar identifier (CAL_GREGORIAN and so on), or
+ *        ENUM_ALL_CALENDARS.
+ * @param CalType The item to return, a CAL_* value such as CAL_SERASTRING
+ *        or CAL_SLONGDATE.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
 #define EnumCalendarInfo EnumCalendarInfoW
+/**
+ * Enumerates the code pages installed on or supported by the system.
+ *
+ * Calls lpCodePageEnumProc with each code page identifier, as a string,
+ * until it returns FALSE or the code pages run out.
+ *
+ * @param lpCodePageEnumProc Callback receiving each code page.
+ * @param dwFlags CP_INSTALLED or CP_SUPPORTED, not both.
+ * @return Nonzero on success, zero on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define EnumSystemCodePages EnumSystemCodePagesW
+/**
+ * Enumerates the locales installed on or supported by the system.
+ *
+ * Calls lpLocaleEnumProc with each locale identifier, as a hex string, until
+ * it returns FALSE or the locales run out.
+ *
+ * @param lpLocaleEnumProc Callback receiving each locale.
+ * @param dwFlags LCID_INSTALLED or LCID_SUPPORTED, not both. Windows CE
+ *        doesn't support LCID_ALTERNATE_SORTS.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
 #define EnumSystemLocales EnumSystemLocalesW
+/**
+ * Enumerates a locale's time formats.
+ *
+ * Calls lpTimeFmtEnumProc with each format picture until it returns FALSE or
+ * the formats run out.
+ *
+ * @param lpTimeFmtEnumProc Callback receiving each format string.
+ * @param Locale LOCALE_SYSTEM_DEFAULT, LOCALE_USER_DEFAULT or a MAKELCID
+ *        value.
+ * @param dwFlags Must be 0.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
 #define EnumTimeFormats EnumTimeFormatsW
+/**
+ * Maps a string to another, folding character variants as requested.
+ *
+ * The source and destination buffers must differ. The result is
+ * null-terminated if the source is.
+ *
+ * @param dwMapFlags One or more of MAP_FOLDCZONE (compatibility zone
+ *        characters to standard Unicode), MAP_FOLDDIGITS (all digits to
+ *        0-9), MAP_PRECOMPOSED or MAP_COMPOSITE (not both), and
+ *        MAP_EXPAND_LIGATURES (not with MAP_PRECOMPOSED or MAP_COMPOSITE).
+ * @param lpSrcStr The source string.
+ * @param cchSrc Length of lpSrcStr in characters, or -1 if null-terminated.
+ * @param lpDestStr Receives the mapped string.
+ * @param cchDest Size of lpDestStr in characters, or 0 to query the size
+ *        needed.
+ * @return Characters written, or the size needed if cchDest is 0, or 0 on
+ *         failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define FoldString FoldStringW
 #define GetCalendarInfo GetCalendarInfoW
 #define GetCPInfoEx GetCPInfoExW
+/**
+ * Formats a number string as currency.
+ *
+ * Windows CE ignores Locale and always uses the system locale.
+ *
+ * @param Locale Pass LOCALE_SYSTEM_DEFAULT.
+ * @param dwFlags Must be 0.
+ * @param lpValue The number: digits, an optional leading minus sign and at
+ *        most one decimal point.
+ * @param lpFormat Currency format, with every member set, or NULL for the
+ *        locale's format.
+ * @param lpCurrencyStr Receives the formatted string.
+ * @param cchCurrency Size of lpCurrencyStr in characters, or 0 to query the
+ *        size needed.
+ * @return Characters written, or the size needed if cchCurrency is 0, or 0
+ *         on failure (see GetLastError).
+ */
 #define GetCurrencyFormat GetCurrencyFormatW
+/**
+ * Formats a date as a string.
+ *
+ * Windows CE ignores Locale and always uses the system locale. The time
+ * fields of lpDate are ignored. A wrong wDayOfWeek is corrected; other
+ * invalid fields fail with ERROR_INVALID_PARAMETER. Bad format pictures
+ * don't fail: the function does its best.
+ *
+ * @param Locale Pass LOCALE_SYSTEM_DEFAULT.
+ * @param dwFlags DATE_SHORTDATE (default) or DATE_LONGDATE if lpFormat is
+ *        NULL, otherwise 0. Windows CE doesn't support LOCALE_NOUSEROVERRIDE
+ *        or DATE_USE_ALT_CALENDAR.
+ * @param lpDate The date, or NULL for today's local date.
+ * @param lpFormat Format picture built from d, dd, ddd, dddd, M, MM, MMM,
+ *        MMMM, y, yy, yyyy and gg, with literal text in single quotes, or
+ *        NULL for the locale's format.
+ * @param lpDateStr Receives the formatted date.
+ * @param cchDate Size of lpDateStr in characters, or 0 to query the size
+ *        needed.
+ * @return Characters written, or the size needed if cchDate is 0, or 0 on
+ *         failure (see GetLastError).
+ */
 #define GetDateFormat GetDateFormatW
 #define GetGeoInfo GetGeoInfoW
+/**
+ * Gets one item of information about a locale, as a string.
+ *
+ * Numeric values are returned as decimal text.
+ *
+ * @param Locale LOCALE_SYSTEM_DEFAULT, LOCALE_USER_DEFAULT or a MAKELCID
+ *        value.
+ * @param LCType A LOCALE_* item, e.g. LOCALE_SDECIMAL or LOCALE_SSHORTDATE,
+ *        optionally OR'd with LOCALE_NOUSEROVERRIDE to ignore user settings.
+ * @param lpLCData Receives the data.
+ * @param cchData Size of lpLCData in characters, or 0 to query the size
+ *        needed.
+ * @return Characters written, or the size needed if cchData is 0, or 0 on
+ *         failure (see GetLastError).
+ */
 #define GetLocaleInfo GetLocaleInfoW
+/**
+ * Formats a number string with a locale's separators, grouping and decimal
+ * places.
+ *
+ * Windows CE ignores Locale and always uses the system locale.
+ *
+ * @param Locale Pass LOCALE_SYSTEM_DEFAULT.
+ * @param dwFlags Must be 0.
+ * @param lpValue The number: digits, an optional leading minus sign and at
+ *        most one decimal point.
+ * @param lpFormat Number format, with every member set, or NULL for the
+ *        locale's format.
+ * @param lpNumberStr Receives the formatted string.
+ * @param cchNumber Size of lpNumberStr in characters, or 0 to query the size
+ *        needed.
+ * @return Characters written, or the size needed if cchNumber is 0, or 0 on
+ *         failure (see GetLastError).
+ */
 #define GetNumberFormat GetNumberFormatW
+/**
+ * Returns character-type flags for each character in a string.
+ *
+ * Fills one WORD per character. The types depend only on the Unicode code
+ * point, not the locale.
+ *
+ * @param Locale Ignored on Windows CE. Pass LOCALE_SYSTEM_DEFAULT or
+ *        LOCALE_USER_DEFAULT.
+ * @param dwInfoType CT_CTYPE1 (C1_UPPER, C1_DIGIT, C1_ALPHA and so on),
+ *        CT_CTYPE2 (bidirectional layout, C2_*) or CT_CTYPE3 (text
+ *        processing, C3_*).
+ * @param lpSrcStr The string. Must not be the same buffer as lpCharType.
+ * @param cchSrc Length in characters, or -1 if null-terminated. A count
+ *        that includes the terminator also returns its type.
+ * @param lpCharType Receives one WORD of flags per character.
+ * @return Nonzero on success, or 0 on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define GetStringTypeEx GetStringTypeExW
+/**
+ * Formats a time as a string, using a format picture or the locale's
+ * default.
+ *
+ * The date fields of the SYSTEMTIME are ignored, and milliseconds are
+ * never shown. An out-of-range time field fails with
+ * ERROR_INVALID_PARAMETER, but a bad format picture doesn't fail.
+ *
+ * @param Locale Ignored: Windows CE always uses the system locale. Pass
+ *        LOCALE_SYSTEM_DEFAULT.
+ * @param dwFlags Zero or more of TIME_NOMINUTESORSECONDS, TIME_NOSECONDS,
+ *        TIME_NOTIMEMARKER and TIME_FORCE24HOURFORMAT. Windows CE doesn't
+ *        support LOCALE_NOUSEOVERRIDE.
+ * @param lpTime The time to format, or NULL for the current local time.
+ * @param lpFormat Format picture built from h, hh, H, HH, m, mm, s, ss, t
+ *        and tt, with literal text in single quotes, e.g.
+ *        L"hh':'mm':'ss tt". NULL for the locale's time format.
+ * @param lpTimeStr Receives the string.
+ * @param cchTime Buffer size in characters, or 0 to query the size needed.
+ * @return Characters written including the terminator, or the size needed
+ *         if cchTime is 0, or 0 on failure (see GetLastError).
+ */
 #define GetTimeFormat GetTimeFormatW
+/**
+ * Transforms a string (case, width, kana) or generates a sort key for it.
+ *
+ * With LCMAP_SORTKEY, the output is a null-terminated array of bytes, not
+ * WCHARs, and sizes are in bytes; compare sort keys byte by byte.
+ *
+ * @param Locale Locale for the mapping, e.g. LOCALE_USER_DEFAULT.
+ * @param dwMapFlags LCMAP_LOWERCASE, LCMAP_UPPERCASE, LCMAP_HALFWIDTH,
+ *        LCMAP_FULLWIDTH, LCMAP_HIRAGANA, LCMAP_KATAKANA, LCMAP_BYTEREV or
+ *        LCMAP_SORTKEY, plus NORM_* and SORT_STRINGSORT flags for sort
+ *        keys. Opposing pairs are mutually exclusive, and LCMAP_SORTKEY
+ *        combines only with LCMAP_BYTEREV among the LCMAP_* flags.
+ *        Windows CE doesn't support LCMAP_LINGUISTIC_CASING,
+ *        LCMAP_SIMPLIFIED_CHINESE or LCMAP_TRADITIONAL_CHINESE.
+ * @param lpSrcStr The source string. Must not be the same buffer as
+ *        lpDestStr.
+ * @param cchSrc Length in characters, or -1 if null-terminated.
+ * @param lpDestStr Receives the mapped string or sort key.
+ * @param cchDest Buffer size in characters (bytes for a sort key), or 0 to
+ *        query the size needed.
+ * @return Characters (or bytes) written including the terminator, or the
+ *         size needed if cchDest is 0, or 0 on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define LCMapString LCMapStringW
 #define SetCalendarInfo  SetCalendarInfoW
+/**
+ * Sets one item of the user's locale settings.
+ *
+ * Changes the user override, not the system defaults. Numeric items are
+ * passed as text.
+ *
+ * @param Locale Locale to change.
+ * @param LCType One LOCALE_* item, e.g. LOCALE_SSHORTDATE, LOCALE_STIME,
+ *        LOCALE_SCURRENCY or LOCALE_ITIME. Windows CE adds
+ *        LOCALE_SYEARMONTH and doesn't support LOCALE_IPAPERSIZE.
+ * @param lpLCData The new value as a null-terminated string, in the
+ *        item's format.
+ * @return Nonzero on success, or 0 on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define SetLocaleInfo SetLocaleInfoW
 #if (WINVER >= 0x0500)
 #define EnumCalendarInfoEx EnumCalendarInfoExW

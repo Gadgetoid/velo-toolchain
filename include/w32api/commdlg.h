@@ -570,15 +570,56 @@ BOOL WINAPI ChooseColorA(LPCHOOSECOLORA);
 BOOL WINAPI _WNAME(ChooseColor)(LPCHOOSECOLORW);
 BOOL WINAPI ChooseFontA(LPCHOOSEFONTA);
 BOOL WINAPI ChooseFontW(LPCHOOSEFONTW);
+/**
+ * Returns the error code from the last failed common dialog call.
+ *
+ * Covers GetOpenFileNameW, GetSaveFileNameW and the other common dialogs.
+ * Windows CE adds CDERR_REGISTRYFAILURE, for a failed registry read, and
+ * never returns CDERR_LOADSTRFAILURE, CDERR_MEMLOCKFAILURE or
+ * CDERR_REGISTERMSGFAIL.
+ *
+ * @return A CDERR_* or FNERR_* code, such as CDERR_STRUCTSIZE or
+ *         FNERR_BUFFERTOOSMALL, or 0 if the user cancelled without error.
+ *
+ * @note Windows CE 2.0 only.
+ */
 DWORD WINAPI CommDlgExtendedError(void);
 HWND WINAPI FindTextA(LPFINDREPLACEA);
 HWND WINAPI FindTextW(LPFINDREPLACEW);
 short WINAPI GetFileTitleA(LPCSTR,LPSTR,WORD);
 short WINAPI GetFileTitleW(LPCWSTR,LPWSTR,WORD);
 BOOL WINAPI GetOpenFileNameA(LPOPENFILENAMEA);
-BOOL WINAPI GetOpenFileNameW(LPOPENFILENAMEW);
+/**
+ * Shows the system Open dialog and lets the user pick a file.
+ *
+ * Windows CE ignores the lCustData, lpfnHook and lpTemplateName members,
+ * and doesn't support OFN_ALLOWMULTISELECT, OFN_ENABLEHOOK,
+ * OFN_ENABLETEMPLATE, OFN_ENABLETEMPLATEHANDLE, OFN_NOREADONLYRETURN,
+ * OFN_NOVALIDATE, OFN_READONLY or OFN_SHAREAWARE. Call
+ * CommDlgExtendedError to tell a failure from a cancel.
+ *
+ * @param lpofn Initial settings, with lStructSize, lpstrFile and nMaxFile
+ *        set. Receives the selected path and related details.
+ * @return TRUE if the user chose a file. FALSE on cancel, error, or if
+ *         lpstrFile is too small for the path.
+ */
+BOOL WINAPI GetOpenFileNameW(LPOPENFILENAMEW lpofn);
 BOOL WINAPI GetSaveFileNameA(LPOPENFILENAMEA);
-BOOL WINAPI GetSaveFileNameW(LPOPENFILENAMEW);
+/**
+ * Shows the system Save As dialog and lets the user pick a file name.
+ *
+ * Windows CE ignores the lCustData, lpfnHook and lpTemplateName members,
+ * and doesn't support OFN_ALLOWMULTISELECT, OFN_ENABLEHOOK,
+ * OFN_ENABLETEMPLATE, OFN_ENABLETEMPLATEHANDLE, OFN_NOREADONLYRETURN,
+ * OFN_NOVALIDATE, OFN_READONLY or OFN_SHAREAWARE. Call
+ * CommDlgExtendedError to tell a failure from a cancel.
+ *
+ * @param lpofn Initial settings, with lStructSize, lpstrFile and nMaxFile
+ *        set. Receives the chosen path and related details.
+ * @return TRUE if the user chose a name. FALSE on cancel, error, or if
+ *         lpstrFile is too small for the path.
+ */
+BOOL WINAPI GetSaveFileNameW(LPOPENFILENAMEW lpofn);
 BOOL WINAPI PageSetupDlgA(LPPAGESETUPDLGA);
 BOOL WINAPI PageSetupDlgW(LPPAGESETUPDLGW);
 BOOL WINAPI PrintDlgA(LPPRINTDLGA);
@@ -609,7 +650,35 @@ typedef PRINTDLGW PRINTDLG,*LPPRINTDLG;
 #define ChooseFont ChooseFontW
 #define FindText FindTextW
 #define GetFileTitle GetFileTitleW
+/**
+ * Shows the system Open dialog and lets the user pick a file.
+ *
+ * Windows CE ignores the lCustData, lpfnHook and lpTemplateName members,
+ * and doesn't support OFN_ALLOWMULTISELECT, OFN_ENABLEHOOK,
+ * OFN_ENABLETEMPLATE, OFN_ENABLETEMPLATEHANDLE, OFN_NOREADONLYRETURN,
+ * OFN_NOVALIDATE, OFN_READONLY or OFN_SHAREAWARE. Call
+ * CommDlgExtendedError to tell a failure from a cancel.
+ *
+ * @param lpofn Initial settings, with lStructSize, lpstrFile and nMaxFile
+ *        set. Receives the selected path and related details.
+ * @return TRUE if the user chose a file. FALSE on cancel, error, or if
+ *         lpstrFile is too small for the path.
+ */
 #define GetOpenFileName GetOpenFileNameW
+/**
+ * Shows the system Save As dialog and lets the user pick a file name.
+ *
+ * Windows CE ignores the lCustData, lpfnHook and lpTemplateName members,
+ * and doesn't support OFN_ALLOWMULTISELECT, OFN_ENABLEHOOK,
+ * OFN_ENABLETEMPLATE, OFN_ENABLETEMPLATEHANDLE, OFN_NOREADONLYRETURN,
+ * OFN_NOVALIDATE, OFN_READONLY or OFN_SHAREAWARE. Call
+ * CommDlgExtendedError to tell a failure from a cancel.
+ *
+ * @param lpofn Initial settings, with lStructSize, lpstrFile and nMaxFile
+ *        set. Receives the chosen path and related details.
+ * @return TRUE if the user chose a name. FALSE on cancel, error, or if
+ *         lpstrFile is too small for the path.
+ */
 #define GetSaveFileName GetSaveFileNameW
 #define PageSetupDlg PageSetupDlgW
 #define PrintDlg _WNAME(PrintDlg)

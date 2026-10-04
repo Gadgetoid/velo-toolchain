@@ -1388,23 +1388,90 @@ WINBASEAPI BOOL WINAPI CheckRemoteDebuggerPresent(HANDLE,PBOOL);
 #if (_WIN32_WINNT >= 0x0500)
 WINBASEAPI BOOL WINAPI CheckTokenMembership(HANDLE,PSID,PBOOL);
 #endif
-WINBASEAPI BOOL WINAPI ClearCommBreak(HANDLE);
-WINBASEAPI BOOL WINAPI ClearCommError(HANDLE,PDWORD,LPCOMSTAT);
+/**
+ * Takes a serial port out of the break state and resumes transmission.
+ *
+ * The break state is set with SetCommBreak or EscapeCommFunction.
+ *
+ * @param hFile Serial port handle from CreateFileW.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI ClearCommBreak(HANDLE hFile);
+/**
+ * Returns and clears a serial port's error state, and optionally its
+ * status.
+ *
+ * If the DCB has fAbortOnError set, reads and writes fail after an error
+ * until this is called.
+ *
+ * @param hFile Serial port handle from CreateFileW.
+ * @param lpErrors Receives CE_* error flags: CE_BREAK, CE_FRAME, CE_IOE,
+ *        CE_MODE, CE_OVERRUN, CE_RXOVER, CE_RXPARITY, CE_TXFULL and so
+ *        on.
+ * @param lpStat Receives a COMSTAT with queue counts and flow control
+ *        state, or NULL.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI ClearCommError(HANDLE hFile,PDWORD lpErrors,LPCOMSTAT lpStat);
 WINBASEAPI BOOL WINAPI ClearEventLogA(HANDLE,LPCSTR);
 WINBASEAPI BOOL WINAPI ClearEventLogW(HANDLE,LPCWSTR);
 WINBASEAPI BOOL WINAPI CloseEventLog(HANDLE);
-WINBASEAPI BOOL WINAPI CloseHandle(HANDLE);
+/**
+ * Closes an object handle.
+ *
+ * The object is destroyed when its last handle closes. Use FindClose for
+ * FindFirstFileW handles and FreeLibrary for modules. Closing an invalid
+ * handle, or the same handle twice, can raise an exception. Process and
+ * thread handles from CreateProcessW must both be closed.
+ *
+ * @param hObject Handle to a file, event, mutex, process, thread or
+ *        other kernel object.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI CloseHandle(HANDLE hObject);
 WINBASEAPI BOOL WINAPI CommConfigDialogA(LPCSTR,HWND,LPCOMMCONFIG);
 WINBASEAPI BOOL WINAPI CommConfigDialogW(LPCWSTR,HWND,LPCOMMCONFIG);
-WINBASEAPI LONG WINAPI CompareFileTime(CONST FILETIME*,CONST FILETIME*);
+/**
+ * Compares two FILETIMEs.
+ *
+ * @param lpFileTime1 First time.
+ * @param lpFileTime2 Second time.
+ * @return -1 if the first is earlier, 0 if equal, +1 if the first is
+ *         later.
+ */
+WINBASEAPI LONG WINAPI CompareFileTime(CONST FILETIME*lpFileTime1,CONST FILETIME*lpFileTime2);
 WINBASEAPI BOOL WINAPI ConnectNamedPipe(HANDLE,LPOVERLAPPED);
-WINBASEAPI BOOL WINAPI ContinueDebugEvent(DWORD,DWORD,DWORD);
+/**
+ * Resumes a thread that reported a debug event.
+ *
+ * Call after handling each event from WaitForDebugEvent.
+ *
+ * @param dwProcessId Process ID from the DEBUG_EVENT.
+ * @param dwThreadId Thread ID from the DEBUG_EVENT.
+ * @param dwContinueStatus DBG_CONTINUE, or DBG_EXCEPTION_NOT_HANDLED to
+ *        pass an exception on to the thread's handlers.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI ContinueDebugEvent(DWORD dwProcessId,DWORD dwThreadId,DWORD dwContinueStatus);
 #if (_WIN32_WINNT >= 0x0400)
 WINBASEAPI BOOL WINAPI ConvertFiberToThread(void);
 #endif
 WINBASEAPI PVOID WINAPI ConvertThreadToFiber(PVOID);
 WINBASEAPI BOOL WINAPI CopyFileA(LPCSTR,LPCSTR,BOOL);
-WINBASEAPI BOOL WINAPI CopyFileW(LPCWSTR,LPCWSTR,BOOL);
+/**
+ * Copies a file.
+ *
+ * The file attributes are copied too.
+ *
+ * @param lpExistingFileName Source path.
+ * @param lpNewFileName Destination path.
+ * @param bFailIfExists TRUE to fail if the destination exists, FALSE to
+ *        overwrite it.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI CopyFileW(LPCWSTR lpExistingFileName,LPCWSTR lpNewFileName,BOOL bFailIfExists);
 WINBASEAPI BOOL WINAPI CopyFileExA(LPCSTR,LPCSTR,LPPROGRESS_ROUTINE,LPVOID,LPBOOL,DWORD);
 WINBASEAPI BOOL WINAPI CopyFileExW(LPCWSTR,LPCWSTR,LPPROGRESS_ROUTINE,LPVOID,LPBOOL,DWORD);
 #define RtlMoveMemory memmove
@@ -1421,22 +1488,123 @@ WINBASEAPI HANDLE WINAPI CreateActCtxA(PCACTCTXA);
 WINBASEAPI HANDLE WINAPI CreateActCtxW(PCACTCTXW);
 #endif
 WINBASEAPI BOOL WINAPI CreateDirectoryA(LPCSTR,LPSECURITY_ATTRIBUTES);
-WINBASEAPI BOOL WINAPI CreateDirectoryW(LPCWSTR,LPSECURITY_ATTRIBUTES);
+/**
+ * Creates a directory.
+ *
+ * Doesn't create missing parent directories.
+ *
+ * @param lpPathName Path of the new directory, up to MAX_PATH characters.
+ * @param lpSecurityAttributes Ignored: must be NULL.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI CreateDirectoryW(LPCWSTR lpPathName,LPSECURITY_ATTRIBUTES lpSecurityAttributes);
 WINBASEAPI BOOL WINAPI CreateDirectoryExA(LPCSTR,LPCSTR,LPSECURITY_ATTRIBUTES);
 WINBASEAPI BOOL WINAPI CreateDirectoryExW(LPCWSTR,LPCWSTR,LPSECURITY_ATTRIBUTES);
 WINBASEAPI HANDLE WINAPI CreateEventA(LPSECURITY_ATTRIBUTES,BOOL,BOOL,LPCSTR);
-WINBASEAPI HANDLE WINAPI CreateEventW(LPSECURITY_ATTRIBUTES,BOOL,BOOL,LPCWSTR);
+/**
+ * Creates an event object.
+ *
+ * Set with SetEvent, clear with ResetEvent, wait with
+ * WaitForSingleObject. A manual-reset event stays signalled until reset.
+ * An auto-reset event releases one waiting thread and then resets. Close
+ * with CloseHandle.
+ *
+ * @param lpEventAttributes Must be NULL.
+ * @param bManualReset TRUE for manual reset, FALSE for auto reset.
+ * @param bInitialState TRUE to start signalled.
+ * @param lpName The SDK reference says named events are not supported and
+ *        this must be NULL.
+ * @return The event, or NULL on failure (see GetLastError).
+ */
+WINBASEAPI HANDLE WINAPI CreateEventW(LPSECURITY_ATTRIBUTES lpEventAttributes,BOOL bManualReset,BOOL bInitialState,LPCWSTR lpName);
 WINBASEAPI LPVOID WINAPI CreateFiber(SIZE_T,LPFIBER_START_ROUTINE,LPVOID);
 #if (_WIN32_WINNT >= 0x0400)
 WINBASEAPI LPVOID WINAPI CreateFiberEx(SIZE_T,SIZE_T,DWORD,LPFIBER_START_ROUTINE,LPVOID);
 #endif
 WINBASEAPI HANDLE WINAPI CreateFileA(LPCSTR,DWORD,DWORD,LPSECURITY_ATTRIBUTES,DWORD,DWORD,HANDLE);
-WINBASEAPI HANDLE WINAPI CreateFileW(LPCWSTR,DWORD,DWORD,LPSECURITY_ATTRIBUTES,DWORD,DWORD,HANDLE);
+/**
+ * Creates or opens a file or device.
+ *
+ * Devices are named with a colon, e.g. L"COM1:", and need OPEN_EXISTING.
+ * Can't create directories (use CreateDirectoryW). Close with
+ * CloseHandle.
+ *
+ * @param lpFileName Path or device name, up to MAX_PATH characters.
+ * @param dwDesiredAccess GENERIC_READ and/or GENERIC_WRITE, or 0 to query
+ *        device attributes only.
+ * @param dwShareMode 0, FILE_SHARE_READ and/or FILE_SHARE_WRITE.
+ * @param lpSecurityAttributes Ignored: should be NULL.
+ * @param dwCreationDisposition CREATE_NEW, CREATE_ALWAYS, OPEN_EXISTING,
+ *        OPEN_ALWAYS or TRUNCATE_EXISTING.
+ * @param dwFlagsAndAttributes FILE_ATTRIBUTE_* values and
+ *        FILE_FLAG_WRITE_THROUGH or FILE_FLAG_RANDOM_ACCESS. Windows CE
+ *        doesn't support FILE_ATTRIBUTE_OFFLINE, FILE_ATTRIBUTE_TEMPORARY,
+ *        FILE_FLAG_OVERLAPPED, FILE_FLAG_SEQUENTIAL_SCAN,
+ *        FILE_FLAG_NO_BUFFERING, FILE_FLAG_DELETE_ON_CLOSE,
+ *        FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_POSIX_SEMANTICS or
+ *        SECURITY_SQOS_PRESENT.
+ * @param hTemplateFile Ignored.
+ * @return The handle, or INVALID_HANDLE_VALUE on failure (see
+ *         GetLastError). GetLastError returns ERROR_ALREADY_EXISTS on
+ *         success if CREATE_ALWAYS or OPEN_ALWAYS found an existing file.
+ */
+WINBASEAPI HANDLE WINAPI CreateFileW(LPCWSTR lpFileName,DWORD dwDesiredAccess,DWORD dwShareMode,LPSECURITY_ATTRIBUTES lpSecurityAttributes,DWORD dwCreationDisposition,DWORD dwFlagsAndAttributes,HANDLE hTemplateFile);
 #ifdef _WIN32_WCE
+/**
+ * Opens or creates a file for use with CreateFileMappingW.
+ *
+ * Windows CE specific. Use this instead of CreateFileW for files to be
+ * mapped: the kernel opens the file, so other processes can share the
+ * mapping. Don't use the handle for ReadFile or WriteFile.
+ *
+ * @param lpFileName Path of the file, up to MAX_PATH characters.
+ * @param dwDesiredAccess GENERIC_READ, GENERIC_READ | GENERIC_WRITE, or 0
+ *        for attribute queries. The Windows CE 2.0 reference lists only
+ *        0 and GENERIC_READ.
+ * @param dwShareMode 0, FILE_SHARE_READ and/or FILE_SHARE_WRITE.
+ * @param lpSecurityAttributes Must be NULL.
+ * @param dwCreationDisposition CREATE_NEW, CREATE_ALWAYS, OPEN_EXISTING,
+ *        OPEN_ALWAYS or TRUNCATE_EXISTING.
+ * @param dwFlagsAndAttributes FILE_ATTRIBUTE_* values, plus
+ *        FILE_FLAG_WRITE_THROUGH and FILE_FLAG_RANDOM_ACCESS.
+ * @param hTemplateFile Ignored.
+ * @return The file handle, or INVALID_HANDLE_VALUE on failure (see
+ *         GetLastError). GetLastError returns ERROR_ALREADY_EXISTS on
+ *         success if CREATE_ALWAYS or OPEN_ALWAYS found an existing file.
+ *
+ * @note Windows CE 2.0 only.
+ */
 HANDLE CreateFileForMappingW(LPCTSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
 #endif
 WINBASEAPI HANDLE WINAPI CreateFileMappingA(HANDLE,LPSECURITY_ATTRIBUTES,DWORD,DWORD,DWORD,LPCSTR);
-WINBASEAPI HANDLE WINAPI CreateFileMappingW(HANDLE,LPSECURITY_ATTRIBUTES,DWORD,DWORD,DWORD,LPCWSTR);
+/**
+ * Creates or opens a file-mapping object.
+ *
+ * Map views with MapViewOfFile. To free it, unmap all views with
+ * UnmapViewOfFile and close the handle. Views of one mapping are
+ * coherent, but not with ReadFile or WriteFile on the same file. Doesn't
+ * work on devices without page-in support.
+ *
+ * @param hFile Handle from CreateFileForMappingW, or INVALID_HANDLE_VALUE
+ *        for a mapping backed by memory instead of a file (the size must
+ *        then be given).
+ * @param lpFileMappingAttributes Must be NULL.
+ * @param flProtect PAGE_READONLY, PAGE_READWRITE or PAGE_WRITECOPY,
+ *        optionally with SEC_COMMIT or SEC_RESERVE. The file's access
+ *        must allow it.
+ * @param dwMaximumSizeHigh High 32 bits of the maximum size.
+ * @param dwMaximumSizeLow Low 32 bits of the maximum size. With
+ *        dwMaximumSizeHigh 0 too, the current file size is used. A larger
+ *        size grows the file.
+ * @param lpName Name for sharing between processes, or NULL. Must not
+ *        contain a backslash.
+ * @return The mapping, or NULL on failure (see GetLastError). If the name
+ *         already existed, the existing mapping is returned and
+ *         GetLastError returns ERROR_ALREADY_EXISTS.
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI HANDLE WINAPI CreateFileMappingW(HANDLE hFile,LPSECURITY_ATTRIBUTES lpFileMappingAttributes,DWORD flProtect,DWORD dwMaximumSizeHigh,DWORD dwMaximumSizeLow,LPCWSTR lpName);
 #if (_WIN32_WINNT >= 0x0500)
 WINBASEAPI BOOL WINAPI CreateHardLinkA(LPCSTR,LPCSTR,LPSECURITY_ATTRIBUTES);
 WINBASEAPI BOOL WINAPI CreateHardLinkW(LPCWSTR,LPCWSTR,LPSECURITY_ATTRIBUTES);
@@ -1456,13 +1624,54 @@ WINBASEAPI HANDLE WINAPI CreateMailslotW(LPCWSTR,DWORD,DWORD,LPSECURITY_ATTRIBUT
 WINBASEAPI HANDLE WINAPI CreateMemoryResourceNotification(MEMORY_RESOURCE_NOTIFICATION_TYPE);
 #endif
 WINBASEAPI HANDLE WINAPI CreateMutexA(LPSECURITY_ATTRIBUTES,BOOL,LPCSTR);
-WINBASEAPI HANDLE WINAPI CreateMutexW(LPSECURITY_ATTRIBUTES,BOOL,LPCWSTR);
+/**
+ * Creates or opens a mutex.
+ *
+ * Acquire with a wait function and release with ReleaseMutex, once per
+ * successful wait. Close with CloseHandle. Events, mutexes, semaphores
+ * and file mappings share one namespace.
+ *
+ * @param lpMutexAttributes Must be NULL.
+ * @param bInitialOwner TRUE to own the mutex on return. Ignored if it
+ *        already existed.
+ * @param lpName Case-sensitive name, up to MAX_PATH characters and no
+ *        backslash, or NULL for an unnamed mutex.
+ * @return The mutex, or NULL on failure (see GetLastError). If the name
+ *         already existed, GetLastError returns ERROR_ALREADY_EXISTS.
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI HANDLE WINAPI CreateMutexW(LPSECURITY_ATTRIBUTES lpMutexAttributes,BOOL bInitialOwner,LPCWSTR lpName);
 WINBASEAPI HANDLE WINAPI CreateNamedPipeA(LPCSTR,DWORD,DWORD,DWORD,DWORD,DWORD,DWORD,LPSECURITY_ATTRIBUTES);
 WINBASEAPI HANDLE WINAPI CreateNamedPipeW(LPCWSTR,DWORD,DWORD,DWORD,DWORD,DWORD,DWORD,LPSECURITY_ATTRIBUTES);
 WINBASEAPI BOOL WINAPI CreatePipe(PHANDLE,PHANDLE,LPSECURITY_ATTRIBUTES,DWORD);
 WINBASEAPI BOOL WINAPI CreatePrivateObjectSecurity(PSECURITY_DESCRIPTOR,PSECURITY_DESCRIPTOR,PSECURITY_DESCRIPTOR*,BOOL,HANDLE,PGENERIC_MAPPING);
 WINBASEAPI BOOL WINAPI CreateProcessA(LPCSTR,LPSTR,LPSECURITY_ATTRIBUTES,LPSECURITY_ATTRIBUTES,BOOL,DWORD,PVOID,LPCSTR,LPSTARTUPINFOA,LPPROCESS_INFORMATION);
-WINBASEAPI BOOL WINAPI CreateProcessW(LPCWSTR,LPWSTR,LPSECURITY_ATTRIBUTES,LPSECURITY_ATTRIBUTES,BOOL,DWORD,PVOID,LPCWSTR,LPSTARTUPINFOW,LPPROCESS_INFORMATION);
+/**
+ * Starts a program in a new process.
+ *
+ * Close both handles in lpProcessInformation with CloseHandle when no
+ * longer needed. There are no priority classes, environment blocks or
+ * current directories.
+ *
+ * @param lpApplicationName The module to run. Must not be NULL, and the
+ *        module can't be named in lpCommandLine instead. Without a path,
+ *        the root of a PC Card, \Windows and \ are searched. .exe is
+ *        assumed if there is no extension.
+ * @param lpCommandLine Arguments, or NULL.
+ * @param lpProcessAttributes Must be NULL.
+ * @param lpThreadAttributes Must be NULL.
+ * @param bInheritHandles Must be FALSE.
+ * @param dwCreationFlags 0 or CREATE_SUSPENDED. Windows CE 2.0 also
+ *        supports DEBUG_PROCESS and DEBUG_ONLY_THIS_PROCESS.
+ * @param lpEnvironment Must be NULL.
+ * @param lpCurrentDirectory Must be NULL.
+ * @param lpStartupInfo Must be NULL.
+ * @param lpProcessInformation Receives the process and primary thread
+ *        handles and IDs.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI CreateProcessW(LPCWSTR lpApplicationName,LPWSTR lpCommandLine,LPSECURITY_ATTRIBUTES lpProcessAttributes,LPSECURITY_ATTRIBUTES lpThreadAttributes,BOOL bInheritHandles,DWORD dwCreationFlags,PVOID lpEnvironment,LPCWSTR lpCurrentDirectory,LPSTARTUPINFOW lpStartupInfo,LPPROCESS_INFORMATION lpProcessInformation);
 WINBASEAPI BOOL WINAPI CreateProcessAsUserA(HANDLE,LPCSTR,LPSTR,LPSECURITY_ATTRIBUTES,LPSECURITY_ATTRIBUTES,BOOL,DWORD,PVOID,LPCSTR,LPSTARTUPINFOA,LPPROCESS_INFORMATION);
 WINBASEAPI BOOL WINAPI CreateProcessAsUserW(HANDLE,LPCWSTR,LPWSTR,LPSECURITY_ATTRIBUTES,LPSECURITY_ATTRIBUTES,BOOL,DWORD,PVOID,LPCWSTR,LPSTARTUPINFOW,LPPROCESS_INFORMATION);
 #if (_WIN32_WINNT >= 0x0500)
@@ -1492,13 +1701,42 @@ WINBASEAPI DWORD WINAPI CreateTapePartition(HANDLE,DWORD,DWORD,DWORD);
 WINBASEAPI HANDLE WINAPI CreateTimerQueue(void);
 WINBASEAPI BOOL WINAPI CreateTimerQueueTimer(PHANDLE,HANDLE,WAITORTIMERCALLBACK,PVOID,DWORD,DWORD,ULONG);
 #endif
-WINBASEAPI HANDLE WINAPI CreateThread(LPSECURITY_ATTRIBUTES,DWORD,LPTHREAD_START_ROUTINE,PVOID,DWORD,PDWORD);
+/**
+ * Creates a thread in the calling process.
+ *
+ * The stack size is the same as the primary thread's. Close the handle
+ * with CloseHandle when no longer needed.
+ *
+ * @param lpThreadAttributes Must be NULL.
+ * @param dwStackSize Must be 0.
+ * @param lpStartAddress Thread function.
+ * @param lpParameter Value passed to the thread function.
+ * @param dwCreationFlags 0, or CREATE_SUSPENDED to wait for ResumeThread.
+ * @param lpThreadId Receives the thread ID.
+ * @return The thread handle, or NULL on failure (see GetLastError).
+ */
+WINBASEAPI HANDLE WINAPI CreateThread(LPSECURITY_ATTRIBUTES lpThreadAttributes,DWORD dwStackSize,LPTHREAD_START_ROUTINE lpStartAddress,PVOID lpParameter,DWORD dwCreationFlags,PDWORD lpThreadId);
 WINBASEAPI HANDLE WINAPI CreateWaitableTimerA(LPSECURITY_ATTRIBUTES,BOOL,LPCSTR);
 WINBASEAPI HANDLE WINAPI CreateWaitableTimerW(LPSECURITY_ATTRIBUTES,BOOL,LPCWSTR);
 #if (_WIN32_WINNT >= 0x0501)
 WINBASEAPI BOOL WINAPI DeactivateActCtx(DWORD,ULONG_PTR);
 #endif
-WINBASEAPI BOOL WINAPI DebugActiveProcess(DWORD);
+/**
+ * Attaches the calling thread as debugger to a running process.
+ *
+ * Then receive events with WaitForDebugEvent: CREATE_PROCESS_DEBUG_EVENT
+ * for the primary thread and CREATE_THREAD_DEBUG_EVENT for each other
+ * thread. Close the thread handles they carry. No initial breakpoint is
+ * raised. Windows CE 2.0 can also launch a just-in-time debugger named by
+ * the JITDebugger value under HKEY_LOCAL_MACHINE\Debug, after a warm
+ * reset; it gets the process ID on its command line.
+ *
+ * @param dwProcessId The process to debug.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI DebugActiveProcess(DWORD dwProcessId);
 #if (_WIN32_WINNT >= 0x0501)
 WINBASEAPI BOOL WINAPI DebugActiveProcessStop(DWORD);
 #endif
@@ -1516,10 +1754,26 @@ WINBASEAPI BOOL WINAPI DefineDosDeviceW(DWORD,LPCWSTR,LPCWSTR);
 #define DefineHandleTable(w) ((w),TRUE)
 WINBASEAPI BOOL WINAPI DeleteAce(PACL,DWORD);
 WINBASEAPI ATOM WINAPI DeleteAtom(ATOM);
-WINBASEAPI void WINAPI DeleteCriticalSection(PCRITICAL_SECTION);
+/**
+ * Frees the resources of a critical section that is no longer used.
+ *
+ * The critical section must not be owned. Reinitialise with
+ * InitializeCriticalSection before reusing it.
+ *
+ * @param lpCriticalSection The critical section.
+ */
+WINBASEAPI void WINAPI DeleteCriticalSection(PCRITICAL_SECTION lpCriticalSection);
 WINBASEAPI void WINAPI DeleteFiber(PVOID);
 WINBASEAPI BOOL WINAPI DeleteFileA(LPCSTR);
-WINBASEAPI BOOL WINAPI DeleteFileW(LPCWSTR);
+/**
+ * Deletes a file.
+ *
+ * Fails for open files and read-only files.
+ *
+ * @param lpFileName Path of the file.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI DeleteFileW(LPCWSTR lpFileName);
 #if (_WIN32_WINNT >= 0x0500)
 WINBASEAPI BOOL WINAPI DeleteTimerQueue(HANDLE);
 WINBASEAPI BOOL WINAPI DeleteTimerQueueEx(HANDLE,HANDLE);
@@ -1529,7 +1783,24 @@ WINBASEAPI BOOL WINAPI DeleteVolumeMountPointW(LPCWSTR);
 #endif
 WINBASEAPI BOOL WINAPI DeregisterEventSource(HANDLE);
 WINBASEAPI BOOL WINAPI DestroyPrivateObjectSecurity(PSECURITY_DESCRIPTOR*);
-WINBASEAPI BOOL WINAPI DeviceIoControl(HANDLE,DWORD,PVOID,DWORD,PVOID,DWORD,PDWORD,POVERLAPPED);
+/**
+ * Sends a control code to a device driver.
+ *
+ * Windows CE defines no standard codes here: drivers define their own
+ * with CTL_CODE.
+ *
+ * @param hDevice Device handle from CreateFileW.
+ * @param dwIoControlCode Driver-defined control code.
+ * @param lpInBuffer Input data, or NULL if none.
+ * @param nInBufferSize Size of lpInBuffer in bytes.
+ * @param lpOutBuffer Receives output data, or NULL if none.
+ * @param nOutBufferSize Size of lpOutBuffer in bytes.
+ * @param lpBytesReturned Receives the bytes written to lpOutBuffer. Must
+ *        not be NULL.
+ * @param lpOverlapped Ignored: should be NULL.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI DeviceIoControl(HANDLE hDevice,DWORD dwIoControlCode,PVOID lpInBuffer,DWORD nInBufferSize,PVOID lpOutBuffer,DWORD nOutBufferSize,PDWORD lpBytesReturned,POVERLAPPED lpOverlapped);
 WINBASEAPI BOOL WINAPI DisableThreadLibraryCalls(HMODULE);
 #if (_WIN32_WINNT >= 0x0500)
 WINBASEAPI BOOL WINAPI DnsHostnameToComputerNameA(LPCSTR,LPSTR,LPDWORD);
@@ -1544,7 +1815,16 @@ WINBASEAPI BOOL WINAPI EncryptFileA(LPCSTR);
 WINBASEAPI BOOL WINAPI EncryptFileW(LPCWSTR);
 WINBASEAPI BOOL WINAPI EndUpdateResourceA(HANDLE,BOOL);
 WINBASEAPI BOOL WINAPI EndUpdateResourceW(HANDLE,BOOL);
-WINBASEAPI void WINAPI EnterCriticalSection(LPCRITICAL_SECTION);
+/**
+ * Waits for and takes ownership of a critical section.
+ *
+ * A thread may enter a critical section it already owns, and must call
+ * LeaveCriticalSection once for each entry.
+ *
+ * @param lpCriticalSection Critical section set up with
+ *        InitializeCriticalSection.
+ */
+WINBASEAPI void WINAPI EnterCriticalSection(LPCRITICAL_SECTION lpCriticalSection);
 #if (_WIN32_WCE >= 0x0500)
 WINBASEAPI BOOL WINAPI EnumDeviceInterfaces(HANDLE, DWORD, GUID*, LPWSTR, LPDWORD);
 WINBASEAPI DWORD EnumDevices(LPTSTR lpszDevList, LPDWORD lpBuflen);
@@ -1558,9 +1838,30 @@ WINBASEAPI BOOL WINAPI EnumResourceTypesW(HMODULE,ENUMRESTYPEPROCW,LONG_PTR);
 WINBASEAPI BOOL WINAPI EqualPrefixSid(PSID,PSID);
 WINBASEAPI BOOL WINAPI EqualSid(PSID,PSID);
 WINBASEAPI DWORD WINAPI EraseTape(HANDLE,DWORD,BOOL);
-WINBASEAPI BOOL WINAPI EscapeCommFunction(HANDLE,DWORD);
+/**
+ * Performs an extended function on a serial port.
+ *
+ * @param hFile Serial port handle from CreateFileW.
+ * @param dwFunc SETDTR, CLRDTR, SETRTS, CLRRTS, SETXON, SETXOFF, SETBREAK
+ *        or CLRBREAK. Windows CE adds SETIR (infrared mode) and CLRIR
+ *        (normal serial mode).
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI EscapeCommFunction(HANDLE hFile,DWORD dwFunc);
 
-WINBASEAPI BOOL WINAPI TerminateProcess(HANDLE,UINT);
+/**
+ * Forcibly ends a process and all of its threads.
+ *
+ * For emergencies only: DLLs aren't notified, so their shared state may be
+ * left inconsistent. The process's handles are closed; child processes
+ * keep running. A process can't terminate itself, nor a protected server
+ * library (PSL).
+ *
+ * @param hProcess The process.
+ * @param uExitCode Ignored: Windows CE doesn't support process exit codes.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI TerminateProcess(HANDLE hProcess,UINT uExitCode);
 #include <kfuncs.h>
 #ifdef _WIN32_WCE
 static inline void ExitProcess(UINT code)
@@ -1572,7 +1873,15 @@ static inline void ExitProcess(UINT code)
 #else
 DECLSPEC_NORETURN WINBASEAPI void WINAPI ExitProcess(UINT);
 #endif
-DECLSPEC_NORETURN WINBASEAPI void WINAPI ExitThread(DWORD);
+/**
+ * Ends the calling thread.
+ *
+ * On Windows CE, calling this from the primary thread ends the
+ * application.
+ *
+ * @param dwExitCode Exit code, read with GetExitCodeThread.
+ */
+DECLSPEC_NORETURN WINBASEAPI void WINAPI ExitThread(DWORD dwExitCode);
 WINBASEAPI DWORD WINAPI ExpandEnvironmentStringsA(LPCSTR,LPSTR,DWORD);
 WINBASEAPI DWORD WINAPI ExpandEnvironmentStringsW(LPCWSTR,LPWSTR,DWORD);
 WINBASEAPI void WINAPI FatalAppExitA(UINT,LPCSTR);
@@ -1581,8 +1890,27 @@ WINBASEAPI void WINAPI FatalExit(int);
 WINBASEAPI BOOL WINAPI FileEncryptionStatusA(LPCSTR,LPDWORD);
 WINBASEAPI BOOL WINAPI FileEncryptionStatusW(LPCWSTR,LPDWORD);
 WINBASEAPI BOOL WINAPI FileTimeToDosDateTime(CONST FILETIME *,LPWORD,LPWORD);
-WINBASEAPI BOOL WINAPI FileTimeToLocalFileTime(CONST FILETIME *,LPFILETIME);
-WINBASEAPI BOOL WINAPI FileTimeToSystemTime(CONST FILETIME *,LPSYSTEMTIME);
+/**
+ * Converts a UTC file time to local time.
+ *
+ * Uses the current time zone and daylight saving setting.
+ *
+ * @param lpFileTime UTC time.
+ * @param lpLocalFileTime Receives the local time. Must not be the same as
+ *        lpFileTime.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI FileTimeToLocalFileTime(CONST FILETIME *lpFileTime,LPFILETIME lpLocalFileTime);
+/**
+ * Converts a FILETIME to a SYSTEMTIME.
+ *
+ * No time zone conversion is made.
+ *
+ * @param lpFileTime The file time.
+ * @param lpSystemTime Receives the date and time.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI FileTimeToSystemTime(CONST FILETIME *lpFileTime,LPSYSTEMTIME lpSystemTime);
 #if (_WIN32_WINNT >= 0x0501)
 WINBASEAPI BOOL WINAPI FindActCtxSectionGuid(DWORD,const GUID*,ULONG,const GUID*,PACTCTX_SECTION_KEYED_DATA);
 WINBASEAPI BOOL WINAPI FindActCtxSectionStringA(DWORD,const GUID*,ULONG,LPCSTR,PACTCTX_SECTION_KEYED_DATA);
@@ -1590,7 +1918,13 @@ WINBASEAPI BOOL WINAPI FindActCtxSectionStringW(DWORD,const GUID*,ULONG,LPCWSTR,
 #endif
 WINBASEAPI ATOM WINAPI FindAtomA(LPCSTR);
 WINBASEAPI ATOM WINAPI FindAtomW(LPCWSTR);
-WINBASEAPI BOOL WINAPI FindClose(HANDLE);
+/**
+ * Closes a search handle from FindFirstFileW.
+ *
+ * @param hFindFile The search handle.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI FindClose(HANDLE hFindFile);
 WINBASEAPI BOOL WINAPI FindCloseChangeNotification(HANDLE);
 WINBASEAPI HANDLE WINAPI FindFirstChangeNotificationA(LPCSTR,BOOL,DWORD);
 WINBASEAPI HANDLE WINAPI FindFirstChangeNotificationW(LPCWSTR,BOOL,DWORD);
@@ -1599,7 +1933,19 @@ WINBASEAPI HANDLE WINAPI FindFirstDevice(DeviceSearchType,LPCVOID,PDEVMGR_DEVICE
 WINBASEAPI BOOL   WINAPI FindNextDevice(HANDLE,PDEVMGR_DEVICE_INFORMATION);
 #endif
 WINBASEAPI HANDLE WINAPI FindFirstFileA(LPCSTR,LPWIN32_FIND_DATAA);
-WINBASEAPI HANDLE WINAPI FindFirstFileW(LPCWSTR,LPWIN32_FIND_DATAW);
+/**
+ * Starts a search for files and directories matching a name pattern.
+ *
+ * Continue with FindNextFileW and close with FindClose, not CloseHandle.
+ * Matches on names only, not attributes.
+ *
+ * @param lpFileName Path and pattern, which may contain * and ?. Only the
+ *        first MAX_PATH characters are used.
+ * @param lpFindFileData Receives the first match.
+ * @return The search handle, or INVALID_HANDLE_VALUE on failure (see
+ *         GetLastError).
+ */
+WINBASEAPI HANDLE WINAPI FindFirstFileW(LPCWSTR lpFileName,LPWIN32_FIND_DATAW lpFindFileData);
 WINBASEAPI HANDLE WINAPI FindFirstFileExA(LPCSTR,FINDEX_INFO_LEVELS,PVOID,FINDEX_SEARCH_OPS,PVOID,DWORD);
 WINBASEAPI HANDLE WINAPI FindFirstFileExW(LPCWSTR,FINDEX_INFO_LEVELS,PVOID,FINDEX_SEARCH_OPS,PVOID,DWORD);
 WINBASEAPI BOOL WINAPI FindFirstFreeAce(PACL,PVOID*);
@@ -1611,7 +1957,15 @@ WINBASEAPI HANDLE WINAPI FindFirstVolumeMountPointW(LPWSTR,LPWSTR,DWORD);
 #endif
 WINBASEAPI BOOL WINAPI FindNextChangeNotification(HANDLE);
 WINBASEAPI BOOL WINAPI FindNextFileA(HANDLE,LPWIN32_FIND_DATAA);
-WINBASEAPI BOOL WINAPI FindNextFileW(HANDLE,LPWIN32_FIND_DATAW);
+/**
+ * Returns the next match of a search started with FindFirstFileW.
+ *
+ * @param hFindFile The search handle.
+ * @param lpFindFileData Receives the match.
+ * @return TRUE on success, FALSE on failure. GetLastError returns
+ *         ERROR_NO_MORE_FILES at the end of the search.
+ */
+WINBASEAPI BOOL WINAPI FindNextFileW(HANDLE hFindFile,LPWIN32_FIND_DATAW lpFindFileData);
 #if (_WIN32_WINNT >= 0x0500)
 WINBASEAPI BOOL WINAPI FindNextVolumeA(HANDLE,LPCSTR,DWORD);
 WINBASEAPI BOOL WINAPI FindNextVolumeW(HANDLE,LPWSTR,DWORD);
@@ -1621,21 +1975,99 @@ WINBASEAPI BOOL WINAPI FindVolumeClose(HANDLE);
 WINBASEAPI BOOL WINAPI FindVolumeMountPointClose(HANDLE);
 #endif
 WINBASEAPI HRSRC WINAPI FindResourceA(HMODULE,LPCSTR,LPCSTR);
-WINBASEAPI HRSRC WINAPI FindResourceW(HINSTANCE,LPCWSTR,LPCWSTR);
+/**
+ * Locates a resource in a module.
+ *
+ * Load it with LoadResource. RT_ANICURSOR and RT_ANIICON are not
+ * supported.
+ *
+ * @param hModule Module containing the resource. Must not be NULL.
+ * @param lpName Resource name, or an ID from MAKEINTRESOURCE. ID 0 doesn't
+ *        work.
+ * @param lpType Resource type, such as RT_RCDATA, or a custom type name.
+ * @return The resource, or NULL on failure (see GetLastError).
+ */
+WINBASEAPI HRSRC WINAPI FindResourceW(HINSTANCE hModule,LPCWSTR lpName,LPCWSTR lpType);
 WINBASEAPI HRSRC WINAPI FindResourceExA(HINSTANCE,LPCSTR,LPCSTR,WORD);
 WINBASEAPI HRSRC WINAPI FindResourceExW(HINSTANCE,LPCWSTR,LPCWSTR,WORD);
 #if (_WIN32_WINNT >= 0x0502)
 WINBASEAPI DWORD WINAPI GetFirmwareEnvironmentVariableA(LPCSTR,LPCSTR,PVOID,DWORD);
 WINBASEAPI DWORD WINAPI GetFirmwareEnvironmentVariableW(LPCWSTR,LPCWSTR,PVOID,DWORD);
 #endif
-WINBASEAPI BOOL WINAPI FlushFileBuffers(HANDLE);
-WINBASEAPI BOOL WINAPI FlushInstructionCache(HANDLE,PCVOID,DWORD);
-WINBASEAPI BOOL WINAPI FlushViewOfFile(PCVOID,DWORD);
+/**
+ * Writes any buffered data for a file to the device.
+ *
+ * @param hFile File handle with GENERIC_WRITE access.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI FlushFileBuffers(HANDLE hFile);
+/**
+ * Flushes the instruction cache for a process.
+ *
+ * Call after writing code to memory, e.g. setting breakpoints, before it
+ * runs.
+ *
+ * @param hProcess The process.
+ * @param lpBaseAddress Start of the modified region, or NULL to flush the
+ *        whole cache.
+ * @param dwSize Size of the region in bytes.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI FlushInstructionCache(HANDLE hProcess,PCVOID lpBaseAddress,DWORD dwSize);
+/**
+ * Writes modified pages in a range of a mapped view back to the file.
+ *
+ * @param lpBaseAddress Start of the range, within a view from
+ *        MapViewOfFile.
+ * @param dwNumberOfBytesToFlush Bytes to flush, or 0 for the rest of the
+ *        mapping.
+ * @return Nonzero on success, 0 on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI FlushViewOfFile(PCVOID lpBaseAddress,DWORD dwNumberOfBytesToFlush);
 WINBASEAPI DWORD WINAPI FormatMessageA(DWORD,PCVOID,DWORD,DWORD,LPSTR,DWORD,va_list*);
-WINBASEAPI DWORD WINAPI FormatMessageW(DWORD,PCVOID,DWORD,DWORD,LPWSTR,DWORD,va_list*);
+/**
+ * Formats a message from a string, a module's message table or the system
+ * message table.
+ *
+ * Inserts use %1, %2 and so on, with optional printf-style formats such as
+ * %1!d!. With FORMAT_MESSAGE_ALLOCATE_BUFFER, free the buffer with
+ * LocalFree.
+ *
+ * @param dwFlags FORMAT_MESSAGE_FROM_STRING, _FROM_HMODULE or
+ *        _FROM_SYSTEM, plus _ALLOCATE_BUFFER, _IGNORE_INSERTS and
+ *        _ARGUMENT_ARRAY. The low byte sets the maximum line width
+ *        (FORMAT_MESSAGE_MAX_WIDTH_MASK).
+ * @param lpSource Format string or module handle, depending on dwFlags.
+ *        Otherwise ignored.
+ * @param dwMessageId Message ID. Ignored with FORMAT_MESSAGE_FROM_STRING.
+ * @param dwLanguageId Language ID, or 0 for the default search.
+ *        Ignored with FORMAT_MESSAGE_FROM_STRING.
+ * @param lpBuffer Output buffer, or, with FORMAT_MESSAGE_ALLOCATE_BUFFER,
+ *        a pointer to an LPWSTR that receives the allocated buffer.
+ * @param nSize Size of lpBuffer in characters, or the minimum to allocate.
+ * @param Arguments Insert values, as a va_list, or an array of 32-bit
+ *        values with FORMAT_MESSAGE_ARGUMENT_ARRAY. May be NULL.
+ * @return Characters written, excluding the terminator, or 0 on failure
+ *         (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI DWORD WINAPI FormatMessageW(DWORD dwFlags,PCVOID lpSource,DWORD dwMessageId,DWORD dwLanguageId,LPWSTR lpBuffer,DWORD nSize,va_list*Arguments);
 WINBASEAPI BOOL WINAPI FreeEnvironmentStringsA(LPSTR);
 WINBASEAPI BOOL WINAPI FreeEnvironmentStringsW(LPWSTR);
-WINBASEAPI BOOL WINAPI FreeLibrary(HMODULE);
+/**
+ * Decrements a DLL's reference count, unloading it when it reaches zero.
+ *
+ * Call once for each LoadLibrary.
+ *
+ * @param hLibModule Module handle from LoadLibrary.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI FreeLibrary(HMODULE hLibModule);
 DECLSPEC_NORETURN WINBASEAPI void WINAPI FreeLibraryAndExitThread(HMODULE,DWORD);
 #define FreeModule(m) FreeLibrary(m)
 #define FreeProcInstance(p) (void)(p)
@@ -1652,11 +2084,51 @@ WINBASEAPI BOOL WINAPI GetBinaryTypeW(LPCWSTR,PDWORD);
 WINBASEAPI LPSTR WINAPI GetCommandLineA(VOID);
 WINBASEAPI LPWSTR WINAPI GetCommandLineW(VOID);
 WINBASEAPI BOOL WINAPI GetCommConfig(HANDLE,LPCOMMCONFIG,PDWORD);
-WINBASEAPI BOOL WINAPI GetCommMask(HANDLE,PDWORD);
-WINBASEAPI BOOL WINAPI GetCommModemStatus(HANDLE,PDWORD);
-WINBASEAPI BOOL WINAPI GetCommProperties(HANDLE,LPCOMMPROP);
-WINBASEAPI BOOL WINAPI GetCommState(HANDLE,LPDCB);
-WINBASEAPI BOOL WINAPI GetCommTimeouts(HANDLE,LPCOMMTIMEOUTS);
+/**
+ * Returns the event mask of a serial port.
+ *
+ * @param hFile Serial port handle from CreateFileW.
+ * @param lpEvtMask Receives EV_* flags, as set by SetCommMask. Windows CE
+ *        doesn't support EV_EVENT1, EV_EVENT2, EV_RX80FULL or EV_PERR.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI GetCommMask(HANDLE hFile,PDWORD lpEvtMask);
+/**
+ * Returns the modem control line states of a serial port.
+ *
+ * @param hFile Serial port handle from CreateFileW.
+ * @param lpModemStat Receives MS_CTS_ON, MS_DSR_ON, MS_RING_ON and
+ *        MS_RLSD_ON flags.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI GetCommModemStatus(HANDLE hFile,PDWORD lpModemStat);
+/**
+ * Returns the capabilities a serial port driver supports.
+ *
+ * @param hFile Serial port handle from CreateFileW.
+ * @param lpCommProp Receives a COMMPROP with supported baud rates, data
+ *        bits, buffer sizes and so on.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI GetCommProperties(HANDLE hFile,LPCOMMPROP lpCommProp);
+/**
+ * Returns the current settings of a serial port.
+ *
+ * Modify the result and pass it to SetCommState to change settings.
+ *
+ * @param hFile Serial port handle from CreateFileW.
+ * @param lpDCB Receives the DCB.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI GetCommState(HANDLE hFile,LPDCB lpDCB);
+/**
+ * Returns the read and write timeouts of a serial port.
+ *
+ * @param hFile Serial port handle from CreateFileW.
+ * @param lpCommTimeouts Receives the COMMTIMEOUTS.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI GetCommTimeouts(HANDLE hFile,LPCOMMTIMEOUTS lpCommTimeouts);
 WINBASEAPI DWORD WINAPI GetCompressedFileSizeA(LPCSTR,PDWORD);
 WINBASEAPI DWORD WINAPI GetCompressedFileSizeW(LPCWSTR,PDWORD);
 WINBASEAPI BOOL WINAPI GetComputerNameA(LPSTR,PDWORD);
@@ -1690,7 +2162,22 @@ WINBASEAPI BOOL WINAPI GetDeviceInformationByFileHandle(HANDLE,PDEVMGR_DEVICE_IN
 WINBASEAPI BOOL WINAPI GetDiskFreeSpaceA(LPCSTR,PDWORD,PDWORD,PDWORD,PDWORD);
 WINBASEAPI BOOL WINAPI GetDiskFreeSpaceW(LPCWSTR,PDWORD,PDWORD,PDWORD,PDWORD);
 WINBASEAPI BOOL WINAPI GetDiskFreeSpaceExA(LPCSTR,PULARGE_INTEGER,PULARGE_INTEGER,PULARGE_INTEGER);
-WINBASEAPI BOOL WINAPI GetDiskFreeSpaceExW(LPCWSTR,PULARGE_INTEGER,PULARGE_INTEGER,PULARGE_INTEGER);
+/**
+ * Returns the total and free space on a volume.
+ *
+ * Values are 64-bit: don't truncate them.
+ *
+ * @param lpDirectoryName Any directory on the volume, e.g. L"\\PC Card",
+ *        or NULL for the object store.
+ * @param lpFreeBytesAvailableToCaller Receives the free bytes available
+ *        to the caller. Without quotas, the same as the total free.
+ * @param lpTotalNumberOfBytes Receives the volume size.
+ * @param lpTotalNumberOfFreeBytes Receives the free bytes, or NULL.
+ * @return Nonzero on success, 0 on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI GetDiskFreeSpaceExW(LPCWSTR lpDirectoryName,PULARGE_INTEGER lpFreeBytesAvailableToCaller,PULARGE_INTEGER lpTotalNumberOfBytes,PULARGE_INTEGER lpTotalNumberOfFreeBytes);
 #if (_WIN32_WINNT >= 0x0502)
 WINBASEAPI DWORD WINAPI GetDllDirectoryA(DWORD,LPSTR);
 WINBASEAPI DWORD WINAPI GetDllDirectoryW(DWORD,LPWSTR);
@@ -1702,24 +2189,80 @@ WINBASEAPI LPCH WINAPI GetEnvironmentStringsA(void);
 WINBASEAPI LPWCH WINAPI GetEnvironmentStringsW(void);
 WINBASEAPI DWORD WINAPI GetEnvironmentVariableA(LPCSTR,LPSTR,DWORD);
 WINBASEAPI DWORD WINAPI GetEnvironmentVariableW(LPCWSTR,LPWSTR,DWORD);
-WINBASEAPI BOOL WINAPI GetExitCodeProcess(HANDLE,PDWORD);
-WINBASEAPI BOOL WINAPI GetExitCodeThread(HANDLE,PDWORD);
+/**
+ * Returns a process's exit code.
+ *
+ * @param hProcess The process.
+ * @param lpExitCode Receives STILL_ACTIVE if the process is running,
+ *        otherwise the code from ExitThread, TerminateProcess, WinMain's
+ *        return, or the unhandled exception.
+ * @return Nonzero on success, 0 on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI GetExitCodeProcess(HANDLE hProcess,PDWORD lpExitCode);
+/**
+ * Returns a thread's exit code.
+ *
+ * @param hThread The thread.
+ * @param lpExitCode Receives STILL_ACTIVE if the thread is running,
+ *        otherwise its exit code.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI GetExitCodeThread(HANDLE hThread,PDWORD lpExitCode);
 WINBASEAPI DWORD WINAPI GetFileAttributesA(LPCSTR);
-WINBASEAPI DWORD WINAPI GetFileAttributesW(LPCWSTR);
+/**
+ * Returns the attributes of a file or directory.
+ *
+ * @param lpFileName Path of the file or directory.
+ * @return FILE_ATTRIBUTE_* flags, or 0xFFFFFFFF on failure (see
+ *         GetLastError). Windows CE adds FILE_ATTRIBUTE_INROM for
+ *         read-only ROM files, and FILE_ATTRIBUTE_ROMMODULE for
+ *         execute-in-place ROM modules, which can't be opened with
+ *         CreateFileW.
+ */
+WINBASEAPI DWORD WINAPI GetFileAttributesW(LPCWSTR lpFileName);
 WINBASEAPI BOOL WINAPI GetFileAttributesExA(LPCSTR,GET_FILEEX_INFO_LEVELS,PVOID);
 WINBASEAPI BOOL WINAPI GetFileAttributesExW(LPCWSTR,GET_FILEEX_INFO_LEVELS,PVOID);
-WINBASEAPI BOOL WINAPI GetFileInformationByHandle(HANDLE,LPBY_HANDLE_FILE_INFORMATION);
+/**
+ * Returns attributes, times, size and other information for an open file.
+ *
+ * @param hFile The file.
+ * @param lpFileInformation Receives a BY_HANDLE_FILE_INFORMATION.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI GetFileInformationByHandle(HANDLE hFile,LPBY_HANDLE_FILE_INFORMATION lpFileInformation);
 #if (_WIN32_WINNT >= 0x0600)
 /* http://msdn.microsoft.com/en-us/library/aa364953%28VS.85%29.aspx */
 WINBASEAPI BOOL WINAPI GetFileInformationByHandleEx(HANDLE,FILE_INFO_BY_HANDLE_CLASS,LPVOID,DWORD);
 #endif
 WINBASEAPI BOOL WINAPI GetFileSecurityA(LPCSTR,SECURITY_INFORMATION,PSECURITY_DESCRIPTOR,DWORD,PDWORD);
 WINBASEAPI BOOL WINAPI GetFileSecurityW(LPCWSTR,SECURITY_INFORMATION,PSECURITY_DESCRIPTOR,DWORD,PDWORD);
-WINBASEAPI DWORD WINAPI GetFileSize(HANDLE,PDWORD);
+/**
+ * Returns the size of a file.
+ *
+ * Not for non-seeking devices such as serial ports.
+ *
+ * @param hFile File handle with GENERIC_READ or GENERIC_WRITE access.
+ * @param lpFileSizeHigh Receives the high 32 bits of the size, or NULL.
+ * @return The low 32 bits of the size, or 0xFFFFFFFF on failure. When
+ *         lpFileSizeHigh is non-NULL, 0xFFFFFFFF may be a valid size:
+ *         check that GetLastError returns NO_ERROR.
+ */
+WINBASEAPI DWORD WINAPI GetFileSize(HANDLE hFile,PDWORD lpFileSizeHigh);
 #if (_WIN32_WINNT >= 0x0500) 
 WINBASEAPI BOOL WINAPI GetFileSizeEx(HANDLE,PLARGE_INTEGER);
 #endif
-WINBASEAPI BOOL WINAPI GetFileTime(HANDLE,LPFILETIME,LPFILETIME,LPFILETIME);
+/**
+ * Returns a file's creation, last access and last write times, in UTC.
+ *
+ * @param hFile The file.
+ * @param lpCreationTime Receives the creation time, or NULL.
+ * @param lpLastAccessTime Receives the last access time, or NULL.
+ * @param lpLastWriteTime Receives the last write time, or NULL.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI GetFileTime(HANDLE hFile,LPFILETIME lpCreationTime,LPFILETIME lpLastAccessTime,LPFILETIME lpLastWriteTime);
 WINBASEAPI DWORD WINAPI GetFileType(HANDLE);
 #if (_WIN32_WINNT >= 0x0600)
 /* http://msdn.microsoft.com/en-us/library/aa364962%28VS.85%29.aspx */
@@ -1731,9 +2274,22 @@ WINBASEAPI DWORD WINAPI GetFullPathNameA(LPCSTR,DWORD,LPSTR,LPSTR*);
 WINBASEAPI DWORD WINAPI GetFullPathNameW(LPCWSTR,DWORD,LPWSTR,LPWSTR*);
 WINBASEAPI BOOL WINAPI GetHandleInformation(HANDLE,PDWORD);
 WINBASEAPI BOOL WINAPI GetKernelObjectSecurity(HANDLE,SECURITY_INFORMATION,PSECURITY_DESCRIPTOR,DWORD,PDWORD);
+/**
+ * Returns the calling thread's last error code.
+ *
+ * Call it straight away after a failed call, as other calls may change
+ * it.
+ *
+ * @return The error code, such as ERROR_FILE_NOT_FOUND.
+ */
 WINBASEAPI DWORD WINAPI GetLastError(void);
 WINBASEAPI DWORD WINAPI GetLengthSid(PSID);
-WINBASEAPI void WINAPI GetLocalTime(LPSYSTEMTIME);
+/**
+ * Returns the current local date and time.
+ *
+ * @param lpSystemTime Receives the local time.
+ */
+WINBASEAPI void WINAPI GetLocalTime(LPSYSTEMTIME lpSystemTime);
 WINBASEAPI DWORD WINAPI GetLogicalDrives(void);
 WINBASEAPI DWORD WINAPI GetLogicalDriveStringsA(DWORD,LPSTR);
 WINBASEAPI DWORD WINAPI GetLogicalDriveStringsW(DWORD,LPWSTR);
@@ -1743,7 +2299,19 @@ WINBASEAPI DWORD WINAPI GetLongPathNameW(LPCWSTR,LPWSTR,DWORD);
 #endif
 WINBASEAPI BOOL WINAPI GetMailslotInfo(HANDLE,PDWORD,PDWORD,PDWORD,PDWORD);
 WINBASEAPI DWORD WINAPI GetModuleFileNameA(HINSTANCE,LPSTR,DWORD);
-WINBASEAPI DWORD WINAPI GetModuleFileNameW(HINSTANCE,LPWSTR,DWORD);
+/**
+ * Returns the full path of a loaded module.
+ *
+ * @param hModule Module handle, or NULL for the calling process's
+ *        executable.
+ * @param lpFilename Receives the path.
+ * @param nSize Size of lpFilename in characters.
+ * @return Characters copied, excluding the terminator, or 0 on failure
+ *         (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI DWORD WINAPI GetModuleFileNameW(HINSTANCE hModule,LPWSTR lpFilename,DWORD nSize);
 WINBASEAPI HMODULE WINAPI GetModuleHandleA(LPCSTR);
 WINBASEAPI HMODULE WINAPI GetModuleHandleW(LPCWSTR);
 #if (_WIN32_WINNT >= 0x0500)
@@ -1775,7 +2343,18 @@ WINBASEAPI BOOL WINAPI GetPrivateProfileStructW(LPCWSTR,LPCWSTR,LPVOID,UINT,LPCW
 #if (_WIN32_WCE >= 0x300)
 WINBASEAPI FARPROC WINAPI GetProcAddressA(HINSTANCE,LPCSTR);
 #endif
-WINBASEAPI FARPROC WINAPI GetProcAddressW(HINSTANCE,LPCWSTR);
+/**
+ * Returns the address of a function exported by a DLL.
+ *
+ * On Windows CE, the name is a Unicode string. Desktop Win32's
+ * GetProcAddress takes an ANSI name.
+ *
+ * @param hModule Module handle from LoadLibrary.
+ * @param lpProcName Export name, matching the case of the EXPORTS entry,
+ *        or an ordinal in the low word with a zero high word.
+ * @return The function address, or NULL on failure (see GetLastError).
+ */
+WINBASEAPI FARPROC WINAPI GetProcAddressW(HINSTANCE hModule,LPCWSTR lpProcName);
 #else
 WINBASEAPI FARPROC WINAPI GetProcAddress(HINSTANCE,LPCSTR);
 #endif
@@ -1786,6 +2365,13 @@ WINBASEAPI BOOL WINAPI GetProcessDEPPolicy (HANDLE, LPDWORD, PBOOL);
 #if (_WIN32_WINNT >= 0x0501)
 WINBASEAPI BOOL WINAPI GetProcessHandleCount(HANDLE,PDWORD);
 #endif
+/**
+ * Returns the calling process's default heap.
+ *
+ * Use with HeapAlloc, HeapFree and so on. Don't destroy it.
+ *
+ * @return The heap, or NULL on failure (see GetLastError).
+ */
 WINBASEAPI HANDLE WINAPI GetProcessHeap(VOID);
 WINBASEAPI DWORD WINAPI GetProcessHeaps(DWORD,PHANDLE);
 #if (_WIN32_WINNT >= 0x0501)
@@ -1797,7 +2383,16 @@ WINBASEAPI BOOL WINAPI GetProcessIoCounters(HANDLE,PIO_COUNTERS);
 WINBASEAPI BOOL WINAPI GetProcessPriorityBoost(HANDLE,PBOOL);
 WINBASEAPI BOOL WINAPI GetProcessShutdownParameters(PDWORD,PDWORD);
 WINBASEAPI BOOL WINAPI GetProcessTimes(HANDLE,LPFILETIME,LPFILETIME,LPFILETIME,LPFILETIME);
-WINBASEAPI DWORD WINAPI GetProcessVersion(DWORD);
+/**
+ * Returns the Windows version a process's executable was built for.
+ *
+ * @param ProcessId The process, or 0 for the calling process.
+ * @return The major version in the high word and the minor in the low
+ *         word, or 0 on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI DWORD WINAPI GetProcessVersion(DWORD ProcessId);
 WINBASEAPI HWINSTA WINAPI GetProcessWindowStation(void);
 WINBASEAPI BOOL WINAPI GetProcessWorkingSetSize(HANDLE,PSIZE_T,PSIZE_T);
 WINBASEAPI UINT WINAPI GetProfileIntA(LPCSTR,LPCSTR,INT);
@@ -1827,17 +2422,39 @@ WINBASEAPI DEP_SYSTEM_POLICY_TYPE WINAPI GetSystemDEPPolicy (void);
 #endif
 WINBASEAPI UINT WINAPI GetSystemDirectoryA(LPSTR,UINT);
 WINBASEAPI UINT WINAPI GetSystemDirectoryW(LPWSTR,UINT);
-WINBASEAPI VOID WINAPI GetSystemInfo(LPSYSTEM_INFO);
+/**
+ * Returns information about the system, such as processor type, page
+ * size and address range.
+ *
+ * @param lpSystemInfo Receives a SYSTEM_INFO.
+ */
+WINBASEAPI VOID WINAPI GetSystemInfo(LPSYSTEM_INFO lpSystemInfo);
 #ifndef _WIN32_WCE
 WINBASEAPI BOOL WINAPI GetSystemPowerStatus(LPSYSTEM_POWER_STATUS);
 #else
 WINBASEAPI DWORD GetSystemPowerStatusEx2(PSYSTEM_POWER_STATUS_EX2,DWORD,BOOL);
-WINBASEAPI BOOL GetSystemPowerStatusEx(PSYSTEM_POWER_STATUS_EX,BOOL);
+/**
+ * Returns the power status: AC or battery, charging state and the
+ * remaining life of the main and backup batteries.
+ *
+ * Windows CE specific. Not supported under emulation.
+ *
+ * @param pstatus Receives a SYSTEM_POWER_STATUS_EX.
+ * @param fUpdate TRUE to read fresh values from the driver, FALSE for
+ *        cached values that may be a few seconds old.
+ * @return TRUE on success, FALSE on failure.
+ */
+WINBASEAPI BOOL GetSystemPowerStatusEx(PSYSTEM_POWER_STATUS_EX pstatus,BOOL fUpdate);
 #endif
 #if (_WIN32_WINNT >= 0x0501)
 WINBASEAPI BOOL WINAPI GetSystemRegistryQuota(PDWORD,PDWORD);
 #endif
-WINBASEAPI VOID WINAPI GetSystemTime(LPSYSTEMTIME);
+/**
+ * Returns the current date and time in UTC.
+ *
+ * @param lpSystemTime Receives the UTC time.
+ */
+WINBASEAPI VOID WINAPI GetSystemTime(LPSYSTEMTIME lpSystemTime);
 #if (_WIN32_WINNT >= 0x0501)
 WINBASEAPI BOOL WINAPI GetSystemTimes(LPFILETIME,LPFILETIME,LPFILETIME);
 #endif
@@ -1857,23 +2474,94 @@ WINBASEAPI DWORD WINAPI GetTapeStatus(HANDLE);
 WINBASEAPI UINT WINAPI GetTempFileNameA(LPCSTR,LPCSTR,UINT,LPSTR);
 WINBASEAPI UINT WINAPI GetTempFileNameW(LPCWSTR,LPCWSTR,UINT,LPWSTR);
 WINBASEAPI DWORD WINAPI GetTempPathA(DWORD,LPSTR);
-WINBASEAPI DWORD WINAPI GetTempPathW(DWORD,LPWSTR);
-WINBASEAPI BOOL WINAPI GetThreadContext(HANDLE,LPCONTEXT);
+/**
+ * Returns the directory for temporary files.
+ *
+ * The path ends with a backslash.
+ *
+ * @param nBufferLength Size of lpBuffer in characters.
+ * @param lpBuffer Receives the path.
+ * @return Characters copied, excluding the terminator. If the buffer is
+ *         too small, the size needed. 0 on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI DWORD WINAPI GetTempPathW(DWORD nBufferLength,LPWSTR lpBuffer);
+/**
+ * Returns the register context of a thread.
+ *
+ * For debuggers. Suspend the thread first, and set ContextFlags to choose
+ * which registers to read.
+ *
+ * @param hThread The thread.
+ * @param lpContext CONTEXT with ContextFlags set. Receives the registers.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI GetThreadContext(HANDLE hThread,LPCONTEXT lpContext);
 #if (_WIN32_WINNT >= 0x0501)
 WINBASEAPI BOOL WINAPI GetThreadIOPendingFlag(HANDLE,PBOOL);
 #endif
-WINBASEAPI int WINAPI GetThreadPriority(HANDLE);
+/**
+ * Returns a thread's priority level.
+ *
+ * Windows CE has no priority classes: threads are scheduled by thread
+ * priority alone. A THREAD_PRIORITY_TIME_CRITICAL thread runs until it
+ * yields, so can starve the rest of the system.
+ *
+ * @param hThread The thread.
+ * @return THREAD_PRIORITY_TIME_CRITICAL, _HIGHEST, _ABOVE_NORMAL, _NORMAL,
+ *         _BELOW_NORMAL, _LOWEST, _ABOVE_IDLE or _IDLE, or
+ *         THREAD_PRIORITY_ERROR_RETURN on failure.
+ */
+WINBASEAPI int WINAPI GetThreadPriority(HANDLE hThread);
 WINBASEAPI BOOL WINAPI GetThreadPriorityBoost(HANDLE,PBOOL);
 WINBASEAPI BOOL WINAPI GetThreadSelectorEntry(HANDLE,DWORD,LPLDT_ENTRY);
 WINBASEAPI BOOL WINAPI GetThreadTimes(HANDLE,LPFILETIME,LPFILETIME,LPFILETIME,LPFILETIME);
+/**
+ * Returns the number of milliseconds since the device was started.
+ *
+ * Wraps to zero after about 49.7 days. The count stops while the device is
+ * switched off and carries on from the same value when it's switched back
+ * on, so it only resets on a reboot. Use it for intervals, not wall-clock
+ * time.
+ *
+ * @return Milliseconds elapsed since boot.
+ */
 WINBASEAPI DWORD WINAPI GetTickCount(VOID);
-WINBASEAPI DWORD WINAPI GetTimeZoneInformation(LPTIME_ZONE_INFORMATION);
+/**
+ * Gets the current time-zone settings used to convert between UTC and local
+ * time.
+ *
+ * UTC = local time + bias, with the bias in minutes. Windows CE always
+ * returns TIME_ZONE_ID_UNKNOWN, never TIME_ZONE_ID_STANDARD or
+ * TIME_ZONE_ID_DAYLIGHT, so don't use the return value to tell whether
+ * daylight saving is in effect.
+ *
+ * @param lpTimeZoneInformation TIME_ZONE_INFORMATION that receives the
+ *        settings.
+ * @return TIME_ZONE_ID_UNKNOWN, or 0xFFFFFFFF on failure (see
+ *         GetLastError).
+ */
+WINBASEAPI DWORD WINAPI GetTimeZoneInformation(LPTIME_ZONE_INFORMATION lpTimeZoneInformation);
 WINBASEAPI BOOL WINAPI GetTokenInformation(HANDLE,TOKEN_INFORMATION_CLASS,PVOID,DWORD,PDWORD);
 WINBASEAPI BOOL WINAPI GetUserNameA (LPSTR,PDWORD);
 WINBASEAPI BOOL WINAPI GetUserNameW(LPWSTR,PDWORD);
 WINBASEAPI DWORD WINAPI GetVersion(void);
 WINBASEAPI BOOL WINAPI GetVersionExA(LPOSVERSIONINFOA);
-WINBASEAPI BOOL WINAPI GetVersionExW(LPOSVERSIONINFOW);
+/**
+ * Gets the operating system version.
+ *
+ * Set dwOSVersionInfoSize to sizeof(OSVERSIONINFOW) before calling.
+ * dwPlatformId is VER_PLATFORM_WIN32_CE. The Japanese Windows CE 2.01
+ * reports itself as version 2.0.
+ *
+ * @param lpVersionInformation OSVERSIONINFOW that receives the version, with
+ *        dwOSVersionInfoSize set.
+ * @return TRUE on success, FALSE if dwOSVersionInfoSize is too small.
+ */
+WINBASEAPI BOOL WINAPI GetVersionExW(LPOSVERSIONINFOW lpVersionInformation);
 WINBASEAPI BOOL WINAPI GetVolumeInformationA(LPCSTR,LPSTR,DWORD,PDWORD,PDWORD,PDWORD,LPSTR,DWORD);
 WINBASEAPI BOOL WINAPI GetVolumeInformationW(LPCWSTR,LPWSTR,DWORD,PDWORD,PDWORD,PDWORD,LPWSTR,DWORD);
 #if (_WIN32_WINNT >= 0x0500)
@@ -1888,7 +2576,15 @@ WINBASEAPI BOOL WINAPI GetVolumePathNamesForVolumeNameW(LPCWSTR,LPWSTR,DWORD,PDW
 #endif
 WINBASEAPI UINT WINAPI GetWindowsDirectoryA(LPSTR,UINT);
 WINBASEAPI UINT WINAPI GetWindowsDirectoryW(LPWSTR,UINT);
-WINBASEAPI DWORD WINAPI GetWindowThreadProcessId(HWND,PDWORD);
+/**
+ * Gets the identifiers of the thread and process that created a window.
+ *
+ * @param hWnd The window.
+ * @param lpdwProcessId Receives the process identifier, or NULL if not
+ *        needed.
+ * @return The identifier of the thread that created the window.
+ */
+WINBASEAPI DWORD WINAPI GetWindowThreadProcessId(HWND hWnd,PDWORD lpdwProcessId);
 WINBASEAPI UINT WINAPI GetWriteWatch(DWORD,PVOID,SIZE_T,PVOID*,PULONG_PTR,PULONG);
 WINBASEAPI ATOM WINAPI GlobalAddAtomA(LPCSTR);
 WINBASEAPI ATOM WINAPI GlobalAddAtomW( LPCWSTR);
@@ -1919,7 +2615,14 @@ WINBASEAPI UINT WINAPI GlobalFlags(HGLOBAL); /* Obsolete: Has no effect. */
 # define GlobalSize(lp) LocalSize(lp)
 # define GlobalFlags(lp) LocalFlags(lp)
 #endif
-WINBASEAPI VOID WINAPI GlobalMemoryStatus(LPMEMORYSTATUS);
+/**
+ * Gets the amount of physical and virtual memory in use and available.
+ *
+ * Set dwLength to sizeof(MEMORYSTATUS) before calling.
+ *
+ * @param lpmst MEMORYSTATUS that receives the figures.
+ */
+WINBASEAPI VOID WINAPI GlobalMemoryStatus(LPMEMORYSTATUS lpmst);
 #if (_WIN32_WINNT >= 0x0500)
 WINBASEAPI BOOL WINAPI GlobalMemoryStatusEx(LPMEMORYSTATUSEX);
 #endif
@@ -1927,29 +2630,121 @@ WINBASEAPI VOID WINAPI GlobalUnfix(HGLOBAL); /* Obsolete: Has no effect. */
 WINBASEAPI BOOL WINAPI GlobalUnWire(HGLOBAL); /* Obsolete: Has no effect. */
 WINBASEAPI PVOID WINAPI GlobalWire(HGLOBAL); /* Obsolete: Has no effect. */
 #define HasOverlappedIoCompleted(lpOverlapped)  ((lpOverlapped)->Internal != STATUS_PENDING)
-WINBASEAPI PVOID WINAPI HeapAlloc(HANDLE,DWORD,DWORD);
+/**
+ * Allocates a fixed (non-movable) block from a heap.
+ *
+ * The block may be larger than requested; HeapSize gives the real size.
+ * Memory isn't zeroed unless HEAP_ZERO_MEMORY is given. Free with HeapFree.
+ *
+ * @param hHeap Heap from HeapCreate or GetProcessHeap.
+ * @param dwFlags 0, or HEAP_NO_SERIALIZE and/or HEAP_ZERO_MEMORY. These
+ *        override the heap's own options. Windows CE doesn't support
+ *        HEAP_GENERATE_EXCEPTIONS.
+ * @param dwBytes Size in bytes.
+ * @return The block, or NULL on failure.
+ */
+WINBASEAPI PVOID WINAPI HeapAlloc(HANDLE hHeap,DWORD dwFlags,DWORD dwBytes);
 SIZE_T WINAPI HeapCompact(HANDLE,DWORD);
-WINBASEAPI HANDLE WINAPI HeapCreate(DWORD,DWORD,DWORD);
-WINBASEAPI BOOL WINAPI HeapDestroy(HANDLE);
-WINBASEAPI BOOL WINAPI HeapFree(HANDLE,DWORD,PVOID);
+/**
+ * Creates a private heap for the calling process.
+ *
+ * Reserves dwMaximumSize of address space and commits dwInitialSize up
+ * front, committing more as allocations need it. Both sizes are rounded up
+ * to a whole page. Some of the heap goes on bookkeeping, so a block as big
+ * as the maximum size won't fit. A heap created by a DLL belongs to the
+ * process that called it. Destroy with HeapDestroy.
+ *
+ * @param flOptions 0, or HEAP_NO_SERIALIZE to skip locking when only one
+ *        thread uses the heap. Windows CE doesn't support
+ *        HEAP_GENERATE_EXCEPTIONS.
+ * @param dwInitialSize Bytes to commit initially.
+ * @param dwMaximumSize Bytes to reserve, or 0 for a heap limited only by
+ *        available memory.
+ * @return The heap, or NULL on failure.
+ */
+WINBASEAPI HANDLE WINAPI HeapCreate(DWORD flOptions,DWORD dwInitialSize,DWORD dwMaximumSize);
+/**
+ * Destroys a private heap and releases all of its memory.
+ *
+ * Blocks still allocated from the heap don't need freeing first.
+ *
+ * @param hHeap Heap from HeapCreate.
+ * @return TRUE on success, FALSE on failure.
+ */
+WINBASEAPI BOOL WINAPI HeapDestroy(HANDLE hHeap);
+/**
+ * Frees a block allocated with HeapAlloc or HeapReAlloc.
+ *
+ * @param hHeap The heap the block came from.
+ * @param dwFlags 0, or HEAP_NO_SERIALIZE.
+ * @param lpMem The block.
+ * @return TRUE on success, FALSE on failure.
+ */
+WINBASEAPI BOOL WINAPI HeapFree(HANDLE hHeap,DWORD dwFlags,PVOID lpMem);
 WINBASEAPI BOOL WINAPI HeapLock(HANDLE);
 #if (_WIN32_WINNT >= 0x0501)
 WINBASEAPI BOOL WINAPI HeapQueryInformation(HANDLE,HEAP_INFORMATION_CLASS,PVOID,SIZE_T,PSIZE_T);
 #endif
-WINBASEAPI PVOID WINAPI HeapReAlloc(HANDLE,DWORD,PVOID,DWORD);
+/**
+ * Resizes a block allocated from a heap.
+ *
+ * The block may move when it grows unless HEAP_REALLOC_IN_PLACE_ONLY is
+ * given, so use the returned pointer. On failure the original block is
+ * left as it was. Free with HeapFree.
+ *
+ * @param hHeap The heap the block came from.
+ * @param dwFlags 0, or any of HEAP_NO_SERIALIZE, HEAP_REALLOC_IN_PLACE_ONLY
+ *        (fail rather than move) and HEAP_ZERO_MEMORY (zero the added
+ *        bytes). Windows CE doesn't support HEAP_GENERATE_EXCEPTIONS.
+ * @param lpMem Block from HeapAlloc or HeapReAlloc.
+ * @param dwBytes New size in bytes, larger or smaller.
+ * @return The resized block, or NULL on failure.
+ */
+WINBASEAPI PVOID WINAPI HeapReAlloc(HANDLE hHeap,DWORD dwFlags,PVOID lpMem,DWORD dwBytes);
 #if (_WIN32_WINNT >= 0x0501)
 WINBASEAPI BOOL WINAPI HeapSetInformation(HANDLE,HEAP_INFORMATION_CLASS,PVOID,SIZE_T);
 #endif
-WINBASEAPI DWORD WINAPI HeapSize(HANDLE,DWORD,PCVOID);
+/**
+ * Returns the size of a block allocated from a heap.
+ *
+ * The size may be more than was asked for.
+ *
+ * @param hHeap The heap the block came from.
+ * @param dwFlags 0, or HEAP_NO_SERIALIZE.
+ * @param lpMem Block from HeapAlloc or HeapReAlloc.
+ * @return The size in bytes, or 0xFFFFFFFF on failure. Failure doesn't set
+ *         the last error.
+ */
+WINBASEAPI DWORD WINAPI HeapSize(HANDLE hHeap,DWORD dwFlags,PCVOID lpMem);
 WINBASEAPI BOOL WINAPI HeapUnlock(HANDLE);
-WINBASEAPI BOOL WINAPI HeapValidate(HANDLE,DWORD,PCVOID);
+/**
+ * Checks a heap, or one block in it, for corruption.
+ *
+ * @param hHeap The heap to check.
+ * @param dwFlags 0, or HEAP_NO_SERIALIZE.
+ * @param lpMem A block to check, or NULL to check the whole heap.
+ * @return TRUE if the heap or block is valid, FALSE if not.
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI HeapValidate(HANDLE hHeap,DWORD dwFlags,PCVOID lpMem);
 WINBASEAPI BOOL WINAPI HeapWalk(HANDLE,LPPROCESS_HEAP_ENTRY);
 WINBASEAPI BOOL WINAPI ImpersonateLoggedOnUser(HANDLE);
 WINBASEAPI BOOL WINAPI ImpersonateNamedPipeClient(HANDLE);
 WINBASEAPI BOOL WINAPI ImpersonateSelf(SECURITY_IMPERSONATION_LEVEL);
 WINBASEAPI BOOL WINAPI InitAtomTable(DWORD);
 WINBASEAPI BOOL WINAPI InitializeAcl(PACL,DWORD,DWORD);
-WINBASEAPI VOID WINAPI InitializeCriticalSection(LPCRITICAL_SECTION);
+/**
+ * Initialises a critical section object.
+ *
+ * Call once before EnterCriticalSection or LeaveCriticalSection, and
+ * release with DeleteCriticalSection. Critical sections work between
+ * threads of one process only; use a mutex across processes. Treat the
+ * structure as opaque and don't move or copy it.
+ *
+ * @param lpCriticalSection The critical section, allocated by the caller.
+ */
+WINBASEAPI VOID WINAPI InitializeCriticalSection(LPCRITICAL_SECTION lpCriticalSection);
 WINBASEAPI BOOL WINAPI InitializeCriticalSectionAndSpinCount(LPCRITICAL_SECTION,DWORD);
 WINBASEAPI DWORD WINAPI SetCriticalSectionSpinCount(LPCRITICAL_SECTION,DWORD);
 WINBASEAPI BOOL WINAPI InitializeSecurityDescriptor(PSECURITY_DESCRIPTOR,DWORD);
@@ -1967,8 +2762,28 @@ LONG WINAPI InterlockedCompareExchange(LONG volatile *,LONG,LONG);
 /* PVOID WINAPI InterlockedCompareExchangePointer(PVOID*,PVOID,PVOID); */
 #define InterlockedCompareExchangePointer(d,e,c) \
     (PVOID)InterlockedCompareExchange((LONG volatile *)(d),(LONG)(e),(LONG)(c))
-LONG WINAPI InterlockedDecrement(LONG volatile *);
-LONG WINAPI InterlockedExchange(LONG volatile *,LONG);
+/**
+ * Atomically decrements a 32-bit variable.
+ *
+ * Safe against other Interlocked* calls on the same variable, including
+ * from other processes if it's in shared memory. The variable must be
+ * 32-bit aligned.
+ *
+ * @param lpAddend The variable to decrement.
+ * @return Zero if the result is zero, otherwise a value with the same sign
+ *         as the result. It isn't guaranteed to equal the result.
+ */
+LONG WINAPI InterlockedDecrement(LONG volatile *lpAddend);
+/**
+ * Atomically sets a 32-bit variable and returns its previous value.
+ *
+ * The variable must be 32-bit aligned.
+ *
+ * @param Target The variable to set.
+ * @param Value The new value.
+ * @return The previous value.
+ */
+LONG WINAPI InterlockedExchange(LONG volatile *Target,LONG Value);
 /* PVOID WINAPI InterlockedExchangePointer(PVOID*,PVOID); */
 #define InterlockedExchangePointer(t,v) \
     (PVOID)InterlockedExchange((LONG volatile *)(t),(LONG)(v))
@@ -1976,7 +2791,18 @@ LONG WINAPI InterlockedExchangeAdd(LONG volatile *,LONG);
 #if (_WIN32_WINNT >= 0x0501)
 PSLIST_ENTRY WINAPI InterlockedFlushSList(PSLIST_HEADER);
 #endif
-LONG WINAPI InterlockedIncrement(LONG volatile *);
+/**
+ * Atomically increments a 32-bit variable.
+ *
+ * Safe against other Interlocked* calls on the same variable, including
+ * from other processes if it's in shared memory. The variable must be
+ * 32-bit aligned.
+ *
+ * @param lpAddend The variable to increment.
+ * @return Zero if the result is zero, otherwise a value with the same sign
+ *         as the result. It isn't guaranteed to equal the result.
+ */
+LONG WINAPI InterlockedIncrement(LONG volatile *lpAddend);
 #if (_WIN32_WINNT >= 0x0501)
 PSLIST_ENTRY WINAPI InterlockedPopEntrySList(PSLIST_HEADER);
 PSLIST_ENTRY WINAPI InterlockedPushEntrySList(PSLIST_HEADER,PSLIST_ENTRY);
@@ -1984,13 +2810,42 @@ PSLIST_ENTRY WINAPI InterlockedPushEntrySList(PSLIST_HEADER,PSLIST_ENTRY);
 #endif /* __INTERLOCKED_DECLARED */
 #endif /*  __USE_NTOSKRNL__ */
 
-WINBASEAPI BOOL WINAPI IsBadCodePtr(FARPROC);
+/**
+ * Checks whether the calling process can read memory at an address.
+ *
+ * Only the single address is checked. Another thread can change access at
+ * any time, so use structured exception handling when it matters.
+ *
+ * @param lpfn The address to check.
+ * @return FALSE if the memory is readable, TRUE if not.
+ */
+WINBASEAPI BOOL WINAPI IsBadCodePtr(FARPROC lpfn);
 WINBASEAPI BOOL WINAPI IsBadHugeReadPtr(PCVOID,UINT);
 WINBASEAPI BOOL WINAPI IsBadHugeWritePtr(PVOID,UINT);
-WINBASEAPI BOOL WINAPI IsBadReadPtr(PCVOID,UINT);
+/**
+ * Checks whether the calling process can read a range of memory.
+ *
+ * Another thread can change access at any time, so use structured
+ * exception handling when it matters.
+ *
+ * @param lp Start of the range.
+ * @param ucb Size of the range in bytes. 0 always gives FALSE.
+ * @return FALSE if every byte is readable, TRUE if any isn't.
+ */
+WINBASEAPI BOOL WINAPI IsBadReadPtr(PCVOID lp,UINT ucb);
 WINBASEAPI BOOL WINAPI IsBadStringPtrA(LPCSTR,UINT);
 WINBASEAPI BOOL WINAPI IsBadStringPtrW(LPCWSTR,UINT);
-WINBASEAPI BOOL WINAPI IsBadWritePtr(PVOID,UINT);
+/**
+ * Checks whether the calling process can write to a range of memory.
+ *
+ * Another thread can change access at any time, so use structured
+ * exception handling when it matters.
+ *
+ * @param lp Start of the range.
+ * @param ucb Size of the range in bytes. 0 always gives FALSE.
+ * @return FALSE if every byte is writable, TRUE if any isn't.
+ */
+WINBASEAPI BOOL WINAPI IsBadWritePtr(PVOID lp,UINT ucb);
 WINBASEAPI BOOL WINAPI IsDebuggerPresent(void);
 #if (_WIN32_WINNT >= 0x0501)
 WINBASEAPI BOOL IsProcessInJob(HANDLE,HANDLE,PBOOL);
@@ -2007,24 +2862,85 @@ WINBASEAPI BOOL WINAPI IsValidSid(PSID);
 #if (_WIN32_WINNT >= 0x0501)
 WINBASEAPI BOOL WINAPI IsWow64Process(HANDLE,PBOOL);
 #endif
-WINBASEAPI void WINAPI LeaveCriticalSection(LPCRITICAL_SECTION);
+/**
+ * Releases a critical section held by the calling thread.
+ *
+ * Call once for each EnterCriticalSection. Leaving a critical section the
+ * thread doesn't own can leave other threads waiting forever.
+ *
+ * @param lpCriticalSection The critical section.
+ */
+WINBASEAPI void WINAPI LeaveCriticalSection(LPCRITICAL_SECTION lpCriticalSection);
 #define LimitEmsPages(n)
 WINBASEAPI HINSTANCE WINAPI LoadLibraryA(LPCSTR);
 WINBASEAPI HINSTANCE WINAPI LoadLibraryExA(LPCSTR,HANDLE,DWORD);
 WINBASEAPI HINSTANCE WINAPI LoadLibraryExW(LPCWSTR,HANDLE,DWORD);
-WINBASEAPI HINSTANCE WINAPI LoadLibraryW(LPCWSTR);
+/**
+ * Loads a DLL or other executable module into the calling process.
+ *
+ * Without a path, Windows CE looks in the root of a PC Card RAM expansion
+ * card (if any), then \Windows, then the root directory; there's no way to
+ * set a search path. Without a path or extension, ".dll" is appended. Only
+ * the base name identifies a module: once Sample.dll is loaded, loading
+ * Sample.cpl or \MyDir\Sample.dll returns the same module. Loading an
+ * already loaded module increments its reference count. Release with
+ * FreeLibrary; get exports with GetProcAddress. An .exe can be loaded for
+ * its resources.
+ *
+ * @param lpLibFileName File name of the module.
+ * @return The module handle, or NULL on failure (see GetLastError).
+ */
+WINBASEAPI HINSTANCE WINAPI LoadLibraryW(LPCWSTR lpLibFileName);
 WINBASEAPI DWORD WINAPI LoadModule(LPCSTR,PVOID);
-WINBASEAPI HGLOBAL WINAPI LoadResource(HINSTANCE,HRSRC);
-WINBASEAPI HLOCAL WINAPI LocalAlloc(UINT,SIZE_T);
+/**
+ * Loads a resource and returns a handle to its data.
+ *
+ * The data is freed by the system. On Windows CE hModule must not be NULL.
+ *
+ * @param hModule Module containing the resource. Must not be NULL.
+ * @param hResInfo Resource from FindResource.
+ * @return The resource data, or NULL on failure (see GetLastError).
+ */
+WINBASEAPI HGLOBAL WINAPI LoadResource(HINSTANCE hModule,HRSRC hResInfo);
+/**
+ * Allocates a block from the process's local heap.
+ *
+ * Windows CE only supports fixed memory: the handle is a pointer to the
+ * block. The local heap is limited to 1MB; use HeapCreate for more, each
+ * heap again up to 1MB. The block may be larger than requested (see
+ * LocalSize). Free with LocalFree.
+ *
+ * @param uFlags LMEM_FIXED (or 0), optionally with LMEM_ZEROINIT, or LPTR
+ *        for both. Windows CE doesn't support LMEM_MOVEABLE, LHND,
+ *        NONZEROLHND, NONZEROLPTR, LMEM_DISCARDABLE, LMEM_NOCOMPACT or
+ *        LMEM_NODISCARD.
+ * @param uBytes Size in bytes.
+ * @return The block, or NULL on failure (see GetLastError).
+ */
+WINBASEAPI HLOCAL WINAPI LocalAlloc(UINT uFlags,SIZE_T uBytes);
 WINBASEAPI SIZE_T WINAPI LocalCompact(UINT); /* Obsolete: Has no effect. */
 WINBASEAPI HLOCAL LocalDiscard(HLOCAL);
-WINBASEAPI BOOL WINAPI LocalFileTimeToFileTime(CONST FILETIME *,LPFILETIME);
+/**
+ * Converts a local file time to UTC.
+ *
+ * @param lpLocalFileTime The local time.
+ * @param lpFileTime Receives the UTC time. Must not be the same structure
+ *        as lpLocalFileTime.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI LocalFileTimeToFileTime(CONST FILETIME *lpLocalFileTime,LPFILETIME lpFileTime);
 #ifndef _WIN32_WCE
 WINBASEAPI UINT WINAPI LocalFlags(HLOCAL); /* Obsolete: Has no effect. */
 #else
 # define LocalFlags(H) ((UINT)0)
 #endif
-WINBASEAPI HLOCAL WINAPI LocalFree(HLOCAL);
+/**
+ * Frees a block allocated with LocalAlloc or LocalReAlloc.
+ *
+ * @param hMem The block, or NULL to do nothing.
+ * @return NULL on success, or hMem on failure (see GetLastError).
+ */
+WINBASEAPI HLOCAL WINAPI LocalFree(HLOCAL hMem);
 #ifndef _WIN32_WCE
 WINBASEAPI HLOCAL WINAPI LocalHandle(LPCVOID);
 #else
@@ -2035,9 +2951,32 @@ WINBASEAPI LPVOID WINAPI LocalLock(HLOCAL);
 #else
 # define LocalLock(H) ((LPVOID)(H))
 #endif
-WINBASEAPI HLOCAL WINAPI LocalReAlloc(HLOCAL,SIZE_T,UINT);
+/**
+ * Resizes a block allocated with LocalAlloc.
+ *
+ * The block only moves if LMEM_MOVEABLE is given, so without it growing a
+ * block may fail. Use the returned handle. On the device, hMem may be NULL
+ * to allocate a new block; the emulator and Windows NT reject that.
+ *
+ * @param hMem Block from LocalAlloc or LocalReAlloc.
+ * @param uBytes New size in bytes, larger or smaller.
+ * @param uFlags LMEM_MOVEABLE to allow the block to move and LMEM_ZEROINIT
+ *        to zero the added bytes. Windows CE doesn't support
+ *        LMEM_DISCARDABLE or LMEM_NOCOMPACT.
+ * @return The resized block, or NULL on failure (see GetLastError).
+ */
+WINBASEAPI HLOCAL WINAPI LocalReAlloc(HLOCAL hMem,SIZE_T uBytes,UINT uFlags);
 WINBASEAPI SIZE_T WINAPI LocalShrink(HLOCAL,UINT);  /* Obsolete: Has no effect. */
-WINBASEAPI UINT WINAPI LocalSize(HLOCAL);
+/**
+ * Returns the size of a block allocated with LocalAlloc or LocalReAlloc.
+ *
+ * The size may be more than was asked for.
+ *
+ * @param hMem The block.
+ * @return The size in bytes, or 0 if the handle isn't valid (see
+ *         GetLastError).
+ */
+WINBASEAPI UINT WINAPI LocalSize(HLOCAL hMem);
 #ifndef _WIN32_WCE
 WINBASEAPI BOOL WINAPI LocalUnlock(HLOCAL);
 #else
@@ -2067,8 +3006,28 @@ WINBASEAPI LPSTR WINAPI lstrcatA(LPSTR,LPCSTR);
 WINBASEAPI LPWSTR WINAPI lstrcatW(LPWSTR,LPCWSTR);
 WINBASEAPI int WINAPI lstrcmpA(LPCSTR,LPCSTR);
 WINBASEAPI int WINAPI lstrcmpiA(LPCSTR,LPCSTR);
-WINBASEAPI int WINAPI lstrcmpiW( LPCWSTR,LPCWSTR);
-WINBASEAPI int WINAPI lstrcmpW(LPCWSTR,LPCWSTR);
+/**
+ * Compares two strings, ignoring case, using locale word sort rules.
+ *
+ * @param lpString1 First string.
+ * @param lpString2 Second string.
+ * @return Negative if lpString1 sorts first, 0 if equal, positive if
+ *         lpString2 sorts first.
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI int WINAPI lstrcmpiW( LPCWSTR lpString1,LPCWSTR lpString2);
+/**
+ * Compares two strings, case-sensitively, using locale word sort rules.
+ *
+ * @param lpString1 First string.
+ * @param lpString2 Second string.
+ * @return Negative if lpString1 sorts first, 0 if equal, positive if
+ *         lpString2 sorts first.
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI int WINAPI lstrcmpW(LPCWSTR lpString1,LPCWSTR lpString2);
 WINBASEAPI LPSTR WINAPI lstrcpyA(LPSTR,LPCSTR);
 WINBASEAPI LPSTR WINAPI lstrcpynA(LPSTR,LPCSTR,int);
 WINBASEAPI LPWSTR WINAPI lstrcpynW(LPWSTR,LPCWSTR,int);
@@ -2079,12 +3038,39 @@ WINBASEAPI BOOL WINAPI MakeAbsoluteSD(PSECURITY_DESCRIPTOR,PSECURITY_DESCRIPTOR,
 #define MakeProcInstance(p,i) (p)
 WINBASEAPI BOOL WINAPI MakeSelfRelativeSD(PSECURITY_DESCRIPTOR,PSECURITY_DESCRIPTOR,PDWORD);
 WINBASEAPI VOID WINAPI MapGenericMask(PDWORD,PGENERIC_MAPPING);
-WINBASEAPI PVOID WINAPI MapViewOfFile(HANDLE,DWORD,DWORD,DWORD,DWORD);
+/**
+ * Maps a view of a file-mapping object into the calling process.
+ *
+ * The file stays open until the last view is unmapped, even if its handle
+ * is closed. Unmap with UnmapViewOfFile.
+ *
+ * @param hFileMappingObject Mapping from CreateFileMapping.
+ * @param dwDesiredAccess FILE_MAP_READ (mapping created with PAGE_READONLY
+ *        or PAGE_READWRITE) or FILE_MAP_WRITE (PAGE_READWRITE).
+ *        FILE_MAP_ALL_ACCESS is the same as FILE_MAP_WRITE.
+ * @param dwFileOffsetHigh High 32 bits of the file offset to start at.
+ * @param dwFileOffsetLow Low 32 bits of the file offset. The offset must be
+ *        a multiple of the allocation granularity (see GetSystemInfo).
+ * @param dwNumberOfBytesToMap Bytes to map, or 0 for the whole file.
+ * @return Start address of the view, or NULL on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI PVOID WINAPI MapViewOfFile(HANDLE hFileMappingObject,DWORD dwDesiredAccess,DWORD dwFileOffsetHigh,DWORD dwFileOffsetLow,DWORD dwNumberOfBytesToMap);
 WINBASEAPI PVOID WINAPI MapViewOfFileEx(HANDLE,DWORD,DWORD,DWORD,DWORD,PVOID);
 WINBASEAPI BOOL WINAPI MoveFileA(LPCSTR,LPCSTR);
 WINBASEAPI BOOL WINAPI MoveFileExA(LPCSTR,LPCSTR,DWORD);
 WINBASEAPI BOOL WINAPI MoveFileExW(LPCWSTR,LPCWSTR,DWORD);
-WINBASEAPI BOOL WINAPI MoveFileW(LPCWSTR,LPCWSTR);
+/**
+ * Renames or moves a file or a directory with its contents.
+ *
+ * Files can move between volumes; directories can't.
+ *
+ * @param lpExistingFileName Existing file or directory.
+ * @param lpNewFileName New name. Must not already exist.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI MoveFileW(LPCWSTR lpExistingFileName,LPCWSTR lpNewFileName);
 #if (_WIN32_WINNT >= 0x0500)
 WINBASEAPI BOOL WINAPI MoveFileWithProgressA(LPCSTR,LPCSTR,LPPROGRESS_ROUTINE,LPVOID,DWORD);
 WINBASEAPI BOOL WINAPI MoveFileWithProgressW(LPCWSTR,LPCWSTR,LPPROGRESS_ROUTINE,LPVOID,DWORD);
@@ -2110,7 +3096,21 @@ WINBASEAPI HANDLE WINAPI OpenFileMappingA(DWORD,BOOL,LPCSTR);
 WINBASEAPI HANDLE WINAPI OpenFileMappingW(DWORD,BOOL,LPCWSTR);
 WINBASEAPI HANDLE WINAPI OpenMutexA(DWORD,BOOL,LPCSTR);
 WINBASEAPI HANDLE WINAPI OpenMutexW(DWORD,BOOL,LPCWSTR);
-WINBASEAPI HANDLE WINAPI OpenProcess(DWORD,BOOL,DWORD);
+/**
+ * Opens a handle to an existing process.
+ *
+ * Windows CE doesn't support handle inheritance or per-handle access
+ * rights. Close the handle with CloseHandle.
+ *
+ * @param dwDesiredAccess Access rights. Not supported on Windows CE: pass
+ *        0.
+ * @param bInheritHandle Not supported on Windows CE: pass FALSE.
+ * @param dwProcessId Identifier of the process to open.
+ * @return The process handle, or NULL on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI HANDLE WINAPI OpenProcess(DWORD dwDesiredAccess,BOOL bInheritHandle,DWORD dwProcessId);
 WINBASEAPI BOOL WINAPI OpenProcessToken(HANDLE,DWORD,PHANDLE);
 WINBASEAPI HANDLE WINAPI OpenSemaphoreA(DWORD,BOOL,LPCSTR);
 WINBASEAPI HANDLE WINAPI OpenSemaphoreW(DWORD,BOOL,LPCWSTR);
@@ -2121,7 +3121,14 @@ WINBASEAPI BOOL WINAPI OpenThreadToken(HANDLE,DWORD,BOOL,PHANDLE);
 WINBASEAPI HANDLE WINAPI OpenWaitableTimerA(DWORD,BOOL,LPCSTR);
 WINBASEAPI HANDLE WINAPI OpenWaitableTimerW(DWORD,BOOL,LPCWSTR);
 WINBASEAPI void WINAPI OutputDebugStringA(LPCSTR);
-WINBASEAPI void WINAPI OutputDebugStringW(LPCWSTR);
+/**
+ * Sends a string to the debugger.
+ *
+ * Windows CE only has the Unicode version.
+ *
+ * @param lpszOutputString The string to send.
+ */
+WINBASEAPI void WINAPI OutputDebugStringW(LPCWSTR lpszOutputString);
 WINBASEAPI BOOL WINAPI PeekNamedPipe(HANDLE,PVOID,DWORD,PDWORD,PDWORD,PDWORD);
 WINBASEAPI BOOL WINAPI PostQueuedCompletionStatus(HANDLE,DWORD,ULONG_PTR,LPOVERLAPPED);
 WINBASEAPI DWORD WINAPI PrepareTape(HANDLE,DWORD,BOOL);
@@ -2132,7 +3139,19 @@ WINBASEAPI BOOL WINAPI PrivilegedServiceAuditAlarmW(LPCWSTR,LPCWSTR,HANDLE,PPRIV
 WINBASEAPI BOOL WINAPI ProcessIdToSessionId(DWORD,DWORD*);
 #endif
 // inlined in kfuncs.h WINBASEAPI BOOL WINAPI PulseEvent(HANDLE);
-WINBASEAPI BOOL WINAPI PurgeComm(HANDLE,DWORD);
+/**
+ * Discards a serial port's buffers and/or cancels pending reads and writes.
+ *
+ * Discarded output is never sent. To wait for output to be sent instead,
+ * use FlushFileBuffers.
+ *
+ * @param hFile Serial port from CreateFile.
+ * @param dwFlags Any of PURGE_TXABORT and PURGE_RXABORT (end pending writes
+ *        or reads at once), and PURGE_TXCLEAR and PURGE_RXCLEAR (empty the
+ *        driver's output or input buffer).
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI PurgeComm(HANDLE hFile,DWORD dwFlags);
 #if (_WIN32_WINNT >= 0x0501)
 WINBASEAPI BOOL WINAPI QueryActCtxW(DWORD,HANDLE,PVOID,ULONG,PVOID,SIZE_T,SIZE_T*);
 #endif
@@ -2141,20 +3160,84 @@ WINBASEAPI DWORD WINAPI QueryDosDeviceW(LPCWSTR,LPWSTR,DWORD);
 #if (_WIN32_WINNT >= 0x0501)
 WINBASEAPI BOOL WINAPI QueryMemoryResourceNotification(HANDLE,PBOOL);
 #endif
-WINBASEAPI BOOL WINAPI QueryPerformanceCounter(PLARGE_INTEGER);
-WINBASEAPI BOOL WINAPI QueryPerformanceFrequency(PLARGE_INTEGER);
+/**
+ * Gets the current value of the high-resolution performance counter.
+ *
+ * Convert to time with QueryPerformanceFrequency.
+ *
+ * @param lpPerformanceCount Receives the counter value.
+ * @return TRUE on success, FALSE if there's no high-resolution counter.
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI QueryPerformanceCounter(PLARGE_INTEGER lpPerformanceCount);
+/**
+ * Gets the frequency of the high-resolution performance counter.
+ *
+ * @param lpFrequency Receives the frequency in counts per second.
+ * @return TRUE on success, FALSE if there's no high-resolution counter.
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI QueryPerformanceFrequency(PLARGE_INTEGER lpFrequency);
 WINBASEAPI DWORD WINAPI QueueUserAPC(PAPCFUNC,HANDLE,ULONG_PTR);
 #if (_WIN32_WINNT >= 0x0500)
 WINBASEAPI BOOL WINAPI QueueUserWorkItem(LPTHREAD_START_ROUTINE,PVOID,ULONG);
 #endif
-WINBASEAPI void WINAPI RaiseException(DWORD,DWORD,DWORD,const DWORD*);
+/**
+ * Raises a software exception in the calling thread.
+ *
+ * The debugger gets the first chance, then frame-based handlers on the
+ * stack, then the debugger again, then the default handling. Handlers can
+ * read the code and arguments with GetExceptionCode and
+ * GetExceptionInformation.
+ *
+ * @param dwExceptionCode Application-defined code. Bit 28 is reserved and
+ *        is cleared by the system.
+ * @param dwExceptionFlags 0 for a continuable exception, or
+ *        EXCEPTION_NONCONTINUABLE.
+ * @param nNumberOfArguments Number of entries in lpArguments, at most
+ *        EXCEPTION_MAXIMUM_PARAMETERS. Ignored if lpArguments is NULL.
+ * @param lpArguments Array of values to pass to the handler, or NULL.
+ */
+WINBASEAPI void WINAPI RaiseException(DWORD dwExceptionCode,DWORD dwExceptionFlags,DWORD nNumberOfArguments,const DWORD*lpArguments);
 WINBASEAPI BOOL WINAPI ReadDirectoryChangesW(HANDLE,PVOID,DWORD,BOOL,DWORD,PDWORD,LPOVERLAPPED,LPOVERLAPPED_COMPLETION_ROUTINE);
 WINBASEAPI BOOL WINAPI ReadEventLogA(HANDLE,DWORD,DWORD,PVOID,DWORD,DWORD *,DWORD *);
 WINBASEAPI BOOL WINAPI ReadEventLogW(HANDLE,DWORD,DWORD,PVOID,DWORD,DWORD *,DWORD *);
-WINBASEAPI BOOL WINAPI ReadFile(HANDLE,PVOID,DWORD,PDWORD,LPOVERLAPPED);
+/**
+ * Reads from a file or device at the current file pointer and advances
+ * it.
+ *
+ * Windows CE has no overlapped I/O: reads always complete before
+ * returning. hFile can't be a socket. On a serial port, how long a read
+ * waits is governed by SetCommTimeouts; set them, or results are
+ * unpredictable. TRUE with zero bytes read means end of file.
+ *
+ * @param hFile File or device opened with GENERIC_READ.
+ * @param lpBuffer Receives the data.
+ * @param nNumberOfBytesToRead Number of bytes to read.
+ * @param lpNumberOfBytesRead Receives the number of bytes read.
+ * @param lpOverlapped Must be NULL.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI ReadFile(HANDLE hFile,PVOID lpBuffer,DWORD nNumberOfBytesToRead,PDWORD lpNumberOfBytesRead,LPOVERLAPPED lpOverlapped);
 WINBASEAPI BOOL WINAPI ReadFileEx(HANDLE,PVOID,DWORD,LPOVERLAPPED,LPOVERLAPPED_COMPLETION_ROUTINE);
 WINBASEAPI BOOL WINAPI ReadFileScatter(HANDLE,FILE_SEGMENT_ELEMENT*,DWORD,LPDWORD,LPOVERLAPPED);
-WINBASEAPI BOOL WINAPI ReadProcessMemory(HANDLE,PCVOID,PVOID,DWORD,PDWORD);
+/**
+ * Reads memory from another process.
+ *
+ * The whole range must be readable or the call fails.
+ *
+ * @param hProcess The process, from OpenProcess or CreateProcess.
+ * @param lpBaseAddress Address to read from in that process.
+ * @param lpBuffer Receives the data.
+ * @param nSize Number of bytes to read.
+ * @param lpNumberOfBytesRead Receives the number of bytes read, or NULL.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI ReadProcessMemory(HANDLE hProcess,PCVOID lpBaseAddress,PVOID lpBuffer,DWORD nSize,PDWORD lpNumberOfBytesRead);
 WINBASEAPI HANDLE WINAPI RegisterEventSourceA (LPCSTR,LPCSTR);
 WINBASEAPI HANDLE WINAPI RegisterEventSourceW(LPCWSTR,LPCWSTR);
 #if (_WIN32_WINNT >= 0x0500)
@@ -2164,10 +3247,28 @@ WINBASEAPI HANDLE WINAPI RegisterWaitForSingleObjectEx(HANDLE,WAITORTIMERCALLBAC
 #if (_WIN32_WINNT >= 0x0501)
 WINBASEAPI void WINAPI ReleaseActCtx(HANDLE);
 #endif
-WINBASEAPI BOOL WINAPI ReleaseMutex(HANDLE);
+/**
+ * Releases a mutex held by the calling thread.
+ *
+ * A thread acquires a mutex through a wait function, or by creating it
+ * with ownership. Release once for each wait it satisfied.
+ *
+ * @param hMutex Mutex from CreateMutex.
+ * @return TRUE on success, FALSE on failure, including when the thread
+ *         doesn't own the mutex (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI ReleaseMutex(HANDLE hMutex);
 WINBASEAPI BOOL WINAPI ReleaseSemaphore(HANDLE,LONG,LPLONG);
 WINBASEAPI BOOL WINAPI RemoveDirectoryA(LPCSTR);
-WINBASEAPI BOOL WINAPI RemoveDirectoryW(LPCWSTR);
+/**
+ * Deletes an empty directory.
+ *
+ * @param lpPathName Path of the directory. It must be empty.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI RemoveDirectoryW(LPCWSTR lpPathName);
 #if (_WIN32_WINNT >= 0x0500)
 WINBASEAPI ULONG WINAPI RemoveVectoredExceptionHandler(PVOID);
 #endif
@@ -2189,16 +3290,65 @@ WINBASEAPI UINT WINAPI ResetWriteWatch(LPVOID,SIZE_T);
 #if (_WIN32_WINNT >= 0x0510)
 WINBASEAPI VOID WINAPI RestoreLastError(DWORD);
 #endif
-WINBASEAPI DWORD WINAPI ResumeThread(HANDLE);
+/**
+ * Decrements a thread's suspend count, resuming it when it reaches zero.
+ *
+ * @param hThread The thread.
+ * @return The previous suspend count: 0 means it wasn't suspended, 1 that
+ *         it's now running, and more that it's still suspended. 0xFFFFFFFF
+ *         on failure (see GetLastError).
+ */
+WINBASEAPI DWORD WINAPI ResumeThread(HANDLE hThread);
 WINBASEAPI BOOL WINAPI RevertToSelf(void);
 WINBASEAPI DWORD WINAPI SearchPathA(LPCSTR,LPCSTR,LPCSTR,DWORD,LPSTR,LPSTR*);
 WINBASEAPI DWORD WINAPI SearchPathW(LPCWSTR,LPCWSTR,LPCWSTR,DWORD,LPWSTR,LPWSTR*);
 WINBASEAPI BOOL WINAPI SetAclInformation(PACL,PVOID,DWORD,ACL_INFORMATION_CLASS);
-WINBASEAPI BOOL WINAPI SetCommBreak(HANDLE);
+/**
+ * Puts a serial line into the break state and stops sending.
+ *
+ * Data waiting to be sent is kept. End the break with ClearCommBreak.
+ *
+ * @param hFile Serial port from CreateFile.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI SetCommBreak(HANDLE hFile);
 WINBASEAPI BOOL WINAPI SetCommConfig(HANDLE,LPCOMMCONFIG,DWORD);
-WINBASEAPI BOOL WINAPI SetCommMask(HANDLE,DWORD);
-WINBASEAPI BOOL WINAPI SetCommState(HANDLE,LPDCB);
-WINBASEAPI BOOL WINAPI SetCommTimeouts(HANDLE,LPCOMMTIMEOUTS);
+/**
+ * Sets which serial port events WaitCommEvent waits for.
+ *
+ * Calling it while another thread is in WaitCommEvent makes that call
+ * return with an event mask of 0. Read the mask back with GetCommMask.
+ *
+ * @param hFile Serial port from CreateFile.
+ * @param dwEvtMask 0 to disable all events, or any of EV_BREAK, EV_CTS,
+ *        EV_DSR, EV_ERR, EV_RING, EV_RLSD, EV_RXCHAR, EV_RXFLAG, EV_TXEMPTY
+ *        and, on Windows CE, EV_POWER.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI SetCommMask(HANDLE hFile,DWORD dwEvtMask);
+/**
+ * Configures a serial port from a DCB.
+ *
+ * Resets the hardware and control settings but keeps queued data. Fill
+ * the DCB with GetCommState first and change only what's needed. Fails if
+ * XonChar equals XoffChar. On 8250-type UARTs ByteSize must be 5 to 8, and
+ * 5 data bits with 2 stop bits, or 6 to 8 with 1.5, is invalid.
+ *
+ * @param hFile Serial port from CreateFile.
+ * @param lpDCB The new settings.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI SetCommState(HANDLE hFile,LPDCB lpDCB);
+/**
+ * Sets the read and write timeouts of a serial port.
+ *
+ * Set these before using ReadFile or WriteFile on the port.
+ *
+ * @param hFile Serial port from CreateFile.
+ * @param lpCommTimeouts The new timeouts.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI SetCommTimeouts(HANDLE hFile,LPCOMMTIMEOUTS lpCommTimeouts);
 WINBASEAPI BOOL WINAPI SetComputerNameA(LPCSTR);
 WINBASEAPI BOOL WINAPI SetComputerNameW(LPCWSTR);
 #if (_WIN32_WINNT >= 0x0500)
@@ -2213,7 +3363,15 @@ WINBASEAPI BOOL WINAPI SetDefaultCommConfigW(LPCWSTR,LPCOMMCONFIG,DWORD);
 WINBASEAPI BOOL WINAPI SetDllDirectoryA(LPCSTR);
 WINBASEAPI BOOL WINAPI SetDllDirectoryW(LPCWSTR);
 #endif
-WINBASEAPI BOOL WINAPI SetEndOfFile(HANDLE);
+/**
+ * Truncates or extends a file to the current file pointer.
+ *
+ * Bytes added by extending a file are undefined.
+ *
+ * @param hFile File opened with GENERIC_WRITE.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI SetEndOfFile(HANDLE hFile);
 WINBASEAPI BOOL WINAPI SetEnvironmentVariableA(LPCSTR,LPCSTR);
 WINBASEAPI BOOL WINAPI SetEnvironmentVariableW(LPCWSTR,LPCWSTR);
 WINBASEAPI UINT WINAPI SetErrorMode(UINT);
@@ -2225,8 +3383,36 @@ WINBASEAPI BOOL WINAPI SetEvent(HANDLE);
 WINBASEAPI VOID WINAPI SetFileApisToANSI(void);
 WINBASEAPI VOID WINAPI SetFileApisToOEM(void);
 WINBASEAPI BOOL WINAPI SetFileAttributesA(LPCSTR,DWORD);
-WINBASEAPI BOOL WINAPI SetFileAttributesW(LPCWSTR,DWORD);
-WINBASEAPI DWORD WINAPI SetFilePointer(HANDLE,LONG,PLONG,DWORD);
+/**
+ * Sets a file's attributes.
+ *
+ * Can't change compression: FILE_ATTRIBUTE_COMPRESSED is ignored.
+ *
+ * @param lpFileName The file.
+ * @param dwFileAttributes Any of FILE_ATTRIBUTE_ARCHIVE,
+ *        FILE_ATTRIBUTE_HIDDEN, FILE_ATTRIBUTE_READONLY,
+ *        FILE_ATTRIBUTE_SYSTEM and FILE_ATTRIBUTE_TEMPORARY, or
+ *        FILE_ATTRIBUTE_NORMAL on its own.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI SetFileAttributesW(LPCWSTR lpFileName,DWORD dwFileAttributes);
+/**
+ * Moves a file's read/write position.
+ *
+ * Doesn't work on devices that can't seek, such as serial ports. With
+ * lpDistanceToMoveHigh set, 0xFFFFFFFF can be a valid position, so check
+ * GetLastError for NO_ERROR. Protect the position with a lock when
+ * threads share a handle.
+ *
+ * @param hFile File opened with GENERIC_READ or GENERIC_WRITE.
+ * @param lDistanceToMove Low 32 bits of the signed distance in bytes.
+ * @param lpDistanceToMoveHigh High 32 bits of the distance, updated with
+ *        the high 32 bits of the new position, or NULL for 32-bit offsets.
+ * @param dwMoveMethod FILE_BEGIN, FILE_CURRENT or FILE_END.
+ * @return Low 32 bits of the new position, or 0xFFFFFFFF on failure (see
+ *         GetLastError).
+ */
+WINBASEAPI DWORD WINAPI SetFilePointer(HANDLE hFile,LONG lDistanceToMove,PLONG lpDistanceToMoveHigh,DWORD dwMoveMethod);
 WINBASEAPI BOOL WINAPI SetFilePointerEx(HANDLE,LARGE_INTEGER,PLARGE_INTEGER,DWORD);
 WINBASEAPI BOOL WINAPI SetFileSecurityA(LPCSTR,SECURITY_INFORMATION,PSECURITY_DESCRIPTOR);
 WINBASEAPI BOOL WINAPI SetFileSecurityW(LPCWSTR,SECURITY_INFORMATION,PSECURITY_DESCRIPTOR);
@@ -2234,7 +3420,16 @@ WINBASEAPI BOOL WINAPI SetFileSecurityW(LPCWSTR,SECURITY_INFORMATION,PSECURITY_D
 WINBASEAPI BOOL WINAPI SetFileShortNameA(HANDLE,LPCSTR);
 WINBASEAPI BOOL WINAPI SetFileShortNameW(HANDLE,LPCWSTR);
 #endif
-WINBASEAPI BOOL WINAPI SetFileTime(HANDLE,const FILETIME*,const FILETIME*,const FILETIME*);
+/**
+ * Sets a file's creation, last access and last write times.
+ *
+ * @param hFile File opened with GENERIC_WRITE.
+ * @param lpCreationTime New creation time, or NULL to leave it.
+ * @param lpLastAccessTime New last access time, or NULL to leave it.
+ * @param lpLastWriteTime New last write time, or NULL to leave it.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI SetFileTime(HANDLE hFile,const FILETIME*lpCreationTime,const FILETIME*lpLastAccessTime,const FILETIME*lpLastWriteTime);
 #if (_WIN32_WINNT >= 0x0501)
 WINBASEAPI BOOL WINAPI SetFileValidData(HANDLE,LONGLONG);
 #endif
@@ -2245,9 +3440,23 @@ WINBASEAPI BOOL WINAPI SetFirmwareEnvironmentVariableW(LPCWSTR,LPCWSTR,PVOID,DWO
 WINBASEAPI UINT WINAPI SetHandleCount(UINT);
 WINBASEAPI BOOL WINAPI SetHandleInformation(HANDLE,DWORD,DWORD);
 WINBASEAPI BOOL WINAPI SetKernelObjectSecurity(HANDLE,SECURITY_INFORMATION,PSECURITY_DESCRIPTOR);
-WINBASEAPI void WINAPI SetLastError(DWORD);
+/**
+ * Sets the calling thread's last-error code.
+ *
+ * Mainly for DLLs to report errors the way system functions do. Set bit 29
+ * on application-defined codes so they can't clash with system codes.
+ *
+ * @param dwErrCode The error code.
+ */
+WINBASEAPI void WINAPI SetLastError(DWORD dwErrCode);
 WINBASEAPI void WINAPI SetLastErrorEx(DWORD,DWORD);
-WINBASEAPI BOOL WINAPI SetLocalTime(const SYSTEMTIME*);
+/**
+ * Sets the current local date and time.
+ *
+ * @param lpSystemTime The new local time. wDayOfWeek is ignored.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI SetLocalTime(const SYSTEMTIME*lpSystemTime);
 WINBASEAPI BOOL WINAPI SetMailslotInfo(HANDLE,DWORD);
 WINBASEAPI BOOL WINAPI SetNamedPipeHandleState(HANDLE,PDWORD,PDWORD,PDWORD);
 WINBASEAPI BOOL WINAPI SetPriorityClass(HANDLE,DWORD);
@@ -2269,23 +3478,77 @@ WINBASEAPI BOOL WINAPI SetStdHandle(DWORD,HANDLE);
 #if !defined (_WIN32_WCE)
 WINBASEAPI BOOL WINAPI SetSystemPowerState(BOOL,BOOL);
 #endif
-WINBASEAPI BOOL WINAPI SetSystemTime(const SYSTEMTIME*);
+/**
+ * Sets the current date and time in UTC.
+ *
+ * @param lpSystemTime The new UTC time. wDayOfWeek is ignored.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI SetSystemTime(const SYSTEMTIME*lpSystemTime);
 WINBASEAPI BOOL WINAPI SetSystemTimeAdjustment(DWORD,BOOL);
 WINBASEAPI DWORD WINAPI SetTapeParameters(HANDLE,DWORD,PVOID);
 WINBASEAPI DWORD WINAPI SetTapePosition(HANDLE,DWORD,DWORD,DWORD,DWORD,BOOL);
 WINBASEAPI DWORD WINAPI SetThreadAffinityMask(HANDLE,DWORD);
-WINBASEAPI BOOL WINAPI SetThreadContext(HANDLE,const CONTEXT*);
+/**
+ * Sets the registers of a thread.
+ *
+ * Intended for debuggers. Suspend the thread first, and fill the CONTEXT
+ * with GetThreadContext, setting ContextFlags to the register groups to
+ * write. CONTEXT is processor-specific.
+ *
+ * @param hThread The thread.
+ * @param lpContext The new register values.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI SetThreadContext(HANDLE hThread,const CONTEXT*lpContext);
 #if (_WIN32_WINNT >= 0x0500 || _WIN32_WINDOWS >= 0x0410)
 WINBASEAPI EXECUTION_STATE WINAPI SetThreadExecutionState(EXECUTION_STATE);
 #endif
 WINBASEAPI DWORD WINAPI SetThreadIdealProcessor(HANDLE,DWORD);
-WINBASEAPI BOOL WINAPI SetThreadPriority(HANDLE,int);
+/**
+ * Sets a thread's priority.
+ *
+ * Windows CE has no priority classes: threads are scheduled round-robin by
+ * priority alone, and lower levels only run when nothing above is ready.
+ * The THREAD_PRIORITY_* values differ from desktop Win32: they run from 0
+ * (time critical) to 7 (idle). A THREAD_PRIORITY_TIME_CRITICAL thread runs
+ * until it yields, even to others at that level, and can stall the system,
+ * including disk cache flushing and the pen.
+ *
+ * @param hThread The thread.
+ * @param nPriority THREAD_PRIORITY_TIME_CRITICAL, _HIGHEST, _ABOVE_NORMAL,
+ *        _NORMAL, _BELOW_NORMAL, _LOWEST, _ABOVE_IDLE or _IDLE. The
+ *        Windows CE 1.0 reference doesn't list THREAD_PRIORITY_ABOVE_IDLE.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI SetThreadPriority(HANDLE hThread,int nPriority);
 WINBASEAPI BOOL WINAPI SetThreadPriorityBoost(HANDLE,BOOL);
 WINBASEAPI BOOL WINAPI SetThreadToken (PHANDLE,HANDLE);
-WINBASEAPI BOOL WINAPI SetTimeZoneInformation(const TIME_ZONE_INFORMATION *);
+/**
+ * Sets the time-zone settings used to convert between UTC and local time.
+ *
+ * UTC = local time + bias, with the bias in minutes.
+ *
+ * @param lpTimeZoneInformation The new settings.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI SetTimeZoneInformation(const TIME_ZONE_INFORMATION *lpTimeZoneInformation);
 WINBASEAPI BOOL WINAPI SetTokenInformation(HANDLE,TOKEN_INFORMATION_CLASS,PVOID,DWORD);
 WINBASEAPI LPTOP_LEVEL_EXCEPTION_FILTER WINAPI SetUnhandledExceptionFilter(LPTOP_LEVEL_EXCEPTION_FILTER);
-WINBASEAPI BOOL WINAPI SetupComm(HANDLE,DWORD,DWORD);
+/**
+ * Recommends input and output buffer sizes for a serial port.
+ *
+ * The driver may use any buffering it likes, and may fail if the sizes are
+ * too large. Without this call the defaults apply.
+ *
+ * @param hFile Serial port from CreateFile.
+ * @param dwInQueue Recommended input buffer size in bytes.
+ * @param dwOutQueue Recommended output buffer size in bytes.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI SetupComm(HANDLE hFile,DWORD dwInQueue,DWORD dwOutQueue);
 WINBASEAPI BOOL WINAPI SetVolumeLabelA(LPCSTR,LPCSTR);
 WINBASEAPI BOOL WINAPI SetVolumeLabelW(LPCWSTR,LPCWSTR);
 #if (_WIN32_WINNT >= 0x0500)
@@ -2294,34 +3557,121 @@ WINBASEAPI BOOL WINAPI SetVolumeMountPointW(LPCWSTR,LPCWSTR);
 #endif
 WINBASEAPI BOOL WINAPI SetWaitableTimer(HANDLE,const LARGE_INTEGER*,LONG,PTIMERAPCROUTINE,PVOID,BOOL);
 WINBASEAPI DWORD WINAPI SignalObjectAndWait(HANDLE,HANDLE,DWORD,BOOL);
-WINBASEAPI DWORD WINAPI SizeofResource(HINSTANCE,HRSRC);
-WINBASEAPI void WINAPI Sleep(DWORD);
+/**
+ * Returns the size of a resource.
+ *
+ * Padding for alignment may make it larger than the actual data.
+ *
+ * @param hModule Module containing the resource.
+ * @param hResInfo Resource from FindResource.
+ * @return The size in bytes, or 0 on failure (see GetLastError).
+ */
+WINBASEAPI DWORD WINAPI SizeofResource(HINSTANCE hModule,HRSRC hResInfo);
+/**
+ * Suspends the calling thread for a time.
+ *
+ * @param dwMilliseconds Time in milliseconds. 0 gives up the rest of the
+ *        time slice to a ready thread of equal priority, returning at once
+ *        if there is none. INFINITE never returns.
+ */
+WINBASEAPI void WINAPI Sleep(DWORD dwMilliseconds);
 WINBASEAPI DWORD WINAPI SleepEx(DWORD,BOOL);
-WINBASEAPI DWORD WINAPI SuspendThread(HANDLE);
+/**
+ * Suspends a thread by incrementing its suspend count.
+ *
+ * The thread runs again when ResumeThread brings the count back to zero.
+ * The count can't go above MAXIMUM_SUSPEND_COUNT.
+ *
+ * @param hThread The thread.
+ * @return The previous suspend count, or 0xFFFFFFFF on failure (see
+ *         GetLastError).
+ */
+WINBASEAPI DWORD WINAPI SuspendThread(HANDLE hThread);
 WINBASEAPI void WINAPI SwitchToFiber(PVOID);
 WINBASEAPI BOOL WINAPI SwitchToThread(void);
-WINBASEAPI BOOL WINAPI SystemTimeToFileTime(const SYSTEMTIME*,LPFILETIME);
+/**
+ * Converts a SYSTEMTIME to a FILETIME.
+ *
+ * No time-zone conversion is done.
+ *
+ * @param lpSystemTime The time to convert. wDayOfWeek is ignored.
+ * @param lpFileTime Receives the converted time.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI SystemTimeToFileTime(const SYSTEMTIME*lpSystemTime,LPFILETIME lpFileTime);
 #if (_WIN32_WINNT >= 0x501)
 WINBASEAPI BOOL WINAPI TzSpecificLocalTimeToSystemTime(LPTIME_ZONE_INFORMATION,LPSYSTEMTIME,LPSYSTEMTIME);
 #endif
 WINBASEAPI BOOL WINAPI SystemTimeToTzSpecificLocalTime(LPTIME_ZONE_INFORMATION,LPSYSTEMTIME,LPSYSTEMTIME);
-WINBASEAPI BOOL WINAPI TerminateThread(HANDLE,DWORD);
+/**
+ * Forcibly ends a thread.
+ *
+ * The thread gets no chance to clean up: locks it holds stay held and DLLs
+ * aren't notified. Prefer having the thread return or call ExitThread.
+ *
+ * @param hThread The thread.
+ * @param dwExitCode Exit code for the thread (see GetExitCodeThread).
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI TerminateThread(HANDLE hThread,DWORD dwExitCode);
 #ifndef _WIN32_WCE
 /* In kfuncs.h */
 WINBASEAPI DWORD WINAPI TlsAlloc(VOID);
 WINBASEAPI BOOL WINAPI TlsFree(DWORD);
 #endif
-WINBASEAPI PVOID WINAPI TlsGetValue(DWORD);
-WINBASEAPI BOOL WINAPI TlsSetValue(DWORD,PVOID);
+/**
+ * Returns the calling thread's value in a thread local storage slot.
+ *
+ * Each slot starts as NULL. The index is barely checked: any value below
+ * TLS_MINIMUM_AVAILABLE succeeds. Clears the last error on success, so a
+ * 0 result with GetLastError returning NO_ERROR is a stored 0.
+ *
+ * @param dwTlsIndex Index from TlsAlloc.
+ * @return The stored value, or 0 on failure (see GetLastError).
+ */
+WINBASEAPI PVOID WINAPI TlsGetValue(DWORD dwTlsIndex);
+/**
+ * Stores a value in the calling thread's thread local storage slot.
+ *
+ * The index is barely checked: any value below TLS_MINIMUM_AVAILABLE
+ * succeeds.
+ *
+ * @param dwTlsIndex Index from TlsAlloc.
+ * @param lpTlsValue The value to store.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI TlsSetValue(DWORD dwTlsIndex,PVOID lpTlsValue);
 WINBASEAPI BOOL WINAPI TransactNamedPipe(HANDLE,PVOID,DWORD,PVOID,DWORD,PDWORD,LPOVERLAPPED);
-WINBASEAPI BOOL WINAPI TransmitCommChar(HANDLE,char);
+/**
+ * Sends a character on a serial port ahead of any queued output.
+ *
+ * Useful for an interrupt character such as Ctrl+C. Flow control still
+ * applies. Fails if the previous character sent this way hasn't gone yet.
+ *
+ * @param hFile Serial port from CreateFile.
+ * @param cChar The character.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI TransmitCommChar(HANDLE hFile,char cChar);
 WINBASEAPI BOOL WINAPI TryEnterCriticalSection(LPCRITICAL_SECTION);
 WINBASEAPI LONG WINAPI UnhandledExceptionFilter(LPEXCEPTION_POINTERS);
 WINBASEAPI BOOL WINAPI UnlockFile(HANDLE,DWORD,DWORD,DWORD,DWORD);
 WINBASEAPI BOOL WINAPI UnlockFileEx(HANDLE,DWORD,DWORD,DWORD,LPOVERLAPPED);
 #define UnlockResource(h) (h)
 #define UnlockSegment(w) GlobalUnfix((HANDLE)(w)) /* Obsolete: Has no effect. */
-WINBASEAPI BOOL WINAPI UnmapViewOfFile(LPCVOID);
+/**
+ * Unmaps a view mapped with MapViewOfFile.
+ *
+ * Modified pages are written back to the file lazily.
+ *
+ * @param lpBaseAddress Address returned by MapViewOfFile.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI UnmapViewOfFile(LPCVOID lpBaseAddress);
 #if (_WIN32_WINNT >= 0x0500)
 WINBASEAPI BOOL WINAPI UnregisterWait(HANDLE);
 WINBASEAPI BOOL WINAPI UnregisterWaitEx(HANDLE,HANDLE);
@@ -2330,26 +3680,158 @@ WINBASEAPI BOOL WINAPI UpdateResourceA(HANDLE,LPCSTR,LPCSTR,WORD,PVOID,DWORD);
 WINBASEAPI BOOL WINAPI UpdateResourceW(HANDLE,LPCWSTR,LPCWSTR,WORD,PVOID,DWORD);
 WINBASEAPI BOOL WINAPI VerifyVersionInfoA(LPOSVERSIONINFOEXA,DWORD,DWORDLONG);
 WINBASEAPI BOOL WINAPI VerifyVersionInfoW(LPOSVERSIONINFOEXW,DWORD,DWORDLONG);
-WINBASEAPI PVOID WINAPI VirtualAlloc(PVOID,DWORD,DWORD,DWORD);
+/**
+ * Reserves and/or commits pages in the calling process's address space.
+ *
+ * Committed memory is zeroed. Reserve a range first and commit pages as
+ * needed to save physical memory; committing an already committed page
+ * succeeds. Release with VirtualFree.
+ *
+ * @param lpAddress Start address, or NULL to let the system choose.
+ *        Rounded down to 64KB when reserving and to a page when
+ *        committing.
+ * @param dwSize Size in bytes. Covers every page the range touches.
+ * @param flAllocationType MEM_RESERVE, MEM_COMMIT or both, optionally with
+ *        MEM_TOP_DOWN.
+ * @param flProtect PAGE_READONLY, PAGE_READWRITE, PAGE_EXECUTE,
+ *        PAGE_EXECUTE_READ, PAGE_EXECUTE_READWRITE or PAGE_NOACCESS,
+ *        optionally with PAGE_GUARD (not with PAGE_NOACCESS) or
+ *        PAGE_NOCACHE.
+ * @return Base address of the region, or NULL on failure (see
+ *         GetLastError).
+ */
+WINBASEAPI PVOID WINAPI VirtualAlloc(PVOID lpAddress,DWORD dwSize,DWORD flAllocationType,DWORD flProtect);
 WINBASEAPI PVOID WINAPI VirtualAllocEx(HANDLE,PVOID,DWORD,DWORD,DWORD);
-WINBASEAPI BOOL WINAPI VirtualFree(PVOID,DWORD,DWORD);
+/**
+ * Decommits or releases pages allocated with VirtualAlloc.
+ *
+ * A release must cover the whole region originally reserved, with all of
+ * its pages in the same state: decommit any committed pages first if only
+ * some are committed. Decommitted pages stay reserved.
+ *
+ * @param lpAddress Start of the range. For MEM_RELEASE, the base address
+ *        VirtualAlloc returned when reserving.
+ * @param dwSize Size in bytes, covering every page the range touches. Must
+ *        be 0 for MEM_RELEASE.
+ * @param dwFreeType MEM_DECOMMIT or MEM_RELEASE, not both.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI VirtualFree(PVOID lpAddress,DWORD dwSize,DWORD dwFreeType);
 WINBASEAPI BOOL WINAPI VirtualFreeEx(HANDLE,PVOID,DWORD,DWORD);
 WINBASEAPI BOOL WINAPI VirtualLock(PVOID,DWORD);
-WINBASEAPI BOOL WINAPI VirtualProtect(PVOID,DWORD,DWORD,PDWORD);
+/**
+ * Changes the access protection of committed pages.
+ *
+ * Fails without changing anything if any page in the range isn't
+ * committed.
+ *
+ * @param lpAddress Start of the range.
+ * @param dwSize Size in bytes. Covers every page the range touches.
+ * @param flNewProtect A PAGE_* protection such as PAGE_READONLY or
+ *        PAGE_EXECUTE_READWRITE, optionally with PAGE_GUARD or PAGE_NOCACHE.
+ * @param lpflOldProtect Receives the previous protection of the first page.
+ *        Must not be NULL.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI VirtualProtect(PVOID lpAddress,DWORD dwSize,DWORD flNewProtect,PDWORD lpflOldProtect);
 WINBASEAPI BOOL WINAPI VirtualProtectEx(HANDLE,PVOID,DWORD,DWORD,PDWORD);
-WINBASEAPI DWORD WINAPI VirtualQuery(LPCVOID,PMEMORY_BASIC_INFORMATION,DWORD);
+/**
+ * Describes the run of pages starting at an address that share the same
+ * state and protection.
+ *
+ * @param lpAddress Address to query, rounded down to a page.
+ * @param lpBuffer MEMORY_BASIC_INFORMATION that receives the description.
+ * @param dwLength Size of lpBuffer in bytes.
+ * @return Number of bytes written to lpBuffer, or 0 on failure.
+ */
+WINBASEAPI DWORD WINAPI VirtualQuery(LPCVOID lpAddress,PMEMORY_BASIC_INFORMATION lpBuffer,DWORD dwLength);
 WINBASEAPI DWORD WINAPI VirtualQueryEx(HANDLE,LPCVOID,PMEMORY_BASIC_INFORMATION,DWORD);
 WINBASEAPI BOOL WINAPI VirtualUnlock(PVOID,DWORD);
-WINBASEAPI BOOL WINAPI WaitCommEvent(HANDLE,PDWORD,LPOVERLAPPED);
-WINBASEAPI BOOL WINAPI WaitForDebugEvent(LPDEBUG_EVENT,DWORD);
-WINBASEAPI DWORD WINAPI WaitForMultipleObjects(DWORD,const HANDLE*,BOOL,DWORD);
+/**
+ * Waits for one of the events set with SetCommMask on a serial port.
+ *
+ * Always blocks until an event or error: Windows CE doesn't support an
+ * overlapped wait. Calling SetCommMask from another thread ends the wait
+ * with a mask of 0. EV_RXFLAG isn't supported on all devices.
+ *
+ * @param hFile Serial port from CreateFile.
+ * @param lpEvtMask Receives the event that occurred (EV_*), or 0 on error.
+ *        Windows CE adds EV_POWER, signalled when the device powers on.
+ * @param lpOverlapped Ignored. Pass NULL.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI WaitCommEvent(HANDLE hFile,PDWORD lpEvtMask,LPOVERLAPPED lpOverlapped);
+/**
+ * Waits for a debug event in a process being debugged.
+ *
+ * Call from the debugger thread, and resume the debuggee with
+ * ContinueDebugEvent after handling each event.
+ *
+ * @param lpDebugEvent DEBUG_EVENT that receives the event.
+ * @param dwMilliseconds Timeout in milliseconds, 0 or INFINITE.
+ * @return TRUE if an event arrived, FALSE on timeout or failure (see
+ *         GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI WaitForDebugEvent(LPDEBUG_EVENT lpDebugEvent,DWORD dwMilliseconds);
+/**
+ * Waits until one of several objects is signalled or the timeout elapses.
+ *
+ * Can wait on events, mutexes, processes and threads. Windows CE can't
+ * wait on semaphores, change notifications, console input or timers. A
+ * satisfied wait resets an auto-reset event and takes ownership of a
+ * mutex. A thread that owns windows must keep processing messages, so
+ * avoid long waits on such threads.
+ *
+ * @param nCount Number of handles, at most MAXIMUM_WAIT_OBJECTS.
+ * @param lpHandles The handles, which may be of different types.
+ * @param bWaitAll Must be FALSE on Windows CE.
+ * @param dwMilliseconds Timeout in milliseconds, 0 to test and return at
+ *        once, or INFINITE.
+ * @return WAIT_OBJECT_0 plus the index of the lowest signalled handle,
+ *         WAIT_ABANDONED_0 plus the index of an abandoned mutex,
+ *         WAIT_TIMEOUT, or WAIT_FAILED on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI DWORD WINAPI WaitForMultipleObjects(DWORD nCount,const HANDLE*lpHandles,BOOL bWaitAll,DWORD dwMilliseconds);
 WINBASEAPI DWORD WINAPI WaitForMultipleObjectsEx(DWORD,const HANDLE*,BOOL,DWORD,BOOL);
-WINBASEAPI DWORD WINAPI WaitForSingleObject(HANDLE,DWORD);
+/**
+ * Waits until an object is signalled or the timeout elapses.
+ *
+ * Can wait on events and, from Windows CE 1.01, mutexes, processes and
+ * threads. Windows CE can't wait on semaphores, change notifications,
+ * console input or timers. A satisfied wait resets an auto-reset event and
+ * takes ownership of a mutex.
+ *
+ * @param hHandle The object. An invalid handle gives WAIT_FAILED.
+ * @param dwMilliseconds Timeout in milliseconds, 0 to test and return at
+ *        once, or INFINITE.
+ * @return WAIT_OBJECT_0 if signalled, WAIT_TIMEOUT, WAIT_ABANDONED for an
+ *         abandoned mutex, or WAIT_FAILED on failure (see GetLastError).
+ */
+WINBASEAPI DWORD WINAPI WaitForSingleObject(HANDLE hHandle,DWORD dwMilliseconds);
 WINBASEAPI DWORD WINAPI WaitForSingleObjectEx(HANDLE,DWORD,BOOL);
 WINBASEAPI BOOL WINAPI WaitNamedPipeA(LPCSTR,DWORD);
 WINBASEAPI BOOL WINAPI WaitNamedPipeW(LPCWSTR,DWORD);
 WINBASEAPI BOOL WINAPI WinLoadTrustProvider(GUID*);
-WINBASEAPI BOOL WINAPI WriteFile(HANDLE,PCVOID,DWORD,PDWORD,LPOVERLAPPED);
+/**
+ * Writes to a file or device at the current file pointer and advances
+ * it.
+ *
+ * Windows CE has no overlapped I/O: writes always complete before
+ * returning. Writing 0 bytes changes nothing but the timestamp; it doesn't
+ * truncate or extend the file (use SetEndOfFile).
+ *
+ * @param hFile File or device opened with GENERIC_WRITE.
+ * @param lpBuffer The data.
+ * @param nNumberOfBytesToWrite Number of bytes to write.
+ * @param lpNumberOfBytesWritten Receives the number of bytes written.
+ * @param lpOverlapped Ignored. Pass NULL.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
+WINBASEAPI BOOL WINAPI WriteFile(HANDLE hFile,PCVOID lpBuffer,DWORD nNumberOfBytesToWrite,PDWORD lpNumberOfBytesWritten,LPOVERLAPPED lpOverlapped);
 WINBASEAPI BOOL WINAPI WriteFileEx(HANDLE,PCVOID,DWORD,LPOVERLAPPED,LPOVERLAPPED_COMPLETION_ROUTINE);
 WINBASEAPI BOOL WINAPI WriteFileGather(HANDLE,FILE_SEGMENT_ELEMENT*,DWORD,LPDWORD,LPOVERLAPPED);
 WINBASEAPI BOOL WINAPI WritePrivateProfileSectionA(LPCSTR,LPCSTR,LPCSTR);
@@ -2358,7 +3840,22 @@ WINBASEAPI BOOL WINAPI WritePrivateProfileStringA(LPCSTR,LPCSTR,LPCSTR,LPCSTR);
 WINBASEAPI BOOL WINAPI WritePrivateProfileStringW(LPCWSTR,LPCWSTR,LPCWSTR,LPCWSTR);
 WINBASEAPI BOOL WINAPI WritePrivateProfileStructA(LPCSTR,LPCSTR,LPVOID,UINT,LPCSTR);
 WINBASEAPI BOOL WINAPI WritePrivateProfileStructW(LPCWSTR,LPCWSTR,LPVOID,UINT,LPCWSTR);
-WINBASEAPI BOOL WINAPI WriteProcessMemory(HANDLE,LPVOID,LPCVOID,SIZE_T,SIZE_T*);
+/**
+ * Writes memory in another process.
+ *
+ * The whole range must be writable or the call fails.
+ *
+ * @param hProcess Process handle with full access, from OpenProcess.
+ * @param lpBaseAddress Address to write to in that process.
+ * @param lpBuffer The data.
+ * @param nSize Number of bytes to write.
+ * @param lpNumberOfBytesWritten Receives the number of bytes written, or
+ *        NULL.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
+WINBASEAPI BOOL WINAPI WriteProcessMemory(HANDLE hProcess,LPVOID lpBaseAddress,LPCVOID lpBuffer,SIZE_T nSize,SIZE_T*lpNumberOfBytesWritten);
 WINBASEAPI BOOL WINAPI WriteProfileSectionA(LPCSTR,LPCSTR);
 WINBASEAPI BOOL WINAPI WriteProfileSectionW(LPCWSTR,LPCWSTR);
 WINBASEAPI BOOL WINAPI WriteProfileStringA(LPCSTR,LPCSTR,LPCSTR);
@@ -2380,6 +3877,14 @@ typedef struct STORE_INFORMATION {
   DWORD dwStoreSize;
   DWORD dwFreeSize;
 } STORE_INFORMATION, *LPSTORE_INFORMATION;
+/**
+ * Returns the size and free space of the object store.
+ *
+ * Windows CE specific.
+ *
+ * @param lpsi Receives a STORE_INFORMATION.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
 WINBASEAPI BOOL GetStoreInformation(LPSTORE_INFORMATION lpsi);
 #endif
 
@@ -2412,26 +3917,179 @@ typedef PCACTCTXW PCACTCTX;
 #endif
 #define ClearEventLog ClearEventLogW
 #define CommConfigDialog CommConfigDialogW
+/**
+ * Copies a file.
+ *
+ * The file attributes are copied too.
+ *
+ * @param lpExistingFileName Source path.
+ * @param lpNewFileName Destination path.
+ * @param bFailIfExists TRUE to fail if the destination exists, FALSE to
+ *        overwrite it.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
 #define CopyFile CopyFileW
 #define CopyFileEx CopyFileExW
 #if (_WIN32_WINNT >= 0x0501)
 #define CreateActCtx CreateActCtxW
 #endif
+/**
+ * Creates a directory.
+ *
+ * Doesn't create missing parent directories.
+ *
+ * @param lpPathName Path of the new directory, up to MAX_PATH characters.
+ * @param lpSecurityAttributes Ignored: must be NULL.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
 #define CreateDirectory CreateDirectoryW
 #define CreateDirectoryEx CreateDirectoryExW
+/**
+ * Creates an event object.
+ *
+ * Set with SetEvent, clear with ResetEvent, wait with
+ * WaitForSingleObject. A manual-reset event stays signalled until reset.
+ * An auto-reset event releases one waiting thread and then resets. Close
+ * with CloseHandle.
+ *
+ * @param lpEventAttributes Must be NULL.
+ * @param bManualReset TRUE for manual reset, FALSE for auto reset.
+ * @param bInitialState TRUE to start signalled.
+ * @param lpName The SDK reference says named events are not supported and
+ *        this must be NULL.
+ * @return The event, or NULL on failure (see GetLastError).
+ */
 #define CreateEvent CreateEventW
+/**
+ * Creates or opens a file or device.
+ *
+ * Devices are named with a colon, e.g. L"COM1:", and need OPEN_EXISTING.
+ * Can't create directories (use CreateDirectoryW). Close with
+ * CloseHandle.
+ *
+ * @param lpFileName Path or device name, up to MAX_PATH characters.
+ * @param dwDesiredAccess GENERIC_READ and/or GENERIC_WRITE, or 0 to query
+ *        device attributes only.
+ * @param dwShareMode 0, FILE_SHARE_READ and/or FILE_SHARE_WRITE.
+ * @param lpSecurityAttributes Ignored: should be NULL.
+ * @param dwCreationDisposition CREATE_NEW, CREATE_ALWAYS, OPEN_EXISTING,
+ *        OPEN_ALWAYS or TRUNCATE_EXISTING.
+ * @param dwFlagsAndAttributes FILE_ATTRIBUTE_* values and
+ *        FILE_FLAG_WRITE_THROUGH or FILE_FLAG_RANDOM_ACCESS. Windows CE
+ *        doesn't support FILE_ATTRIBUTE_OFFLINE, FILE_ATTRIBUTE_TEMPORARY,
+ *        FILE_FLAG_OVERLAPPED, FILE_FLAG_SEQUENTIAL_SCAN,
+ *        FILE_FLAG_NO_BUFFERING, FILE_FLAG_DELETE_ON_CLOSE,
+ *        FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_POSIX_SEMANTICS or
+ *        SECURITY_SQOS_PRESENT.
+ * @param hTemplateFile Ignored.
+ * @return The handle, or INVALID_HANDLE_VALUE on failure (see
+ *         GetLastError). GetLastError returns ERROR_ALREADY_EXISTS on
+ *         success if CREATE_ALWAYS or OPEN_ALWAYS found an existing file.
+ */
 #define CreateFile CreateFileW
 #ifdef _WIN32_WCE
+/**
+ * Opens or creates a file for use with CreateFileMappingW.
+ *
+ * Windows CE specific. Use this instead of CreateFileW for files to be
+ * mapped: the kernel opens the file, so other processes can share the
+ * mapping. Don't use the handle for ReadFile or WriteFile.
+ *
+ * @param lpFileName Path of the file, up to MAX_PATH characters.
+ * @param dwDesiredAccess GENERIC_READ, GENERIC_READ | GENERIC_WRITE, or 0
+ *        for attribute queries. The Windows CE 2.0 reference lists only
+ *        0 and GENERIC_READ.
+ * @param dwShareMode 0, FILE_SHARE_READ and/or FILE_SHARE_WRITE.
+ * @param lpSecurityAttributes Must be NULL.
+ * @param dwCreationDisposition CREATE_NEW, CREATE_ALWAYS, OPEN_EXISTING,
+ *        OPEN_ALWAYS or TRUNCATE_EXISTING.
+ * @param dwFlagsAndAttributes FILE_ATTRIBUTE_* values, plus
+ *        FILE_FLAG_WRITE_THROUGH and FILE_FLAG_RANDOM_ACCESS.
+ * @param hTemplateFile Ignored.
+ * @return The file handle, or INVALID_HANDLE_VALUE on failure (see
+ *         GetLastError). GetLastError returns ERROR_ALREADY_EXISTS on
+ *         success if CREATE_ALWAYS or OPEN_ALWAYS found an existing file.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define CreateFileForMapping CreateFileForMappingW
 #endif
+/**
+ * Creates or opens a file-mapping object.
+ *
+ * Map views with MapViewOfFile. To free it, unmap all views with
+ * UnmapViewOfFile and close the handle. Views of one mapping are
+ * coherent, but not with ReadFile or WriteFile on the same file. Doesn't
+ * work on devices without page-in support.
+ *
+ * @param hFile Handle from CreateFileForMappingW, or INVALID_HANDLE_VALUE
+ *        for a mapping backed by memory instead of a file (the size must
+ *        then be given).
+ * @param lpFileMappingAttributes Must be NULL.
+ * @param flProtect PAGE_READONLY, PAGE_READWRITE or PAGE_WRITECOPY,
+ *        optionally with SEC_COMMIT or SEC_RESERVE. The file's access
+ *        must allow it.
+ * @param dwMaximumSizeHigh High 32 bits of the maximum size.
+ * @param dwMaximumSizeLow Low 32 bits of the maximum size. With
+ *        dwMaximumSizeHigh 0 too, the current file size is used. A larger
+ *        size grows the file.
+ * @param lpName Name for sharing between processes, or NULL. Must not
+ *        contain a backslash.
+ * @return The mapping, or NULL on failure (see GetLastError). If the name
+ *         already existed, the existing mapping is returned and
+ *         GetLastError returns ERROR_ALREADY_EXISTS.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define CreateFileMapping CreateFileMappingW
 #if (_WIN32_WINNT >= 0x0500)
 #define CreateHardLink CreateHardLinkW
 #define CreateJobObject CreateJobObjectW
 #endif
 #define CreateMailslot CreateMailslotW
+/**
+ * Creates or opens a mutex.
+ *
+ * Acquire with a wait function and release with ReleaseMutex, once per
+ * successful wait. Close with CloseHandle. Events, mutexes, semaphores
+ * and file mappings share one namespace.
+ *
+ * @param lpMutexAttributes Must be NULL.
+ * @param bInitialOwner TRUE to own the mutex on return. Ignored if it
+ *        already existed.
+ * @param lpName Case-sensitive name, up to MAX_PATH characters and no
+ *        backslash, or NULL for an unnamed mutex.
+ * @return The mutex, or NULL on failure (see GetLastError). If the name
+ *         already existed, GetLastError returns ERROR_ALREADY_EXISTS.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define CreateMutex CreateMutexW
 #define CreateNamedPipe CreateNamedPipeW
+/**
+ * Starts a program in a new process.
+ *
+ * Close both handles in lpProcessInformation with CloseHandle when no
+ * longer needed. There are no priority classes, environment blocks or
+ * current directories.
+ *
+ * @param lpApplicationName The module to run. Must not be NULL, and the
+ *        module can't be named in lpCommandLine instead. Without a path,
+ *        the root of a PC Card, \Windows and \ are searched. .exe is
+ *        assumed if there is no extension.
+ * @param lpCommandLine Arguments, or NULL.
+ * @param lpProcessAttributes Must be NULL.
+ * @param lpThreadAttributes Must be NULL.
+ * @param bInheritHandles Must be FALSE.
+ * @param dwCreationFlags 0 or CREATE_SUSPENDED. Windows CE 2.0 also
+ *        supports DEBUG_PROCESS and DEBUG_ONLY_THIS_PROCESS.
+ * @param lpEnvironment Must be NULL.
+ * @param lpCurrentDirectory Must be NULL.
+ * @param lpStartupInfo Must be NULL.
+ * @param lpProcessInformation Receives the process and primary thread
+ *        handles and IDs.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
 #define CreateProcess CreateProcessW
 #define CreateProcessAsUser CreateProcessAsUserW
 #define CreateSemaphore CreateSemaphoreW
@@ -2440,6 +4098,14 @@ typedef PCACTCTXW PCACTCTX;
 #endif
 #define CreateWaitableTimer CreateWaitableTimerW
 #define DefineDosDevice DefineDosDeviceW
+/**
+ * Deletes a file.
+ *
+ * Fails for open files and read-only files.
+ *
+ * @param lpFileName Path of the file.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
 #define DeleteFile DeleteFileW
 #if (_WIN32_WINNT >= 0x0500)
 #define DeleteVolumeMountPoint DeleteVolumeMountPointW
@@ -2458,19 +4124,78 @@ typedef PCACTCTXW PCACTCTX;
 #endif
 #define FindAtom FindAtomW
 #define FindFirstChangeNotification FindFirstChangeNotificationW
+/**
+ * Starts a search for files and directories matching a name pattern.
+ *
+ * Continue with FindNextFileW and close with FindClose, not CloseHandle.
+ * Matches on names only, not attributes.
+ *
+ * @param lpFileName Path and pattern, which may contain * and ?. Only the
+ *        first MAX_PATH characters are used.
+ * @param lpFindFileData Receives the first match.
+ * @return The search handle, or INVALID_HANDLE_VALUE on failure (see
+ *         GetLastError).
+ */
 #define FindFirstFile FindFirstFileW
 #define FindFirstFileEx FindFirstFileExW
 #if (_WIN32_WINNT >= 0x0500)
 #define FindFirstVolume FindFirstVolumeW
 #define FindFirstVolumeMountPoint FindFirstVolumeMountPointW
 #endif
+/**
+ * Returns the next match of a search started with FindFirstFileW.
+ *
+ * @param hFindFile The search handle.
+ * @param lpFindFileData Receives the match.
+ * @return TRUE on success, FALSE on failure. GetLastError returns
+ *         ERROR_NO_MORE_FILES at the end of the search.
+ */
 #define FindNextFile FindNextFileW
 #if (_WIN32_WINNT >= 0x0500)
 #define FindNextVolume FindNextVolumeW
 #define FindNextVolumeMountPoint  FindNextVolumeMountPointW
 #endif
+/**
+ * Locates a resource in a module.
+ *
+ * Load it with LoadResource. RT_ANICURSOR and RT_ANIICON are not
+ * supported.
+ *
+ * @param hModule Module containing the resource. Must not be NULL.
+ * @param lpName Resource name, or an ID from MAKEINTRESOURCE. ID 0 doesn't
+ *        work.
+ * @param lpType Resource type, such as RT_RCDATA, or a custom type name.
+ * @return The resource, or NULL on failure (see GetLastError).
+ */
 #define FindResource FindResourceW
 #define FindResourceEx FindResourceExW
+/**
+ * Formats a message from a string, a module's message table or the system
+ * message table.
+ *
+ * Inserts use %1, %2 and so on, with optional printf-style formats such as
+ * %1!d!. With FORMAT_MESSAGE_ALLOCATE_BUFFER, free the buffer with
+ * LocalFree.
+ *
+ * @param dwFlags FORMAT_MESSAGE_FROM_STRING, _FROM_HMODULE or
+ *        _FROM_SYSTEM, plus _ALLOCATE_BUFFER, _IGNORE_INSERTS and
+ *        _ARGUMENT_ARRAY. The low byte sets the maximum line width
+ *        (FORMAT_MESSAGE_MAX_WIDTH_MASK).
+ * @param lpSource Format string or module handle, depending on dwFlags.
+ *        Otherwise ignored.
+ * @param dwMessageId Message ID. Ignored with FORMAT_MESSAGE_FROM_STRING.
+ * @param dwLanguageId Language ID, or 0 for the default search.
+ *        Ignored with FORMAT_MESSAGE_FROM_STRING.
+ * @param lpBuffer Output buffer, or, with FORMAT_MESSAGE_ALLOCATE_BUFFER,
+ *        a pointer to an LPWSTR that receives the allocated buffer.
+ * @param nSize Size of lpBuffer in characters, or the minimum to allocate.
+ * @param Arguments Insert values, as a va_list, or an array of 32-bit
+ *        values with FORMAT_MESSAGE_ARGUMENT_ARRAY. May be NULL.
+ * @return Characters written, excluding the terminator, or 0 on failure
+ *         (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define FormatMessage FormatMessageW
 #define FreeEnvironmentStrings FreeEnvironmentStringsW
 #define GetAtomName GetAtomNameW
@@ -2484,6 +4209,21 @@ typedef PCACTCTXW PCACTCTX;
 #define GetCurrentDirectory GetCurrentDirectoryW
 #define GetDefaultCommConfig GetDefaultCommConfigW
 #define GetDiskFreeSpace GetDiskFreeSpaceW
+/**
+ * Returns the total and free space on a volume.
+ *
+ * Values are 64-bit: don't truncate them.
+ *
+ * @param lpDirectoryName Any directory on the volume, e.g. L"\\PC Card",
+ *        or NULL for the object store.
+ * @param lpFreeBytesAvailableToCaller Receives the free bytes available
+ *        to the caller. Without quotas, the same as the total free.
+ * @param lpTotalNumberOfBytes Receives the volume size.
+ * @param lpTotalNumberOfFreeBytes Receives the free bytes, or NULL.
+ * @return Nonzero on success, 0 on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define GetDiskFreeSpaceEx GetDiskFreeSpaceExW
 #if (_WIN32_WINNT >= 0x0502)
 #define GetDllDirectory GetDllDirectoryW
@@ -2491,6 +4231,16 @@ typedef PCACTCTXW PCACTCTX;
 #define GetDriveType GetDriveTypeW
 #define GetEnvironmentStrings GetEnvironmentStringsW
 #define GetEnvironmentVariable GetEnvironmentVariableW
+/**
+ * Returns the attributes of a file or directory.
+ *
+ * @param lpFileName Path of the file or directory.
+ * @return FILE_ATTRIBUTE_* flags, or 0xFFFFFFFF on failure (see
+ *         GetLastError). Windows CE adds FILE_ATTRIBUTE_INROM for
+ *         read-only ROM files, and FILE_ATTRIBUTE_ROMMODULE for
+ *         execute-in-place ROM modules, which can't be opened with
+ *         CreateFileW.
+ */
 #define GetFileAttributes GetFileAttributesW
 #define GetFileSecurity GetFileSecurityW
 #define GetFileAttributesEx GetFileAttributesExW
@@ -2502,6 +4252,18 @@ typedef PCACTCTXW PCACTCTX;
 #if (_WIN32_WINNT >= 0x0500 || _WIN32_WINDOWS >= 0x0410)
 #define GetLongPathName GetLongPathNameW
 #endif
+/**
+ * Returns the full path of a loaded module.
+ *
+ * @param hModule Module handle, or NULL for the calling process's
+ *        executable.
+ * @param lpFilename Receives the path.
+ * @param nSize Size of lpFilename in characters.
+ * @return Characters copied, excluding the terminator, or 0 on failure
+ *         (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define GetModuleFileName GetModuleFileNameW
 #define GetModuleHandle GetModuleHandleW
 #if (_WIN32_WINNT >= 0x0500)
@@ -2514,6 +4276,17 @@ typedef PCACTCTXW PCACTCTX;
 #define GetPrivateProfileString GetPrivateProfileStringW
 #define GetPrivateProfileStruct GetPrivateProfileStructW
 #ifdef _WIN32_WCE
+/**
+ * Returns the address of a function exported by a DLL.
+ *
+ * On Windows CE, the name is a Unicode string. Desktop Win32's
+ * GetProcAddress takes an ANSI name.
+ *
+ * @param hModule Module handle from LoadLibrary.
+ * @param lpProcName Export name, matching the case of the EXPORTS entry,
+ *        or an ordinal in the low word with a zero high word.
+ * @return The function address, or NULL on failure (see GetLastError).
+ */
 #define GetProcAddress GetProcAddressW
 #endif
 #define GetProfileInt GetProfileIntW
@@ -2529,8 +4302,31 @@ typedef PCACTCTXW PCACTCTX;
 #define GetSystemWow64Directory GetSystemWow64DirectoryW
 #endif
 #define GetTempFileName GetTempFileNameW
+/**
+ * Returns the directory for temporary files.
+ *
+ * The path ends with a backslash.
+ *
+ * @param nBufferLength Size of lpBuffer in characters.
+ * @param lpBuffer Receives the path.
+ * @return Characters copied, excluding the terminator. If the buffer is
+ *         too small, the size needed. 0 on failure (see GetLastError).
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define GetTempPath GetTempPathW
 #define GetUserName GetUserNameW
+/**
+ * Gets the operating system version.
+ *
+ * Set dwOSVersionInfoSize to sizeof(OSVERSIONINFOW) before calling.
+ * dwPlatformId is VER_PLATFORM_WIN32_CE. The Japanese Windows CE 2.01
+ * reports itself as version 2.0.
+ *
+ * @param lpVersionInformation OSVERSIONINFOW that receives the version, with
+ *        dwOSVersionInfoSize set.
+ * @return TRUE on success, FALSE if dwOSVersionInfoSize is too small.
+ */
 #define GetVersionEx GetVersionExW
 #define GetVolumeInformation GetVolumeInformationW
 #define GetVolumeNameForVolumeMountPoint GetVolumeNameForVolumeMountPointW
@@ -2541,6 +4337,21 @@ typedef PCACTCTXW PCACTCTX;
 #define GlobalFindAtom GlobalFindAtomW
 #define GlobalGetAtomName GlobalGetAtomNameW
 #define IsBadStringPtr IsBadStringPtrW
+/**
+ * Loads a DLL or other executable module into the calling process.
+ *
+ * Without a path, Windows CE looks in the root of a PC Card RAM expansion
+ * card (if any), then \Windows, then the root directory; there's no way to
+ * set a search path. Without a path or extension, ".dll" is appended. Only
+ * the base name identifies a module: once Sample.dll is loaded, loading
+ * Sample.cpl or \MyDir\Sample.dll returns the same module. Loading an
+ * already loaded module increments its reference count. Release with
+ * FreeLibrary; get exports with GetProcAddress. An .exe can be loaded for
+ * its resources.
+ *
+ * @param lpLibFileName File name of the module.
+ * @return The module handle, or NULL on failure (see GetLastError).
+ */
 #define LoadLibrary LoadLibraryW
 #define LoadLibraryEx LoadLibraryExW
 #define LogonUser LogonUserW
@@ -2550,11 +4361,40 @@ typedef PCACTCTXW PCACTCTX;
 #define LookupPrivilegeName LookupPrivilegeNameW
 #define LookupPrivilegeValue LookupPrivilegeValueW
 #define lstrcat lstrcatW
+/**
+ * Compares two strings, case-sensitively, using locale word sort rules.
+ *
+ * @param lpString1 First string.
+ * @param lpString2 Second string.
+ * @return Negative if lpString1 sorts first, 0 if equal, positive if
+ *         lpString2 sorts first.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define lstrcmp lstrcmpW
+/**
+ * Compares two strings, ignoring case, using locale word sort rules.
+ *
+ * @param lpString1 First string.
+ * @param lpString2 Second string.
+ * @return Negative if lpString1 sorts first, 0 if equal, positive if
+ *         lpString2 sorts first.
+ *
+ * @note Windows CE 2.0 only.
+ */
 #define lstrcmpi lstrcmpiW
 #define lstrcpy lstrcpyW
 #define lstrcpyn lstrcpynW
 #define lstrlen lstrlenW
+/**
+ * Renames or moves a file or a directory with its contents.
+ *
+ * Files can move between volumes; directories can't.
+ *
+ * @param lpExistingFileName Existing file or directory.
+ * @param lpNewFileName New name. Must not already exist.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
 #define MoveFile MoveFileW
 #define MoveFileEx MoveFileExW
 #if (_WIN32_WINNT >= 0x0500)
@@ -2570,11 +4410,24 @@ typedef PCACTCTXW PCACTCTX;
 #define OpenFileMapping OpenFileMappingW
 #define OpenMutex OpenMutexW
 #define OpenSemaphore OpenSemaphoreW
+/**
+ * Sends a string to the debugger.
+ *
+ * Windows CE only has the Unicode version.
+ *
+ * @param lpszOutputString The string to send.
+ */
 #define OutputDebugString OutputDebugStringW
 #define PrivilegedServiceAuditAlarm PrivilegedServiceAuditAlarmW
 #define QueryDosDevice QueryDosDeviceW
 #define ReadEventLog ReadEventLogW
 #define RegisterEventSource RegisterEventSourceW
+/**
+ * Deletes an empty directory.
+ *
+ * @param lpPathName Path of the directory. It must be empty.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
 #define RemoveDirectory RemoveDirectoryW
 #if (_WIN32_WINNT >= 0x0500)
 #define ReplaceFile ReplaceFileW
@@ -2588,6 +4441,18 @@ typedef PCACTCTXW PCACTCTX;
 #define SetDllDirectory SetDllDirectoryW
 #endif
 #define SetEnvironmentVariable SetEnvironmentVariableW
+/**
+ * Sets a file's attributes.
+ *
+ * Can't change compression: FILE_ATTRIBUTE_COMPRESSED is ignored.
+ *
+ * @param lpFileName The file.
+ * @param dwFileAttributes Any of FILE_ATTRIBUTE_ARCHIVE,
+ *        FILE_ATTRIBUTE_HIDDEN, FILE_ATTRIBUTE_READONLY,
+ *        FILE_ATTRIBUTE_SYSTEM and FILE_ATTRIBUTE_TEMPORARY, or
+ *        FILE_ATTRIBUTE_NORMAL on its own.
+ * @return TRUE on success, FALSE on failure (see GetLastError).
+ */
 #define SetFileAttributes SetFileAttributesW
 #define SetFileSecurity SetFileSecurityW
 #if (_WIN32_WINNT >= 0x0501)
@@ -2827,8 +4692,31 @@ typedef PCACTCTXA PCACTCTX;
 WINBASEAPI HANDLE WINAPI ActivateDevice(LPCWSTR, DWORD);
 WINBASEAPI HANDLE WINAPI ActivateDeviceEx(LPCWSTR, LPCVOID, DWORD, LPVOID);
 WINBASEAPI BOOL WINAPI DeactivateDevice(HANDLE);
-WINBASEAPI BOOL DeregisterDevice(HANDLE);
-WINBASEAPI HANDLE RegisterDevice(LPCWSTR, DWORD, LPCWSTR, DWORD);
+/**
+ * Unloads a device driver loaded with RegisterDevice.
+ *
+ * Windows CE specific. Use when the device is removed or shut down.
+ *
+ * @param hDevice Handle from RegisterDevice.
+ * @return TRUE on success, FALSE on failure.
+ */
+WINBASEAPI BOOL DeregisterDevice(HANDLE hDevice);
+/**
+ * Loads a stream device driver and gives it a device name such as COM1:.
+ *
+ * Applications then open the device with CreateFile. The driver DLL exports
+ * its entry points with the prefix as their names' start, such as
+ * COM_Init, so one DLL can implement several device types. Unregister with
+ * DeregisterDevice.
+ *
+ * @param lpszType Three-character device prefix, such as L"COM".
+ * @param dwIndex Device index, 0 to 9: 2 makes COM2:.
+ * @param lpszLib File name of the driver DLL.
+ * @param dwInfo Value passed to the driver's Init entry point, such as a
+ *        port address.
+ * @return The device handle, or 0 on failure.
+ */
+WINBASEAPI HANDLE RegisterDevice(LPCWSTR lpszType, DWORD dwIndex, LPCWSTR lpszLib, DWORD dwInfo);
 #endif /* _WIN32_WCE */
 
 #ifdef __cplusplus
