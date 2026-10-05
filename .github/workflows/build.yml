@@ -36,6 +36,44 @@ jobs:
             build/ce*/**/*.dll
             build/debugmgr/ce*/*.exe
 
+  sh3:
+    runs-on: ubuntu-latest
+    env:
+      VELO_LLVM_RELEASE: v1
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install CMake
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake
+
+      - name: Download the SH3 LLVM
+        run: |
+          name=velo-llvm-$VELO_LLVM_RELEASE-linux-x86_64
+          url=https://github.com/Gadgetoid/velo-llvm-builds/releases/download/$VELO_LLVM_RELEASE
+          curl -fsSLO $url/$name.tar.xz
+          curl -fsSLO $url/$name.tar.xz.sha256
+          sha256sum -c $name.tar.xz.sha256
+          tar xf $name.tar.xz -C "$RUNNER_TEMP"
+          echo "VELO_SH3_LLVM=$RUNNER_TEMP/$name" >> "$GITHUB_ENV"
+
+      - name: Check the headers work from C++ on SH3
+        run: make check-cxx-headers-sh3
+
+      - name: Build the SH3 examples and debugmgr, with no warnings
+        run: |
+          make examples-sh3 debugmgr-sh3 2>&1 | tee build.log
+          ! grep -i "warning" build.log
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: examples-sh3
+          path: |
+            build/ce*-sh3/**/*.exe
+            build/ce*-sh3/**/*.dll
+            build/debugmgr/ce*-sh3/*.exe
+
   rc-grammar:
     runs-on: ubuntu-latest
     defaults:
