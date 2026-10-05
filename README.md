@@ -261,7 +261,7 @@ What changes:
 - clang targets `sh3el-unknown-none-wince`, and `SHx`, `SH3` and `_SH3_` are defined, as the SDK's SH3 projects do, for C and `.rc` files. The headers define them too if the compiler is SuperH, and `MIPS` and `_MIPS_` otherwise.
 - `CONTEXT` is CE's SH3 layout: `TEA`, `Expevt` and `Trapa` after `Psr`, then the debug registers in a union with CE 1.0's `hProc`, `akyCur` and `oldR15`, or CE 2.0's `oldR15` and `pFpuData`.
 - Import stubs load `__imp_<name>` from a literal after the stub and `jmp @r0`, as Microsoft's SH3 import libraries do.
-- `mkpe.py` writes machine 0x1A2 when the ELF is SuperH, and `R_SH_DIR32` relocations become HIGHLOW base relocations. PC-relative ones need none.
+- `mkpe.py` writes machine 0x1A2 when the ELF is SuperH, and `R_SH_DIR32` relocations become HIGHLOW base relocations. PC-relative ones need none. The subsystem is 9 with the CE version as on MIPS, and 1.01 for `VELO_CE_VERSION=1.01`, as Microsoft's CE 2.0 toolkit writes for `/subsystem:windowsce,1.01`.
 - `velo_runtime` adds the 32-bit division builtins, since the SH3 has no divide instruction.
 - C++ works as on MIPS: clang++ targets `sh3el-unknown-none-wince` with the same flags, and the `R_SH_DIR32` relocations in `.init_array`, `.fini_array` and vtables, all in `.rdata`, become base relocations.
 
