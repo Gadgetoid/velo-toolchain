@@ -113,6 +113,17 @@ import os
 def velo_os_symbols(event):
     folder = os.path.realpath(\"${VELO_OS_SYMBOLS}\")
     loaded = [os.path.realpath(objfile.filename) for objfile in gdb.objfiles() if objfile.filename]
+    if os.path.join(folder, \"rom.elf\") in loaded:
+        return
+    files = {name.lower(): name for name in os.listdir(folder)}
+    for line in gdb.execute(\"info sharedlibrary\", to_string=True).splitlines():
+        fields = line.split()
+        if len(fields) < 2 or fields[-2] != \"No\":
+            continue
+        name = files.get(os.path.basename(fields[-1]).lower())
+        if name and os.path.join(folder, name) not in loaded:
+            gdb.execute(\"add-symbol-file \\\"%s\\\"\" % os.path.join(folder, name))
+            loaded.append(os.path.join(folder, name))
     if [path for path in loaded if os.path.dirname(path) == folder and os.path.basename(path) != \"nk.elf\"]:
         return
     gdb.execute(\"remove-symbol-file \\\"%s\\\"\" % os.path.join(folder, \"nk.elf\"))

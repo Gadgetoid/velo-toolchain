@@ -235,7 +235,7 @@ Set `VELO_OS_SYMBOLS` to a folder of ELF symbol files for the image, one per mod
 
 Make them from the PDBs and map files Platform Builder leaves in the image's release folder. They're derived from Microsoft's binaries, so keep them out of anything you publish.
 
-With it set, the `.gdb` scripts load `nk.elf` and add the folder to the shared-library search path after the project's folders, and `velo-load` runs `sharedlibrary`, so GDB reads each system DLL's symbols as the stub reports it. If no system DLL has been read by the first stop, because the stub has no module list, they replace `nk.elf` with `rom.elf`, which works as ROM DLLs don't move. That needs GDB with Python. Source lines name files on the machine the image was built on, so GDB shows the line number without the text. Without the setting, the scripts are unchanged.
+With it set, the `.gdb` scripts load `nk.elf` and add the folder to the shared-library search path after the project's folders, and `velo-load` runs `sharedlibrary`, so GDB reads each system DLL's symbols as the stub reports it. The stub names a DLL as the program loaded it, so a file in the folder whose name only differs in case is loaded too. If no system DLL has been read by the first stop, because the stub has no module list, they replace `nk.elf` with `rom.elf`, which works as ROM DLLs don't move. That needs GDB with Python. Source lines name files on the machine the image was built on, so GDB shows the line number without the text. Without the setting, the scripts are unchanged.
 
 `tools/velo-symbolize --os FOLDER` looks up kernel and ROM DLL addresses in `rom.elf`, after the modules given. `tools/velo-emulator` warns when `VELO_OS_SYMBOLS` in its environment has a `rom.sha256` for another ROM.
 
