@@ -80,7 +80,6 @@ Not covered, so declare them yourself if you need them:
 
 - COM and OLE (`ole32`, `oleaut32` on CE 2.0)
 - telephony (`line` and `phone` functions)
-- `windowsx.h`'s message crackers, which CE 1.01's `windows.h` includes
 - audio codec format IDs (`mmreg.h`), and the ACM filter and format chooser functions
 - drivers and kernel internals: PC Card services, device loading, `kfuncs.h` handles
 - the address book, mail store and transport APIs
@@ -250,11 +249,24 @@ To debug on a self-built CE 2.x image, set `VELO_CE2_ROM` to it and `VELO_CE2_ST
 
 ## SH3
 
-`-DVELO_ARCH=sh3` builds for SH3 Windows CE devices. It needs an LLVM with a SuperH backend and Windows CE's SH-3 calling convention (the `sh3el-unknown-none-wince` triple), which LLVM releases don't have: set `VELO_LLVM_ROOT` to one, built from llvm/llvm-project#181287 with CE support added.
+`-DVELO_ARCH=sh3` builds for SH3 Windows CE devices. It needs an LLVM with a SuperH backend and Windows CE's SH-3 calling convention (the `sh3el-unknown-none-wince` triple), which LLVM releases don't have. [velo-llvm-builds](https://github.com/Gadgetoid/velo-llvm-builds/releases/tag/v1) has one for macOS (arm64) and Linux (x86_64):
 
 ```sh
-cmake -S . -B build-sh3 -DCMAKE_TOOLCHAIN_FILE=/path/to/velo-toolchain/cmake/velo-ce.cmake -DVELO_CE_VERSION=1 -DVELO_ARCH=sh3 -DVELO_LLVM_ROOT=/path/to/llvm
+curl -LO https://github.com/Gadgetoid/velo-llvm-builds/releases/download/v1/velo-llvm-v1-macos-arm64.tar.xz
+curl -LO https://github.com/Gadgetoid/velo-llvm-builds/releases/download/v1/velo-llvm-v1-macos-arm64.tar.xz.sha256
+shasum -a 256 -c velo-llvm-v1-macos-arm64.tar.xz.sha256
+tar xf velo-llvm-v1-macos-arm64.tar.xz
 ```
+
+On Linux, use `linux-x86_64` in place of `macos-arm64`. The macOS binaries aren't notarized, so if a browser downloaded the tarball, macOS stops them until you run `xattr -dr com.apple.quarantine velo-llvm-v1-macos-arm64`.
+
+Set `VELO_LLVM_ROOT` to the unpacked folder, or `VELO_SH3_LLVM` for the Makefile's SH3 targets:
+
+```sh
+cmake -S . -B build-sh3 -DCMAKE_TOOLCHAIN_FILE=/path/to/velo-toolchain/cmake/velo-ce.cmake -DVELO_CE_VERSION=1 -DVELO_ARCH=sh3 -DVELO_LLVM_ROOT=/path/to/velo-llvm-v1-macos-arm64
+```
+
+For another platform, build it from the `wince-sh3` branch of [Gadgetoid/llvm-project](https://github.com/Gadgetoid/llvm-project/tree/wince-sh3), or with velo-llvm-builds' scripts.
 
 What changes:
 
@@ -281,13 +293,13 @@ The C runtime DLL's libraries (`msvcrt.lib`, `msvcrtd.lib`) are left out: that D
 
 ### SH3 emulator
 
-The SH3 emulator is a velo-emu fork for Microsoft's Odo SH3 reference board, running a CE 2.12 (beta) image with the Explorer shell, built with Platform Builder 2.12. Its `--folder` serves a host folder to CE's parallel-port file system, so programs there start from Start > Run by name without copying them over. The CE 1.0, 1.01 and 2.0 builds all run on it, and look the same:
+The SH3 tests, debug state and launcher are optional, and need an SH3 Windows CE emulator. They're written for one that emulates Microsoft's Odo SH3 reference board, running a CE 2.12 (beta) image with the Explorer shell, built with Platform Builder 2.12. The emulator's `--folder` serves a host folder to CE's parallel-port file system, so programs there start from Start > Run by name without copying them over. The CE 1.0, 1.01 and 2.0 builds all run on it, and look the same:
 
 | `hello` | `window` | `maths` | `dll` |
 | --- | --- | --- | --- |
 | ![hello on SH3 CE 2.12](docs/screenshots/sh3/hello.png) | ![window on SH3 CE 2.12](docs/screenshots/sh3/window.png) | ![maths on SH3 CE 2.12](docs/screenshots/sh3/maths.png) | ![greeter on SH3 CE 2.12](docs/screenshots/sh3/greeter.png) |
 
-These need `VELO_SH3_EMU` (a built SH3 emulator checkout, with `headless`, and `sh3emu` for the window) and `VELO_SH3_ROM` (its CE 2.12 image, `odo-sh3-ce212.bin`):
+These need `VELO_SH3_EMU` (the emulator's folder, with `headless`, and `sh3emu` for the window) and `VELO_SH3_ROM` (its CE 2.12 image):
 
 ```sh
 make test-sh3          # run the examples, screenshots in build/ce*-sh3/screenshots
