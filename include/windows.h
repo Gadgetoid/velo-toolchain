@@ -11,7 +11,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <windbase.h>
-#if VELO_CE >= 2
+#if VELO_WCE == 101
+#include <windowsx.h>
+#endif
+#if VELO_CE >= 2 || VELO_WCE == 101
 #include <tchar.h>
 #endif
 #endif
@@ -28,7 +31,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <windbase.h>
-#if VELO_CE >= 2
+#if VELO_WCE == 101
+#include <windowsx.h>
+#endif
+#if VELO_CE >= 2 || VELO_WCE == 101
 #include <tchar.h>
 #endif
 #endif

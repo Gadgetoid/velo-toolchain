@@ -25,7 +25,7 @@ EXCLUDED_FUNCTIONS = re.compile(r"^(Co[A-Z]\w*|Ole\w+|Stg\w+|Var[A-Z]\w*|Variant
                                 r"VectorFromBstr|SystemTimeToVariantTime|VariantTimeToSystemTime|line[A-Z]\w*|Dll[A-Z]\w*|ThisIsGwes|__C_specific_handler|"
                                 r"acmFilter\w+|acmFormatChoose)$")
 EXCLUDED_HEADERS = {"tapi.h", "mmreg.h", "mmddk.h", "oleauto.h", "oaidl.h", "objidl.h", "objbase.h", "oleidl.h", "ole2.h", "wtypes.h", "kfuncs.h",
-                    "unknwn.h", "rpc.h", "rpcdce.h", "rpcndr.h", "rpcnsip.h", "rpcnterr.h", "olectl.h", "ocidl.h", "cguid.h", "coguid.h", "windowsx.h"}
+                    "unknwn.h", "rpc.h", "rpcdce.h", "rpcndr.h", "rpcnsip.h", "rpcnterr.h", "olectl.h", "ocidl.h", "cguid.h", "coguid.h"}
 EXCLUDED_TYPES = re.compile(r"^(P?U?INT128|RNAAPP_INFO|PRNAAPP_INFO|RASPPPADDR|RasCntlEnum_t|RUNQ_t|PRUNQ_t|PTHREAD|P?EXCEPTION_ROUTINE|"
                             r"_onexit_t|l?div_t|P?SOCKHAND|LPHICON)$|^(LP)?(LINE|PHONE|HLINE|HPHONE|HCALL|P?ACMFILTER|P?ACMFORMATCHOOSE|ACMDRIVERPROC|LPACMDRIVERPROC|I[A-Z]\w*Vtbl$|I[A-Z][a-z]\w*$|LP[A-Z]*VTBL$|PFN(CANUNLOADNOW|GETCLASSOBJECT)$)")
 EXCLUDED_MACROS = re.compile(r"^(\w+[a-z0-9]A|\w+API|DEBUGMSG|ERRORMSG|RETAILMSG|DBGCHK|WSAStartup|WSACleanup|BASETYPES|cdecl|NETCONS_INCLUDED|"

@@ -9,7 +9,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UNWRAPPED = {"pshpack1.h", "pshpack2.h", "pshpack4.h", "pshpack8.h", "poppack.h", "README.w32api", "VENDOR.md"}
 WINDOWS_EXTRAS = ["stdint.h", "mmsystem.h", "shellapi.h", "wchar.h", "stdlib.h", "string.h", "windbase.h"]
-WINDOWS_VERSION_EXTRAS = [("VELO_CE >= 2", "tchar.h")]
+WINDOWS_VERSION_EXTRAS = [("VELO_WCE == 101", "windowsx.h"), ("VELO_CE >= 2 || VELO_WCE == 101", "tchar.h")]
 OWN_HEADERS = ["wchar.h", "stdlib.h", "string.h", "windbase.h", "tchar.h"]
 MACRO_HEADERS = {"windowsx.h"}
 VERSIONS = {1: "1.0", 101: "1.01", 2: "2.0"}

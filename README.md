@@ -73,8 +73,8 @@ The Win32 headers are CeGCC's w32api (public domain) in `include/w32api`, patche
 - CE exports some wide functions without the `W` (`FindResource`, `GetVersionEx`, `GetClassLong`, the `Ras` and `acm` functions): either name works.
 - Every function the ROMs export has a docstring and named parameters, for editor hover and signature help. They're written from the CE 1.0 and 2.0 SDK references, with CE restrictions and the version that has the function.
 - `velo::runtime`, always linked: compiler-rt builtins (soft float, 64-bit division), `memcpy`, `memmove`, `memset`, `memcmp`, and `swprintf` and `vswprintf` over coredll's `wsprintfW`. That has no floating point (`%f` prints `f` and misreads the values after it) and writes at most 1023 characters plus the terminating null. Beyond coredll's wide-string functions there is no C library: use `LocalAlloc`, `wsprintfW` and your own maths.
-- `windowsx.h` has the SDK's message crackers and control macros. Include it yourself: the CE 1.0 and 2.0 SDKs' `windows.h` don't (CE 1.01's does).
-- `tchar.h` has the SDK's generic-text names: `_T`, `_TEXT`, `_tWinMain`, the `_tcs*`, `_ist*` and `_tto*` names on the wide functions coredll exports, and `_stprintf` and `_vstprintf` on `swprintf` and `vswprintf`. `windows.h` includes it on CE 2.0, as the SDK's does. The rest of the SDK's mapping goes to its static C library (`wprintf`, `_snwprintf`, `swscanf`, the stdio functions, `wcstol`, `wcstoul`, `wcstod`), so those are unavailable.
+- `windowsx.h` has the SDK's message crackers and control macros. Include it yourself: the CE 1.0 and 2.0 SDKs' `windows.h` don't. CE 1.01's does, and so does ours on SH3 CE 1.01.
+- `tchar.h` has the SDK's generic-text names: `_T`, `_TEXT`, `_tWinMain`, the `_tcs*`, `_ist*` and `_tto*` names on the wide functions coredll exports, and `_stprintf` and `_vstprintf` on `swprintf` and `vswprintf`. `windows.h` includes it on CE 2.0 (and SH3 CE 1.01), as the SDK's does. The rest of the SDK's mapping goes to its static C library (`wprintf`, `_snwprintf`, `swscanf`, the stdio functions, `wcstol`, `wcstoul`, `wcstod`), so those are unavailable.
 
 Not covered, so declare them yourself if you need them:
 
@@ -274,7 +274,7 @@ The C runtime DLL's libraries (`msvcrt.lib`, `msvcrtd.lib`) are left out: that D
 
 - coredll is the same as the MIPS SDK's, plus `DebugBreak`. The MIPS SDK lists match the Velo's `exports/ce1` and `exports/ce2` coredll, commctrl and winsock exactly.
 - There are lists for the SDK's other DLLs: on CE 1.0 addrstor, htmlview, msgstore, pcmcia and pmemtool, and on CE 2.0 also atlce, hwxusa, inkx, ndis, toolhelp and wininet. The Velo's ROM-only DLLs aren't there.
-- `VELO_CE_VERSION=1.01` targets CE 1.01, the Handheld PC update with localisation support: `_WIN32_WCE` is `101`, `INTERNATIONAL` is defined as the SDK's `windows.h` does, and the import libraries are CE 1.01's (`exports/ce101-sh3`), whose coredll adds 276 functions to CE 1.0's and drops 5. The headers add CE 1.01's constants and `CONTEXT`'s `pFpuData`.
+- `VELO_CE_VERSION=1.01` targets CE 1.01, the Handheld PC update with localisation support: `_WIN32_WCE` is `101`, `INTERNATIONAL` is defined as the SDK's `windows.h` does, and the import libraries are CE 1.01's (`exports/ce101-sh3`), whose coredll adds 276 functions to CE 1.0's and drops 5. The headers add CE 1.01's constants and `CONTEXT`'s `pFpuData`, and `windows.h` includes `windowsx.h` and `tchar.h`, as 1.01's does.
 
 `make examples-sh3` builds the examples into `build/ce1-sh3`, `build/ce101-sh3` and `build/ce2-sh3`, with `VELO_SH3_LLVM` as the LLVM. `make check-headers-sh3` compares the headers with the SDK headers using its SH3 defines. Without `VELO_SH3_LLVM` it compiles for MIPS instead (`--target-arch mips`), which checks the SH3 declarations but not the SuperH ABI's layouts. `long long` and `double` are 8-byte aligned in structures, as the SH compiler's default `/Zp8` gives.
 
