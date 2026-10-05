@@ -263,6 +263,7 @@ What changes:
 - Import stubs load `__imp_<name>` from a literal after the stub and `jmp @r0`, as Microsoft's SH3 import libraries do.
 - `mkpe.py` writes machine 0x1A2 when the ELF is SuperH, and `R_SH_DIR32` relocations become HIGHLOW base relocations. PC-relative ones need none.
 - `velo_runtime` adds the 32-bit division builtins, since the SH3 has no divide instruction.
+- C++ works as on MIPS: clang++ targets `sh3el-unknown-none-wince` with the same flags, and the `R_SH_DIR32` relocations in `.init_array`, `.fini_array` and vtables, all in `.rdata`, become base relocations.
 
 The import libraries come from `exports/ce1-sh3` and `exports/ce2-sh3`: the SH3 import libraries in Microsoft's CE 1.0 and 2.0 SDKs, not a device's ROM. `tools/mkexports.py` reads them out of the SDK's `.lib` files, which `tools/fetch-reference` downloads to `lib/`:
 
@@ -276,7 +277,7 @@ The C runtime DLL's libraries (`msvcrt.lib`, `msvcrtd.lib`) are left out: that D
 - There are lists for the SDK's other DLLs: on CE 1.0 addrstor, htmlview, msgstore, pcmcia and pmemtool, and on CE 2.0 also atlce, hwxusa, inkx, ndis, toolhelp and wininet. The Velo's ROM-only DLLs aren't there.
 - `VELO_CE_VERSION=1.01` targets CE 1.01, the Handheld PC update with localisation support: `_WIN32_WCE` is `101`, `INTERNATIONAL` is defined as the SDK's `windows.h` does, and the import libraries are CE 1.01's (`exports/ce101-sh3`), whose coredll adds 276 functions to CE 1.0's and drops 5. The headers add CE 1.01's constants and `CONTEXT`'s `pFpuData`, and `windows.h` includes `windowsx.h` and `tchar.h`, as 1.01's does.
 
-`make examples-sh3` builds the examples into `build/ce1-sh3`, `build/ce101-sh3` and `build/ce2-sh3`, with `VELO_SH3_LLVM` as the LLVM. `make check-headers-sh3` compares the headers with the SDK headers using its SH3 defines. Without `VELO_SH3_LLVM` it compiles for MIPS instead (`--target-arch mips`), which checks the SH3 declarations but not the SuperH ABI's layouts. `long long` and `double` are 8-byte aligned in structures, as the SH compiler's default `/Zp8` gives.
+`make examples-sh3` builds the examples into `build/ce1-sh3`, `build/ce101-sh3` and `build/ce2-sh3`, with `VELO_SH3_LLVM` as the LLVM. `make check-headers-sh3` compares the headers with the SDK headers using its SH3 defines. Without `VELO_SH3_LLVM` it compiles for MIPS instead (`--target-arch mips`), which checks the SH3 declarations but not the SuperH ABI's layouts. `long long` and `double` are 8-byte aligned in structures, as the SH compiler's default `/Zp8` gives. `make check-cxx-headers-sh3` checks the headers in C++ for CE 1.0, 1.01 and 2.0, the same way.
 
 ### SH3 emulator
 
