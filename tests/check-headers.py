@@ -13,7 +13,7 @@ WIN32_WCE = {1: 100, 101: 101, 2: 200}
 VERSION_NAMES = {1: "1.0", 101: "1.01", 2: "2.0"}
 COMMON_FLAGS = ["-fshort-wchar", "-ffreestanding", "-w", "-ferror-limit=0"]
 ARCHITECTURES = {
-    "mips": {"target": ["--target=mipsel-unknown-none-elf", "-march=mips1", "-msoft-float", "-Wno-experimental-option"],
+    "mips": {"target": ["--target=mipsel-unknown-none-elf", "-march=mips1", "-msoft-float", "-Wno-unknown-warning-option", "-Wno-experimental-option"],
              "sdk_defines": ["-DMIPS", "-D_MIPS_=1", "-D_M_MRX000=4000"], "defines": [], "exports": "ce%d"},
     "sh3": {"target": ["--target=sh3el-unknown-none-wince"],
             "sdk_defines": ["-DSHx", "-DSH3", "-D_SH3_", "-D_M_SH=3"], "defines": ["-DSHx", "-DSH3", "-D_SH3_"], "exports": "ce%d-sh3"},

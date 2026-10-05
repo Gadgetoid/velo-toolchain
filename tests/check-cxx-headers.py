@@ -8,7 +8,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 COMMON_FLAGS = ["-fshort-wchar", "-ffreestanding", "-std=c++20", "-fno-exceptions", "-fno-rtti", "-x", "c++"]
 ARCHITECTURES = {
-    "mips": {"target": ["--target=mipsel-unknown-none-elf", "-march=mips1", "-msoft-float", "-Wno-experimental-option"], "defines": []},
+    "mips": {"target": ["--target=mipsel-unknown-none-elf", "-march=mips1", "-msoft-float", "-Wno-unknown-warning-option", "-Wno-experimental-option"], "defines": []},
     "sh3": {"target": ["--target=sh3el-unknown-none-wince"], "defines": ["-DSHx", "-DSH3", "-D_SH3_"]},
 }
 WIN32_WCE = {1: 100, 101: 101, 2: 200}

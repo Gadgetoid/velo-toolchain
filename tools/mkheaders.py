@@ -46,7 +46,7 @@ def write_wrappers():
 def declarations(clang, version, arch="mips"):
     source = "#include <windows.h>\n#include <winsock.h>\n#include <tchar.h>\n" + "".join("#include <%s>\n" % header for header in vendored())
     command = [clang, "--target=mipsel-unknown-none-elf", "-march=mips1", "-msoft-float", "-fshort-wchar", "-ffreestanding",
-               "-Wno-experimental-option", "-fsyntax-only", "-Xclang", "-ast-dump=json", "-D_WIN32_WCE=%d" % WIN32_WCE[version],
+               "-Wno-unknown-warning-option", "-Wno-experimental-option", "-fsyntax-only", "-Xclang", "-ast-dump=json", "-D_WIN32_WCE=%d" % WIN32_WCE[version],
                "-DVELO_ALL_DECLARATIONS"] + ARCHITECTURES[arch]["defines"] + ["-I", os.path.join(ROOT, "include"), "-I", os.path.join(ROOT, "include", "w32api"), "-x", "c", "-"]
     tree = json.loads(subprocess.run(command, input=source, capture_output=True, text=True, check=True).stdout)
     macro_command = [argument for argument in command if argument not in ("-fsyntax-only", "-Xclang", "-ast-dump=json")] + ["-E", "-dM"]
