@@ -234,7 +234,7 @@ For a CE image built with Platform Builder, GDB can also show the kernel's and t
 Set `VELO_OS_SYMBOLS` to a folder of ELF symbol files for the image, one per module, when configuring the project: `-DVELO_OS_SYMBOLS=folder`, or in the environment, which also covers VS Code. The folder holds:
 
 - `nk.elf`: the kernel, at its run-time addresses
-- an ELF for each DLL, at its address in ROM, named as velo-emu's GDB stub reports it: the name in the ROM's module table, with `.elf` for `.dll` (`coredll.elf`)
+- an ELF for each DLL, at its address in ROM, named as velo-emu's and the SH3 emulator's GDB stubs report it: the name in the ROM's module table, with `.elf` for `.dll` (`coredll.elf`)
 - `rom.elf`: the kernel and all the DLLs in one file
 - optionally `rom.sha256`: the image's SHA-256, as `shasum -a 256` prints it
 
@@ -297,7 +297,7 @@ tools/velo-emulator --arch sh3 &
 gdb -x build/maths.elf.gdb -ex "target extended-remote :2003" -ex "set target-wide-charset UTF-16LE" -ex velo-load -ex "break WinMain" -ex run
 ```
 
-Each run boots the image to its desktop first (30 emulated seconds), unless `VELO_SH3_STATE` names a saved desktop state. `velo-emulator --arch sh3` starts the emulator from the debug state with its GDB stub on port 2003 and the agent socket at `build/debugmgr/ce2-sh3/agent.sock`, for `velo-debug` (`VELO_AGENT`). SH3 GDB scripts set GDB's architecture to `sh3`. VS Code's `Odo SH3 CE 2.12` configuration uses the `velo: emulator SH3` task; its `targetArchitecture` is `mips` because cpptools has no SH value, and GDB itself is set to `sh3`.
+Each run boots the image to its desktop first (30 emulated seconds), unless `VELO_SH3_STATE` names a saved desktop state. `velo-emulator --arch sh3` starts the emulator from the debug state with its GDB stub on port 2003 and the agent socket at `build/debugmgr/ce2-sh3/agent.sock`, for `velo-debug` (`VELO_AGENT`). It names the ROM the debug state was made with if `VELO_SH3_ROM` differs. SH3 GDB scripts set GDB's architecture to `sh3`. The SH3 image is self-built, so [OS symbols](#os-symbols) work on it: SH3 builds and `velo-emulator --arch sh3` read `VELO_SH3_OS_SYMBOLS` in place of `VELO_OS_SYMBOLS`. VS Code's `Odo SH3 CE 2.12` configuration uses the `velo: emulator SH3` task; its `targetArchitecture` is `mips` because cpptools has no SH value, and GDB itself is set to `sh3`.
 
 On SH3, debugmgr is `velo-debugmgr.exe`, and the emulator's image has a build of it in ROM, which CE starts in place of a `--folder` file with the same name. `make debug-state-sh3` runs the current build as `velo-debugmgr-build.exe` instead.
 
