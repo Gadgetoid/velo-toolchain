@@ -10,6 +10,16 @@ if(NOT IS_DIRECTORY "${VELO_EXPORTS_DIR}")
     message(FATAL_ERROR "No export lists for VELO_CE_VERSION=${VELO_CE_VERSION}")
 endif()
 
+if(NOT DEFINED VELO_OS_SYMBOLS)
+    set(VELO_OS_SYMBOLS "$ENV{VELO_OS_SYMBOLS}")
+endif()
+if(VELO_OS_SYMBOLS)
+    get_filename_component(VELO_OS_SYMBOLS "${VELO_OS_SYMBOLS}" ABSOLUTE)
+    if(NOT EXISTS "${VELO_OS_SYMBOLS}/nk.elf" OR NOT EXISTS "${VELO_OS_SYMBOLS}/rom.elf")
+        message(WARNING "VELO_OS_SYMBOLS is ${VELO_OS_SYMBOLS}, which lacks nk.elf or rom.elf")
+    endif()
+endif()
+
 add_library(velo_headers INTERFACE)
 target_include_directories(velo_headers SYSTEM INTERFACE "${VELO_TOOLCHAIN_ROOT}/include" "${VELO_TOOLCHAIN_ROOT}/include/w32api")
 add_library(velo::headers ALIAS velo_headers)
@@ -93,6 +103,26 @@ function(_velo_gdb_scripts)
         string(APPEND library_folders ":$<TARGET_FILE_DIR:${library}>")
         string(APPEND library_uploads "  remote put \"$<TARGET_FILE_DIR:${library}>/${output}\" /Windows/${output}\n")
     endforeach()
+    set(os_symbols_setup "")
+    set(os_symbols_folder "")
+    set(os_symbols_load "")
+    if(VELO_OS_SYMBOLS)
+        set(os_symbols_setup "add-symbol-file \"${VELO_OS_SYMBOLS}/nk.elf\"
+python
+import os
+def velo_os_symbols(event):
+    folder = os.path.realpath(\"${VELO_OS_SYMBOLS}\")
+    loaded = [os.path.realpath(objfile.filename) for objfile in gdb.objfiles() if objfile.filename]
+    if [path for path in loaded if os.path.dirname(path) == folder and os.path.basename(path) != \"nk.elf\"]:
+        return
+    gdb.execute(\"remove-symbol-file \\\"%s\\\"\" % os.path.join(folder, \"nk.elf\"))
+    gdb.execute(\"add-symbol-file \\\"%s\\\"\" % os.path.join(folder, \"rom.elf\"))
+gdb.events.stop.connect(velo_os_symbols)
+end
+")
+        set(os_symbols_folder ":${VELO_OS_SYMBOLS}")
+        set(os_symbols_load "  sharedlibrary\n")
+    endif()
     foreach(target IN LISTS executables)
         get_target_property(output ${target} VELO_OUTPUT)
         file(GENERATE OUTPUT "$<TARGET_FILE:${target}>.gdb" CONTENT
@@ -100,12 +130,12 @@ function(_velo_gdb_scripts)
 set exec-file-mismatch off
 maint set target-non-stop on
 file \"$<TARGET_FILE:${target}>\"
-set breakpoint pending on
-set solib-search-path $<TARGET_FILE_DIR:${target}>${library_folders}
+${os_symbols_setup}set breakpoint pending on
+set solib-search-path $<TARGET_FILE_DIR:${target}>${library_folders}${os_symbols_folder}
 set remote exec-file /Windows/${output}
 define velo-load
   remote put \"$<TARGET_FILE_DIR:${target}>/${output}\" /Windows/${output}
-${library_uploads}end
+${library_uploads}${os_symbols_load}end
 ")
     endforeach()
 endfunction()

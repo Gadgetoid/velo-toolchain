@@ -62,7 +62,7 @@ def describe(frames):
         function = frame.get("FunctionName") or "??"
         file_name = frame.get("FileName")
         if file_name and frame.get("Line"):
-            described.append("%s %s:%d" % (function, os.path.basename(file_name), frame.get("Line", 0)))
+            described.append("%s %s:%d" % (function, os.path.basename(file_name.replace("\\", "/")), frame.get("Line", 0)))
         else:
             described.append(function)
     return " < ".join(described)
@@ -94,11 +94,16 @@ def annotate(line, names):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Turn Windows CE addresses into functions and source lines, from the .elf beside each .exe or .dll")
-    parser.add_argument("module", nargs="+", help="program.elf, or library.elf@LOADADDRESS for a DLL (hex); .exe and .dll name the .elf beside them")
+    parser.add_argument("module", nargs="*", help="program.elf, or library.elf@LOADADDRESS for a DLL (hex); .exe and .dll name the .elf beside them")
     parser.add_argument("--address", "-a", action="append", default=[], help="address to look up (hex); without any, annotate stdin")
+    parser.add_argument("--os", metavar="FOLDER",
+                        help="OS symbol folder for a self-built image, for kernel and ROM DLL addresses")
     arguments = parser.parse_args()
+    if not arguments.module and not arguments.os:
+        parser.error("give at least one module, or --os")
     symbolizer = find_symbolizer()
-    modules = [Module(specification) for specification in arguments.module]
+    modules = [Module(os.path.join(arguments.os, "rom.elf"))] if arguments.os else []
+    modules += [Module(specification) for specification in arguments.module]
     if arguments.address:
         addresses = [int(address, 16) for address in arguments.address]
         names = symbolize(symbolizer, modules, addresses)

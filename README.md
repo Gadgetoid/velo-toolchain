@@ -222,6 +222,25 @@ For VS Code, copy `vscode/launch.json`, `vscode/tasks.json` and `vscode/settings
 
 F5 starts the emulator if it isn't running, uploads the selected target's `.exe` and runs it, stopping at breakpoints. The emulator keeps running between sessions.
 
+### OS symbols
+
+For a CE image built with Platform Builder, GDB can also show the kernel's and the system DLLs' functions and source lines. Philips' Velo ROMs have no symbols, so this only applies to self-built images.
+
+Set `VELO_OS_SYMBOLS` to a folder of ELF symbol files for the image, one per module, when configuring the project: `-DVELO_OS_SYMBOLS=folder`, or in the environment, which also covers VS Code. The folder holds:
+
+- `nk.elf`: the kernel, at its run-time addresses
+- an ELF for each DLL, at its address in ROM, named as velo-emu's GDB stub reports it: the name in the ROM's module table, with `.elf` for `.dll` (`coredll.elf`)
+- `rom.elf`: the kernel and all the DLLs in one file
+- optionally `rom.sha256`: the image's SHA-256, as `shasum -a 256` prints it
+
+Make them from the PDBs and map files Platform Builder leaves in the image's release folder. They're derived from Microsoft's binaries, so keep them out of anything you publish.
+
+With it set, the `.gdb` scripts load `nk.elf` and add the folder to the shared-library search path after the project's folders, and `velo-load` runs `sharedlibrary`, so GDB reads each system DLL's symbols as the stub reports it. If no system DLL has been read by the first stop, because the stub has no module list, they replace `nk.elf` with `rom.elf`, which works as ROM DLLs don't move. That needs GDB with Python. Source lines name files on the machine the image was built on, so GDB shows the line number without the text. Without the setting, the scripts are unchanged.
+
+`tools/velo-symbolize --os FOLDER` looks up kernel and ROM DLL addresses in `rom.elf`, after the modules given. `tools/velo-emulator` warns when `VELO_OS_SYMBOLS` in its environment has a `rom.sha256` for another ROM.
+
+To debug on a self-built CE 2.x image, set `VELO_CE2_ROM` to it and `VELO_CE2_STATE` to a desktop state saved with it, and run `make debug-state`.
+
 `vscode/rc-language` is a VS Code extension that highlights resource scripts (`.rc`). Its README says how to install it.
 
 ## Reference material

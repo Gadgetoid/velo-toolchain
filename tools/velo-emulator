@@ -10,6 +10,12 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "tests"))
 import emulator
 
+
+def file_digest(path):
+    with open(path, "rb") as file:
+        return hashlib.sha256(file.read()).hexdigest()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Start velo-emu from the debug desktop state, with its GDB stub listening")
     parser.add_argument("--ce", choices=sorted(emulator.TARGETS), default="1")
@@ -33,12 +39,14 @@ if __name__ == "__main__":
     rom = emulator.TARGETS[arguments.ce]["rom"]()
     if os.path.exists(state + ".rom"):
         expected_digest, expected_rom = open(state + ".rom").read().strip().split(" ", 1)
-        with open(rom, "rb") as rom_file:
-            digest = hashlib.sha256(rom_file.read()).hexdigest()
-        if digest != expected_digest:
+        if file_digest(rom) != expected_digest:
             setting = "VELO_EMU's rom/nk.bin" if arguments.ce == "1" else "VELO_CE%s_ROM" % arguments.ce
             sys.exit("velo-emulator: error: the debug state was made with %s, but %s is %s; set it to that ROM, or run make debug-state with this one"
                      % (expected_rom, setting, rom))
+    symbols = emulator.optional_environment("VELO_OS_SYMBOLS")
+    if symbols and os.path.exists(os.path.join(symbols, "rom.sha256")):
+        if open(os.path.join(symbols, "rom.sha256")).read().split()[0] != file_digest(rom):
+            print("velo-emulator: warning: VELO_OS_SYMBOLS is for another ROM than %s" % rom, flush=True)
     session = os.path.join(ROOT, "build", "debugmgr", "ce" + arguments.ce, "session.state")
     shutil.copyfile(state, session)
     folder = emulator.environment("VELO_EMU")
