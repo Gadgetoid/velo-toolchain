@@ -68,6 +68,25 @@ typedef unsigned long ULONG_PTR, *PULONG_PTR;
 #define VS_L2tpOnly 	                3
 #define VS_L2tpFirst	                4
 #define RASDIALEVENT                    "RasDialEvent"
+/**
+ * This message is sent by the OS to a window procedure when a change of
+ * state event occurs during a Remote Access Service (RAS) connection
+ * process, and a window has been specified to handle notifications of such
+ * events by using the notifier parameter of RasDial.
+ *
+ * @param rasconnstate Equivalent to the rasconnstate parameter of the
+ *        RasDialFunc and RasDialFunc1 callback functions. Specifies a
+ *        RASCONNSTATE enumerator value that indicates the state the
+ *        RasDial RAS connection process is about to enter.
+ * @param dwError Equivalent to the dwError parameter of the RasDialFunc
+ *        and RasDialFunc1 callback functions. A nonzero value indicates
+ *        the error that has occurred, or zero if no error has occurred.
+ *        RasDial sends this message with dwError set to zero upon entry to
+ *        each connection state. If an error occurs within a state, the
+ *        message is sent again for the state, this time with a nonzero
+ *        dwError value.
+ * @return An application should return TRUE if it processes this message.
+ */
 #define WM_RASDIALEVENT                 0xCCCD
 #define RASEO_UseCountryAndAreaCodes    0x00000001
 #define RASEO_SpecificIpAddr            0x00000002

@@ -14,14 +14,15 @@ ENTRY = re.compile(r"^## (\w+)(?:\((.*)\))?\s*$")
 
 def read_entries():
     entries = {}
-    for path in sorted(glob.glob(os.path.join(ROOT, "docs", "api", "*.txt"))):
+    paths = sorted(glob.glob(os.path.join(ROOT, "docs", "api", "*.txt"))) + sorted(glob.glob(os.path.join(ROOT, "docs", "api", "sdk", "*.txt")))
+    for path in paths:
         current = None
         for line in open(path, encoding="utf-8"):
             match = ENTRY.match(line)
             if match:
                 name, parameters = match.groups()
                 names = [word.strip() for word in parameters.split(",")] if parameters else []
-                current = entries[name] = {"parameters": [word for word in names if word], "body": [], "source": path}
+                current = None if name in entries else entries.setdefault(name, {"parameters": [word for word in names if word], "body": [], "source": path})
             elif current is not None:
                 current["body"].append(line.rstrip())
     for entry in entries.values():
@@ -54,6 +55,93 @@ def availability(name):
     if versions == [2]:
         return "Windows CE 2.0 only."
     return None
+
+
+def split_members(body):
+    kept = []
+    members = {}
+    current = None
+    for line in body:
+        match = re.match(r"@member (\w+) ?(.*)", line)
+        if match:
+            current = members[match.group(1)] = [match.group(2)]
+        elif current is not None and line.startswith(" "):
+            current.append(line.strip())
+        else:
+            current = None
+            kept.append(line)
+    while kept and not kept[-1]:
+        kept.pop()
+    return kept, members
+
+
+def indented_docstring(lines, indent):
+    return indent + "/**\n" + "".join((indent + " * %s\n" % line) if line else indent + " *\n" for line in lines) + indent + " */\n"
+
+
+def strip_indented_docstring(text, start):
+    before = text[:start]
+    match = re.search(r"[ \t]*/\*\*(?:(?!\*/).)*\*/\n$", before, re.S)
+    if match:
+        return before[:match.start()], text[start:]
+    return before, text[start:]
+
+
+def struct_braces(text, name):
+    for match in re.finditer(r"\}\s*(?:[*\w]+\s*,\s*)*%s\s*[,;]" % re.escape(name), text):
+        close = match.start()
+        depth = 0
+        for index in range(close, -1, -1):
+            if text[index] == "}":
+                depth += 1
+            elif text[index] == "{":
+                depth -= 1
+                if depth == 0:
+                    return index, close
+    return None
+
+
+def document_struct(text, entry, name):
+    braces = struct_braces(text, name)
+    if not braces:
+        return text, "not declared"
+    open_brace, close_brace = braces
+    body, members = split_members(entry["body"])
+    placements = []
+    code_lines = []
+    position = text.rfind("\n", 0, open_brace) + 1
+    while position < close_brace:
+        end = text.find("\n", position)
+        line = text[position:end]
+        code = re.sub(r"//.*|/\*.*?\*/", "", line).strip()
+        if code and not code.startswith(("*", "/*")):
+            code_lines.append((position, code))
+        position = end + 1
+    for member, lines in members.items():
+        for line_start, code in code_lines:
+            if line_start > open_brace and re.search(r"\b%s\s*(\[[^\]]*\])?\s*(:\s*\w+\s*)?[;,]" % re.escape(member), code):
+                placements.append((line_start, lines))
+                break
+    seen = set()
+    for line_start, lines in sorted(placements, key=lambda placement: -placement[0]):
+        if line_start in seen:
+            continue
+        seen.add(line_start)
+        line = text[line_start:text.find("\n", line_start)]
+        indent = line[:len(line) - len(line.lstrip())]
+        before, after = strip_indented_docstring(text, line_start)
+        text = before + indented_docstring(lines, indent) + after
+    start = statement_start(text, open_brace)
+    before, after = strip_docstring(text, start)
+    return before + docstring({"body": body}, None) + after, None
+
+
+def document_define(text, entry, name):
+    match = re.search(r"^[ \t]*#[ \t]*define[ \t]+%s\b" % re.escape(name), text, re.M)
+    if not match:
+        return text, "not declared"
+    before, after = strip_docstring(text, match.start())
+    return before + docstring(entry, None) + after, None
 
 
 def docstring(entry, note):
@@ -185,9 +273,22 @@ def apply(entries):
     problems = []
     for name in sorted(entries):
         entry = entries[name]
+        if any(line.startswith("@member ") for line in entry["body"]):
+            path = next((path for path, text in texts.items() if struct_braces(text, name)), None)
+            if not path:
+                problems.append("%s: not declared" % name)
+                continue
+            texts[path], problem = document_struct(texts[path], entry, name)
+            changed.add(path)
+            continue
         path, found = find_declaration(texts, name)
         if not found:
-            problems.append("%s: not declared" % name)
+            path = next((path for path, text in texts.items() if re.search(r"^[ \t]*#[ \t]*define[ \t]+%s\b" % re.escape(name), text, re.M)), None)
+            if not path:
+                problems.append("%s: not declared" % name)
+                continue
+            texts[path], problem = document_define(texts[path], entry, name)
+            changed.add(path)
             continue
         text = texts[path]
         name_start, open_paren = found

@@ -1,0 +1,256 @@
+## WSACleanup()
+This function terminates the use of Winsock.dll.
+
+This function initiates no action and is provided only for compatibility
+reasons.
+
+An application or DLL is required to perform a successful WSAStartup
+call before it can use Windows Sockets services. When it has completed
+the use of Windows Sockets, the application or DLL must call WSACleanup
+to deregister itself from a Windows Sockets implementation and allow the
+implementation to free any resources allocated on behalf of the
+application or DLL.
+
+Sockets that were open when WSACleanup was called are reset and
+automatically deallocated as if closesocket were called; sockets that
+have been closed with closesocket but that still have pending data to be
+sent can be affected-the pending data can be lost if the Winsock.dll is
+unloaded from memory as the application exits. To insure that all
+pending data is sent, an application should use shutdown to close the
+connection, then wait until the close completes before calling
+closesocket and WSACleanup. All resources and internal state, such as
+queued un-posted messages, must be deallocated so as to be available to
+the next user.
+
+There must be a call to WSACleanup for every successful call to
+WSAStartup made by a task. Only the final WSACleanup for that task does
+the actual cleanup; the preceding calls simply decrement an internal
+reference count in the Winsock.dll.
+
+@return Zero indicates success. SOCKET_ERROR indicates failure. To get a
+       specific error value, call WSAGetLastError. In a multithreaded
+       environment, WSACleanup terminates Windows Sockets operations for
+       all threads.
+
+## WSADATA
+This structure is used to store Windows Sockets initialization data
+returned by a call to WSAStartup. It contains data about the Winsock.dll
+implementation.
+
+WSAStartup assigns the following values to the members of the WSADATA
+structure:
+
+WSADATA member Assigned value wVersion wVersionRequested parameter value
+wHighVersion wVersionRequested parameter value szDescription NULL string
+szSystemStatus NULL string iMaxSockets 20 iMaxUdpDg 0 lpVendorInfo NULL
+
+@member wVersion Version of the Windows Sockets specification that the
+       Windows Sockets DLL expects the caller to use. The high-order
+       word specifies the minor version (revision) number; and the
+       low-order word specifies the major version number.
+@member wHighVersion Highest version of the Windows Sockets
+       specification that this DLL can support, usually the same as
+       wVersion.
+@member szDescription Null-terminated string into which the Windows
+       Sockets DLL copies a description of the Windows Sockets
+       implementation, including vendor identification. The text-up to
+       256 characters in length-can contain any characters, but vendors
+       are cautioned against including control and formatting
+       characters. Typically, an application uses this description in a
+       status message.
+@member szSystemStatus Null-terminated string into which the Windows
+       Sockets DLL copies relevant status or configuration data. The
+       Windows Sockets DLL should use this member only if the data might
+       be useful to the user or support staff; it should not be
+       considered as an extension of the szDescription member.
+@member iMaxSockets Maximum number of sockets which a single process can
+       potentially open. A Windows Sockets implementation can provide a
+       global pool of sockets for allocation to any process;
+       alternatively it can allocate per-process resources for sockets.
+       The number can well reflect the way in which the Windows Sockets
+       DLL or the networking software was configured. Application
+       writers can use this number as a crude indication of whether the
+       Windows Sockets implementation is usable by the application. For
+       example, an X Windows server might check iMaxSockets when first
+       started: if it is less than 8, the application would display an
+       error message instructing the user to reconfigure the networking
+       software. (This is a situation in which the szSystemStatus text
+       might be used.) Obviously there is no guarantee that a particular
+       application can actually allocate iMaxSockets sockets, since
+       there can be other Windows Sockets applications in use.
+@member iMaxUdpDg Size, in bytes, of the largest User Datagram Protocol
+       (UDP) datagram that can be sent or received by a Windows Sockets
+       application. If the implementation imposes no limit, iMaxUdpDg is
+       zero. In many implementations of Berkeley sockets, there is an
+       implicit limit of 8192 bytes on UDP datagrams, which are
+       fragmented if necessary. A Windows Sockets implementation can
+       impose a limit based, for instance, on the allocation of fragment
+       reassembly buffers. The minimum value of iMaxUdpDg for a
+       compliant Windows Sockets implementation is 512. Note that
+       regardless of the value of iMaxUdpDg, it is inadvisable to
+       attempt to send a broadcast datagram which is larger than the
+       Maximum Transmission Unit (MTU) for the network. The Windows
+       Sockets API does not provide a mechanism to discover the MTU, but
+       it must be no less than 512 bytes.
+@member lpVendorInfo Long pointer to a vendor-specific data structure.
+       The definition of this structure (if supplied) is beyond the
+       scope of the Windows Sockets specification.
+
+## WSAGetLastError()
+This function retrieves the error status for the last Windows Socket
+operation that failed.
+
+The WSAGetLastError function returns the last network error that
+occurred. When a particular Windows Sockets function indicates that an
+error has occurred, this function should be called to retrieve the
+appropriate error value. This error value can be different from the
+error value obtained from getsockopt SO_ERROR, which is socket-specific
+since WSAGetLastError is for all thread-specific sockets.
+
+A successful function call, or a call to WSAGetLastError, does not reset
+the error value. To reset the error value, use the WSASetLastError
+function call with iError set to zero. A getsockopt SO_ERROR also resets
+the error value to zero.
+
+@return The return value indicates the error value for this thread's
+       last Windows Sockets operation that failed.
+
+## WSASetLastError(iError)
+This function sets the error value that can be retrieved through the
+WSAGetLastError function.
+
+The WSASetLastError function allows an application to set the error
+value to be returned by a subsequent WSAGetLastError call for the
+current thread. Note that any subsequent Windows Sockets routine called
+by the application will override the error value as set by this routine.
+
+The error value set by WSASetLastError is different from the error value
+reset by calling the function getsockopt with SO_ERROR.
+
+@param iError [in] Integer that specifies the error value to be returned
+       by a subsequent WSAGetLastError call.
+@return None.
+
+## WSAStartup(wVersionRequested, lpWSAData)
+This function initializes a WSADATA structure.
+
+The WSAStartup function must be the first Windows Sockets function
+called by an application or DLL. It allows an application or DLL to
+specify the version of Windows Sockets required and to retrieve details
+of the specific Windows Sockets implementation. The application or DLL
+can only issue further Windows Sockets functions after a successfully
+calling WSAStartup.
+
+To support future Windows Sockets implementations and applications that
+can have functionality differences from current version of Windows
+Sockets, a negotiation takes place in WSAStartup. The caller of
+WSAStartup and the Winsock.dll indicate to each other the highest
+version that they can support, and each confirms that the other's
+highest version is acceptable. Upon entry to WSAStartup, the Winsock.dll
+examines the version requested by the application. If this version is
+equal to or higher than the lowest version supported by the DLL, the
+call succeeds and the DLL returns in wHighVersion the highest version it
+supports and in wVersion the minimum of its high version and
+wVersionRequested. The Winsock.dll then assumes that the application
+will use wVersion. If the wVersion field of the WSADATA structure is
+unacceptable to the caller, it should call WSACleanup and either search
+for another Winsock.dll or fail to initialize.
+
+It is legal and possible for an application written to this version of
+the specification to successfully negotiate a higher version number than
+the version of this specification. In such a case, the application is
+only guaranteed access to higher-version functionality that fits within
+the syntax defined in this version, such as new Ioctl codes and new
+behavior of existing functions. New functions, for example, may be
+inaccessible. To be guaranteed full access to new syntax of a future
+version, the application must fully conform to that future version, such
+as compiling against a new header file, linking to a new library, or
+other special cases.
+
+This negotiation allows both a Winsock.dll and a Windows Sockets
+application to support a range of Windows Sockets versions. An
+application can use Winsock.dll if there is any overlap in the version
+ranges. The following chart gives examples of how WSAStartup works in
+conjunction with different application and Winsock.dll versions:
+
+App versions DLL versions wVersion requested wVersion wHigh version End
+result 1.1 1.1 1.1 1.1 1.1 use 1.1 1.0 1.1 1.0 1.1 1.0 1.0 use 1.0 1.0
+1.0 1.1 1.0 1.0 1.1 use 1.0 1.1 1.0 1.1 1.1 1.1 1.1 use 1.1 1.1 1.0 1.1
+1.0 1.0 Application fails 1.0 1.1 1.0 --- --- WSAVERNOT SUPPORTED 1.0
+1.1 1.0 1.1 1.1 1.1 1.1 use 1.1 1.1 2.0 1.1 2.0 1.1 1.1 use 1.1
+
+The following code example demonstrates how an application that supports
+only version 1.1 of Windows Sockets makes a WSAStartup call:
+
+    WORD wVersionRequested;
+    WSADATA wsaData;
+    int err;
+
+    wVersionRequested = MAKEWORD( 1, 1 );
+
+    err = WSAStartup( wVersionRequested, &wsaData );
+    if ( err != 0 ) {
+     / * Tell the user that we could not find a usable * /
+     / * WinSock DLL.   * /
+     return;
+    }
+
+    / * Confirm that the WinSock DLL supports 1.1.* /
+    / * Note that if the DLL supports versions greater * /
+    / * than 1.1 in addition to 1.1, it will still return * /
+    / * 1.1 in wVersion since that is the version we * /
+    / * requested.   * /
+
+    if ( LOBYTE( wsaData.wVersion ) != 1 ||
+     HIBYTE( wsaData.wVersion ) != 1 ) {
+     / * Tell the user that we could not find a usable * /
+     / * WinSock DLL.   * /
+     WSACleanup( );
+     return;
+    }
+
+    / * The WinSock DLL is acceptable. Proceed. * /
+
+Once an application or DLL has made a successful WSAStartup call, it can
+proceed to make other Windows Sockets calls as needed. When it has
+finished using the services of the Winsock.dll, the application or DLL
+must call WSACleanup to allow the Winsock.dll to free any resources for
+the application.
+
+Details of the actual Windows Sockets implementation are described in
+the WSADATA structure.
+
+An application or DLL can call WSAStartup more than once if it needs to
+obtain the WSAData structure information more than once. On each such
+call the application can specify any version number supported by the
+DLL.
+
+An application must call one WSACleanup call for every successful
+WSAStartup call to allow third-party DLLs to make use of a Winsock.dllon
+behalf of an application. This means, for example, that if an
+application calls WSAStartup three times, it must call WSACleanup three
+times. The first two calls to WSACleanup do nothing except decrement an
+internal counter; the final WSACleanup call for the task does all
+necessary resource deallocation for the task.
+
+@param wVersionRequested [in] Specifies the highest version of Windows
+       Sockets support that the caller can use. The high order byte
+       specifies the minor version (revision) number; the low-order byte
+       specifies the major version number.
+@param lpWSAData [out] Long pointer to the WSADATA data structure that
+       is to receive details of the Windows Sockets implementation.
+@return Zero indicates success. To get a specific error value, call
+       WSAGetLastError. The following table shows possible error values.
+       Value Meaning WSASYSNOTREADY The underlying network subsystem is
+       not ready for network communication. WSAVERNOTSUPPORTED The
+       version of Windows Sockets support requested is not provided by
+       this particular Windows Sockets implementation. WSAEINPROGRESS A
+       blocking Windows Sockets 1.1 operation is in progress.
+       WSAEPROCLIM The limit on the number of tasks supported by the
+       Windows Sockets implementation has been reached. WSAEFAULT The
+       lpWSAData is not a valid pointer. An application cannot call
+       WSAGetLastError to determine the error value as is normally done
+       in Windows Sockets is WSAStartup fails. The Winsock.dll will not
+       have been loaded in the case of a failure so the client data area
+       where the "last error" information is stored could not be
+       established.

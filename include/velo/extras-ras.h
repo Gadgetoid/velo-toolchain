@@ -9,12 +9,59 @@ extern "C" {
 
 #ifndef VELO_VARSTRING
 #define VELO_VARSTRING
+/**
+ * This structure is used for returning variably sized strings. It is used
+ * both by the line device class and the phone device class.
+ *
+ * No extensibility.
+ *
+ * If a string cannot be returned in a variable structure, the dwStringSize
+ * and dwStringOffset members are set in one of these ways:
+ *
+ * dwStringSize and dwStringOffset members are both set to zero.
+ *
+ * dwStringOffset is nonzero and dwStringSize is zero.
+ *
+ * dwStringOffset is nonzero, dwStringSize is 1, and the byte at the given
+ * offset is zero.
+ */
 typedef struct varstring_tag {
+    /**
+     * Specifies the total size, in bytes, allocated to
+     * this data structure.
+     */
     DWORD dwTotalSize;
+    /**
+     * Specifies the size, in bytes, for this data
+     * structure that is needed to hold all the returned data.
+     */
     DWORD dwNeededSize;
+    /**
+     * Specifies the size, in bytes, of the portion of this
+     * data structure that contains useful data.
+     */
     DWORD dwUsedSize;
+    /**
+     * Specifies the format of the string. This member
+     * uses the following STRINGFORMAT_ constants: Value Description
+     * STRINGFORMAT_ASCII ASCII string format using one byte per
+     * character. The actual string is a NULL-terminated ASCII string
+     * with the terminating NULL accounted for in the string size.
+     * STRINGFORMAT_DBCS DBCS string format using one or two bytes per
+     * character. STRINGFORMAT_UNICODE Unicode string format using two
+     * bytes per character. STRINGFORMAT_BINARY An array of unsigned
+     * characters that could be used for numeric values.
+     */
     DWORD dwStringFormat;
+    /**
+     *
+     */
     DWORD dwStringSize;
+    /**
+     * Specify the size, in bytes, of the variably sized
+     * device field that contains the string data, and the offset, in
+     * bytes, from the beginning of this data structure.
+     */
     DWORD dwStringOffset;
 } VARSTRING, *LPVARSTRING;
 #endif

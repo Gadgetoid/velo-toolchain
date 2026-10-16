@@ -911,24 +911,78 @@ typedef UINT MCIDEVICEID;
 typedef UINT(CALLBACK *YIELDPROC)(MCIDEVICEID,DWORD);
 typedef UINT MMVERSION;
 typedef UINT MMRESULT;
+/**
+ * This structure contains timing information for different types of
+ * multimedia data.
+ */
 typedef struct mmtime_tag {
+	/**
+	 * Time format. It is one of the following values: Value
+	 * Description TIME_BYTES Current byte offset from beginning of the
+	 * file. TIME_MIDI MIDI time. TIME_MS Time in milliseconds.
+	 * TIME_SAMPLES Number of waveform-audio samples. TIME_SMPTE SMPTE
+	 * (Society of Motion Picture and Television Engineers) time.
+	 * TIME_TICKS Ticks within a MIDI stream.
+	 */
 	UINT wType;
 	union {
+		/**
+		 * Number of milliseconds. Used when wType is TIME_MS.
+		 */
 		DWORD ms;
+		/**
+		 * Number of samples. Used when wType is TIME_SAMPLES.
+		 */
 		DWORD sample;
+		/**
+		 * Byte count. Used when wType is TIME_BYTES.
+		 */
 		DWORD cb;
+		/**
+		 * Ticks in MIDI stream. Used when wType is TIME_TICKS.
+		 */
 		DWORD ticks;
 		struct {
+			/**
+			 * Hours.
+			 */
 			BYTE hour;
+			/**
+			 * Minutes.
+			 */
 			BYTE min;
+			/**
+			 * Seconds.
+			 */
 			BYTE sec;
+			/**
+			 * Frames.
+			 */
 			BYTE frame;
+			/**
+			 * Frames per second-24, 25, 29 (30 drop), or 30.
+			 */
 			BYTE fps;
+			/**
+			 * Dummy byte for alignment.
+			 */
 			BYTE dummy;
+			/**
+			 * Padding.
+			 */
 			BYTE pad[2];
+		/**
+		 * SMPTE time structure. Used when wType is TIME_SMPTE.
+		 */
 		} smpte;
 		struct {
+			/**
+			 * Song pointer position.
+			 */
 			DWORD songptrpos;
+		/**
+		 * MIDI time structure. Used when wType is TIME_MIDI.
+		 */
 		} midi;
 	} u;
 } MMTIME,*PMMTIME,*LPMMTIME;
@@ -955,14 +1009,61 @@ typedef HWAVEIN *LPHWAVEIN;
 typedef HWAVEOUT *LPHWAVEOUT;
 typedef DRVCALLBACK WAVECALLBACK;
 typedef WAVECALLBACK *LPWAVECALLBACK;
+/**
+ * This structure defines the header used to identify a waveform-audio
+ * buffer.
+ *
+ * Use the WHDR_BEGINLOOP and WHDR_ENDLOOP flags in the dwFlags member to
+ * specify the beginning and ending data blocks for looping. To loop on a
+ * single block, specify both flags for the same block. Use the dwLoops
+ * member in the WAVEHDR structure for the first block in the loop to
+ * specify the number of times to play the loop.
+ *
+ * The lpData, dwBufferLength, and dwFlags members must be set before
+ * calling the waveInPrepareHeader or waveOutPrepareHeader function. For
+ * either function, the dwFlags member must be set to zero.
+ */
 typedef struct wavehdr_tag {
+	/**
+	 * Long pointer to the address of the waveform buffer.
+	 */
 	LPSTR lpData;
+	/**
+	 * Specifies the length, in bytes, of the buffer.
+	 */
 	DWORD dwBufferLength;
+	/**
+	 * When the header is used in input, this member
+	 * specifies how much data is in the buffer.
+	 */
 	DWORD dwBytesRecorded;
+	/**
+	 * Specifies user data.
+	 */
 	DWORD dwUser;
+	/**
+	 * Specifies information about the buffer. It is one of the
+	 * following flags: Value Description WHDR_BEGINLOOP This buffer is
+	 * the first buffer in a loop. This flag is used only with output
+	 * buffers. WHDR_DONE Set by the device driver to indicate that it
+	 * is finished with the buffer and is returning it to the
+	 * application. WHDR_ENDLOOP This buffer is the last buffer in a
+	 * loop. This flag is used only with output buffers. WHDR_INQUEUE
+	 * Set by Windows to indicate that the buffer is queued for
+	 * playback. WHDR_PREPARED Set by Windows to indicate that the
+	 * buffer has been prepared with the waveInPrepareHeader or
+	 * waveOutPrepareHeader function.
+	 */
 	DWORD dwFlags;
+	/**
+	 * Specifies the number of times to play the loop. This
+	 * member is used only with output buffers.
+	 */
 	DWORD dwLoops;
 	struct wavehdr_tag *lpNext;
+	/**
+	 * Reserved.
+	 */
 	DWORD reserved;
 } WAVEHDR,*PWAVEHDR,*LPWAVEHDR;
 typedef struct tagWAVEOUTCAPSA {
@@ -1017,13 +1118,82 @@ typedef struct pcmwaveformat_tag {
 #ifndef _LPCWAVEFORMATEX_DEFINED
 #define _LPCWAVEFORMATEX_DEFINED
 #define _WAVEFORMATEX_
+/**
+ * This structure defines the format of waveform-audio data. Only format
+ * information common to all waveform-audio data formats is included in
+ * this structure. For formats that require additional information, this
+ * structure is included as the first member in another structure, along
+ * with the additional information.
+ *
+ * An example of a format that uses extra information is the Microsoft
+ * Adaptive Delta Pulse Code Modulation (MS-ADPCM) format. The wFormatTag
+ * for MS-ADPCM is WAVE_FORMAT_ADPCM. The cbSize member is typically set to
+ * 32. The extra information stored for WAVE_FORMAT_ADPCM is coefficient
+ * pairs required for encoding and decoding the waveform-audio data.
+ */
 typedef struct tWAVEFORMATEX {
+	/**
+	 * Waveform-audio format type. Format tags are
+	 * registered with Microsoft Corporation for many compression
+	 * algorithms. A complete list of format tags can be found in the
+	 * Mmsystem.h header file.
+	 */
 	WORD wFormatTag;
+	/**
+	 * Number of channels in the waveform-audio data.
+	 * Monaural data uses one channel and stereo data uses two channels.
+	 */
 	WORD nChannels;
+	/**
+	 * Sample rate, in samples per second (hertz), that
+	 * each channel should be played or recorded. If wFormatTag is
+	 * WAVE_FORMAT_PCM, then common values for nSamplesPerSec are 8.0
+	 * kHz, 11.025 kHz, 22.05 kHz, and 44.1 kHz. For non-PCM formats,
+	 * this member must be computed according to the manufacturer's
+	 * specification of the format tag.
+	 */
 	DWORD nSamplesPerSec;
+	/**
+	 * Required average data-transfer rate, in bytes
+	 * per second, for the format tag. If wFormatTag is WAVE_FORMAT_PCM,
+	 * nAvgBytesPerSec should be equal to the product of nSamplesPerSec
+	 * and nBlockAlign. For non-PCM formats, this member must be
+	 * computed according to the manufacturer's specification of the
+	 * format tag. Playback and record software can estimate buffer
+	 * sizes by using the nAvgBytesPerSec member.
+	 */
 	DWORD nAvgBytesPerSec;
+	/**
+	 * Block alignment, in bytes. The block alignment is
+	 * the minimum atomic unit of data for the wFormatTag format type.
+	 * If wFormatTag is WAVE_FORMAT_PCM, nBlockAlign should be equal to
+	 * the product of nChannels and wBitsPerSample divided by 8 (bits
+	 * per byte). For non-PCM formats, this member must be computed
+	 * according to the manufacturer's specification of the format tag.
+	 * Playback and record software must process a multiple of
+	 * nBlockAlign bytes of data at a time. Data written and read from a
+	 * device must always start at the beginning of a block. For
+	 * example, it is illegal to start playback of PCM data in the
+	 * middle of a sample (that is, on a non-block-aligned boundary).
+	 */
 	WORD nBlockAlign;
+	/**
+	 * Bits per sample for the wFormatTag format type.
+	 * If wFormatTag is WAVE_FORMAT_PCM, then wBitsPerSample should be
+	 * equal to 8 or 16. For non-PCM formats, this member must be set
+	 * according to the manufacturer's specification of the format tag.
+	 * Note that some compression schemes cannot define a value for
+	 * wBitsPerSample, so this member can be zero.
+	 */
 	WORD wBitsPerSample;
+	/**
+	 * Size, in bytes, of extra format information appended to
+	 * the end of the WAVEFORMATEX structure. This information can be
+	 * used by non-PCM formats to store extra attributes for the
+	 * wFormatTag. If no extra information is required by the
+	 * wFormatTag, this member must be set to zero. For WAVE_FORMAT_PCM
+	 * formats only, this member is ignored.
+	 */
 	WORD cbSize;
 } WAVEFORMATEX,*PWAVEFORMATEX,*LPWAVEFORMATEX;
 typedef const WAVEFORMATEX *LPCWAVEFORMATEX;
@@ -2302,9 +2472,97 @@ typedef MCI_OVLY_SAVE_PARMSW MCI_OVLY_SAVE_PARMS,*PMCI_OVLY_SAVE_PARMS,*LPMCI_OV
  * @note Windows CE 2.0 only.
  */
 #define PlaySound PlaySoundW
+/**
+ * This function queries a specified waveform device to determine its
+ * capabilities.
+ *
+ * Use the waveOutGetNumDevs function to determine the number of
+ * waveform-audio output devices present in the system. If the value
+ * specified by the uDeviceID parameter is a device identifier, it can vary
+ * from zero to one less than the number of devices present. The
+ * WAVE_MAPPER constant can also be used as a device identifier. Only cbwoc
+ * bytes (or less) of information is copied to the location pointed to by
+ * pwoc. If cbwoc is zero, nothing is copied and the function returns zero.
+ *
+ * @param uDeviceID Identifier of the waveform-audio output device. It can
+ *        be either a device identifier or a Handle to an open
+ *        waveform-audio output device.
+ * @param pwoc Pointer to a WAVEOUTCAPS structure to be filled with
+ *        information about the capabilities of the device.
+ * @param cbwoc Size, in bytes, of the WAVEOUTCAPS structure.
+ * @return One of the values described in the following table is returned.
+ *        Value Description MMSYSERR_NOERROR Success. MMSYSERR_INVALHANDLE
+ *        Specified device handle is invalid. MMSYSERR_NODRIVER No device
+ *        driver is present. MMSYSERR_NOMEM Unable to allocate or lock
+ *        memory.
+ */
 #define waveOutGetDevCaps _WNAME(waveOutGetDevCaps)
+/**
+ * This function retrieves a textual description of the error identified by
+ * the specified error number.
+ *
+ * If the textual error description is longer than the specified buffer,
+ * the description is truncated. The returned error string is always
+ * null-terminated. If cchText is zero, nothing is copied and the function
+ * returns zero. All error descriptions are less than MAXERRORLENGTH
+ * characters long.
+ *
+ * @param mmrError Error number.
+ * @param pszText Address of a buffer to be filled with the textual error
+ *        description.
+ * @param cchText Size, in characters, of the buffer pointed to by pszText.
+ * @return One of the values described in the following table is returned.
+ *        Value Description MMSYSERR_NOERROR Success. MMSYSERR_INVALHANDLE
+ *        Specified device handle is invalid. MMSYSERR_NODRIVER No device
+ *        driver is present. MMSYSERR_NOMEM Unable to allocate or lock
+ *        memory.
+ */
 #define waveOutGetErrorText _WNAME(waveOutGetErrorText)
+/**
+ * This function retrieves the capabilities of a specified waveform-audio
+ * input device.
+ *
+ * Use this function to determine the number of waveform-audio input
+ * devices present in the system. If the value specified by the uDeviceID
+ * parameter is a device identifier, it can vary from zero to one less than
+ * the number of devices present. The WAVE_MAPPER constant can also be used
+ * as a device identifier. Only cbwic bytes (or less) of information is
+ * copied to the location pointed to by pwic. If cbwic is zero, nothing is
+ * copied and the function returns zero.
+ *
+ * @param uDeviceID Identifier of the waveform-audio output device. It can
+ *        be either a device identifier or a Handle to an open
+ *        waveform-audio input device.
+ * @param pwic Pointer to a WAVEINCAPS structure to be filled with
+ *        information about the capabilities of the device.
+ * @param cbwic Size, in bytes, of the WAVEINCAPS structure.
+ * @return One of the values described in the following table is returned.
+ *        Value Description MMSYSERR_NOERROR Success. MMSYSERR_BADDEVICEID
+ *        Specified device identifier is out of range. MMSYSERR_NODRIVER No
+ *        device driver is present. MMSYSERR_NOMEM Unable to allocate or
+ *        lock memory.
+ */
 #define waveInGetDevCaps _WNAME(waveInGetDevCaps)
+/**
+ * This function retrieves a textual description of the error identified by
+ * the specified error number.
+ *
+ * If the textual error description is longer than the specified buffer,
+ * the description is truncated. The returned error string is always
+ * null-terminated. If cchText is zero, nothing is copied and the function
+ * returns zero. All error descriptions are less than MAXERRORLENGTH
+ * characters long.
+ *
+ * @param mmrError Error number.
+ * @param pszText Address of the buffer to be filled with the textual error
+ *        description.
+ * @param cchText Size, in characters, of the buffer pointed to by pszText.
+ * @return One of the values described in the following table is returned.
+ *        Value Description MMSYSERR_NOERROR Success. MMSYSERR_BADERRNUM
+ *        Specified error number is out of range. MMSYSERR_NODRIVER No
+ *        device driver is present. MMSYSERR_NOMEM Unable to allocate or
+ *        lock memory.
+ */
 #define waveInGetErrorText _WNAME(waveInGetErrorText)
 #define midiOutGetDevCaps midiOutGetDevCapsW
 #define midiOutGetErrorText midiOutGetErrorTextW

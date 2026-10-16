@@ -91,7 +91,8 @@ Not covered, so declare them yourself if you need them:
 - `tools/vendor-w32api.py` copies and patches w32api; `include/w32api/VENDOR.md` lists the patches.
 - `tools/mkheaders.py` writes the wrappers, `velo/aliases.h` and `velo/unavailable.h` from `exports/`.
 - `tools/mkconstants.py` writes `velo/constants.h` and `velo/types.h`: SDK constants and typedefs w32api lacks.
-- `tools/mkdocs.py` (also `make docstrings`) writes the docstrings from `docs/api` above each declaration, and names its parameters.
+- `tools/mkdocs.py` (also `make docstrings`) writes the docstrings from `docs/api` above each declaration, and names its parameters. Entries in `docs/api/sdk` fill in what `docs/api` doesn't cover: macros, messages and structures, with an `@member` line for each member, which goes above the member.
+- `tools/mksdkdocs.py wcesdkr.chm` writes `docs/api/sdk` from the Windows CE SDK reference (`Online_help_files/wcesdkr.chm` in the Auto PC SDK on the Windows CE DevCon 99 CD), for what the headers declare and `docs/api` doesn't document. It needs `7zz` or `7z`.
 
 Both need a clang with the MIPS backend (`CLANG`, default Homebrew's).
 

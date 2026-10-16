@@ -14,12 +14,70 @@ extern "C" {
 
 #ifdef	_WIN32_WCE	/* Valid from Windows CE 1.01 and later */
 
+/**
+ * This structure contains information used to initialize the user
+ * notifications settings dialog box, and receives the user's notification
+ * preferences entered by way of the dialog box. Also used when setting a
+ * user notification.
+ *
+ * The CE_USER_NOTIFICATION structure is passed in the
+ * CeGetUserNotificationPreferences function. Initial settings are used to
+ * populate the dialog box. If the function returns TRUE, the returned
+ * settings should be saved, and considered when calling
+ * CeSetUserNotification. Settings for hardware not on the current device
+ * will be ignored.
+ *
+ * It is also used when calling CeSetUserNotification, to describe what
+ * should happen when the notification time is reached.
+ */
 typedef struct UserNotificationType {
+	/**
+	 * Specifies the action to take when a notification
+	 * event occurs. It can be a combination of the following flags:
+	 * Value Description PUN_LED Flashes the LED. PUN_VIBRATE Vibrates
+	 * the device. PUN_DIALOG Displays the user notification dialog box.
+	 * When this structure is passed to the CeSetUserNotification
+	 * function, the pwszDialogTitle and pwszDialogText members must
+	 * provide the title and text of the dialog box. PUN_SOUND Plays the
+	 * sound specified by the pwszSound member. When passed to PSVN, the
+	 * pwszSound member must provide the name of the sound file.
+	 * PUN_REPEAT Repeats the pwszSound for 10-15 seconds. Only valid if
+	 * PUN_SOUND is set. Any flag that is not valid on the current
+	 * hardware platform is ignored.
+	 */
 	DWORD		ActionFlags;
+	/**
+	 * Pointer to the string that contains the title of
+	 * the user notification dialog box. If this member is NULL, no
+	 * dialog is displayed. The CeGetUserNotificationPreferences
+	 * function ignores this member.
+	 */
 	wchar_t		*pwszDialogTitle;
+	/**
+	 * Pointer to the string that contains the text of
+	 * the user notification dialog box. If this member is NULL, no
+	 * dialog is displayed. The CeGetUserNotificationPreferences
+	 * function ignores this member.
+	 */
 	wchar_t		*pwszDialogText;
+	/**
+	 * Pointer to a buffer that contains the unqualified name
+	 * of a sound file to play. This member is ignored if the
+	 * ActionFlags member does not include the PUN_SOUND flag.
+	 */
 	wchar_t		*pwszSound;
+	/**
+	 * Specifies the maximum length of the string that the
+	 * CeGetUserNotificationPreferences function can copy into the
+	 * pwszSound buffer. Because the string may be a path name in a
+	 * future release, the buffer must be at least the length derived by
+	 * the following expression: PATH_MAX * sizeof(TCHAR). This member
+	 * is ignored by the CeSetUserNotification function.
+	 */
 	DWORD		nMaxSound;
+	/**
+	 * Reserved; set to zero.
+	 */
 	DWORD		dwReserved;
 } CE_USER_NOTIFICATION, *PCE_USER_NOTIFICATION;
 
@@ -168,6 +226,21 @@ HANDLE CeSetUserNotification (HANDLE hNotification,
 		wchar_t *pwszAppName,
 		SYSTEMTIME* lpTime,
 		PCE_USER_NOTIFICATION lpUserNotification); 
+/**
+ * This function creates a new user notification or modifies an existing
+ * one.
+ *
+ * @param hNotification [in] Handle to the notification to overwrite or 0
+ *        to add a new notification.
+ * @param pcnt [in] Pointer to a UserNotificationTrigger structure which
+ *        defines what event activates a notification.
+ * @param pceun [in] Pointer to a UserNotificationType structure, which
+ *        defines how the system should respond when a notification occurs.
+ *        For example, the system could launch a dialog box or another
+ *        application.
+ * @return Returns a handle to the notification event if successful.
+ *        Returns NULL if unsuccessful.
+ */
 HANDLE CeSetUserNotificationEx (HANDLE hNotification,
 		CE_NOTIFICATION_TRIGGER *pcnt,
 		CE_USER_NOTIFICATION* pceun);

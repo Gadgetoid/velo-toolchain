@@ -167,7 +167,48 @@ WINADVAPI LONG WINAPI RegEnumValueA(HKEY,DWORD,LPSTR,PDWORD,PDWORD,PDWORD,LPBYTE
  * @return ERROR_SUCCESS, ERROR_NO_MORE_ITEMS at the end, or an error code.
  */
 WINADVAPI LONG WINAPI RegEnumValueW(HKEY hKey,DWORD dwIndex,LPWSTR lpszValueName,PDWORD lpcchValueName,PDWORD lpReserved,PDWORD lpType,LPBYTE lpData,PDWORD lpcbData);
-WINADVAPI LONG WINAPI RegFlushKey(HKEY);
+/**
+ * This function writes all the attributes of the specified open key into
+ * the registry.
+ *
+ * If RegFlushKey is called, the operating system attempts to flush the
+ * entire registry to the platform-supported storage. The implementation of
+ * this function OEM-dependent, which results in the following scenarios:
+ *
+ * If an OEM does not support persistent registry storage, then a call to
+ * this function fails.
+ *
+ * If an OEM does support persistent registry storage, then a call to this
+ * function flushes the entire registry to the OEM for storage.
+ *
+ * If the OEM fails the flush request, then RegFlushKey fails.
+ *
+ * Unlike RegCloseKey, the RegFlushKey function returns only when all the
+ * data has been written to the registry.
+ *
+ * The RegFlushKey function may also write out parts of or all of the other
+ * keys. Calling this function excessively can have a negative effect on an
+ * application's performance.
+ *
+ * By default, Windows CE does not support a lazy flush of the registry;
+ * therefore, it is important that all applications call RegFlushKey to
+ * save important registry information. Call RegFlushKey after a group of
+ * changes have been made, but not for every individual registry change.
+ * Frequent calling of RegFlushKey can degrade performance. Platforms that
+ * need to implement a lazy-flush or power-down flush can do so by calling
+ * RegFlushKey at anytime from a shell, from a low priority thread, or in
+ * the power-off switch handler in the keyboard driver.
+ *
+ * @param hKey [in] Handle to a currently open key, which is validated but
+ *        ignored. It can also be one of the following predefined reserved
+ *        handle values: HKEY_CLASSES_ROOT HKEY_CURRENT_USER
+ *        HKEY_LOCAL_MACHINE HKEY_USERS
+ * @return ERROR_SUCCESS indicates success. A nonzero error code defined in
+ *        Winerror.h indicates failure. To get a generic description of the
+ *        error, call FormatMessage with the FORMAT_MESSAGE_FROM_SYSTEM
+ *        flag set.
+ */
+WINADVAPI LONG WINAPI RegFlushKey(HKEY hKey);
 WINADVAPI LONG WINAPI RegGetKeySecurity(HKEY,SECURITY_INFORMATION,PSECURITY_DESCRIPTOR,PDWORD);
 WINADVAPI LONG WINAPI RegLoadKeyA(HKEY,LPCSTR,LPCSTR);
 WINADVAPI LONG WINAPI RegLoadKeyW(HKEY,LPCWSTR,LPCWSTR);

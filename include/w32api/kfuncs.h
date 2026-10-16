@@ -128,6 +128,16 @@ static inline BOOL WINAPI TlsFree(DWORD x)
 # define DebugBreak() __asm__( ".byte 0xcc" )
 #else
   /* externally supplied for an unsupported architecture */
+/**
+ * This function causes a breakpoint exception to occur in the current
+ * process so that the calling thread can signal the debugger and force it
+ * to take some action. If the process is not being debugged, the search
+ * logic of a standard exception handler is used. In most cases, this
+ * causes the calling process to terminate because of an unhandled
+ * breakpoint exception.
+ *
+ * @return None.
+ */
   extern void DebugBreak(void);
 #endif
 #endif

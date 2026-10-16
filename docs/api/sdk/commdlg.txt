@@ -1,0 +1,171 @@
+## CDM_SETDEFEXT
+This message sets the default filename extension for an Explorer-style
+Open or Save As common dialog box. The dialog box must have been created
+with the OFN_EXPLORER flag; otherwise, the message fails.
+
+@param hdlg Handle to the common dialog box window to receive the
+       message.
+@param pszext Pointer to the null-terminated string that contains the
+       new file name extension. Must not include a period (.).
+@return None.
+
+## CDN_TYPECHANGE
+This notification message is sent by an Explorer-style Open or Save As
+common dialog box when the user selects a new file type from the file
+types combo box. Your OFNHookProc hook procedure receives this message
+in the form of a WM_NOTIFY message.
+
+The system sends this notification only if the dialog box was created
+using the OFN_EXPLORER value.
+
+@param lpon Long pointer to an OFNOTIFY structure. The OFNOTIFY
+       structure contains an NMHDR structure whose code member indicates
+       the CDN_TYPECHANGE notification code. The OFNOTIFY structure also
+       contains a pointer to an OPENFILENAME structure whose
+       nFilterIndex member indicates the one-based index of the newly
+       selected file type filter.
+@return The return value is ignored.
+
+## ChooseColor(lpcc)
+This function creates a Color common dialog box that enables the user to
+select a color.
+
+The Color common dialog does not support user-defined colors if the
+target device screen is less than 480 pixels in width. In this case, the
+CC_FULLOPEN and CC_PREVENTFULLOPEN flags are ignored.
+
+The Color dialog box does not support palettes. The color choices
+offered by the dialog box are limited to the system colors and dithered
+versions of those colors.
+
+You can provide a CCHookProc hook procedure for a Color dialog box. The
+hook procedure can process messages sent to the dialog box. To enable a
+hook procedure, set the CC_ENABLEHOOK flag in the Flags member of the
+CHOOSECOLOR structure and specify the address of the hook procedure in
+the lpfnHook member.
+
+@param lpcc Long pointer to a CHOOSECOLOR structure that contains
+       information used to initialize the dialog box. When ChooseColor
+       returns, this structure contains information about the user's
+       color selection.
+@return If the user clicks the OK button of the dialog box, the return
+       value is nonzero. The rgbResult member of the CHOOSECOLOR
+       structure contains the RGB color value of the color selected by
+       the user. If the user cancels or closes the Color dialog box or
+       an error occurs, the return value is zero. To get extended error
+       information, call the CommDlgExtendedError function, which can
+       return one of the following values: CDERR_FINDRESFAILURE
+       CDERR_MEMLOCKFAILURE CDERR_INITIALIZATION CDERR_NOHINSTANCE
+       CDERR_LOCKRESFAILURE CDERR_NOHOOK CDERR_LOADRESFAILURE
+       CDERR_NOTEMPLATE CDERR_LOADSTRFAILURE CDERR_STRUCTSIZE
+       CDERR_MEMALLOCFAILURE
+
+## DEVNAMES
+This structure contains strings that identify the driver, device, and
+output port names for a printer. The PageSetupDlg function uses these
+strings to initialize the system-defined Print property sheet or Print
+dialog box. When the user closes the property sheet or dialog box,
+information about the selected printer is returned in this structure.
+
+The PageSetupDlg function fills this structure with byte offsets rather
+than character offsets.
+
+@member wDriverOffset (In/Out) Specifies the offset in bytes from the
+       beginning of this structure to a null-terminated string that
+       contains the file name (without the extension) of the device
+       driver. On input, this string is used to determine the printer to
+       display initially in the dialog box.
+@member wDeviceOffset (In/Out) Specifies the offset in bytes from the
+       beginning of this structure to the null-terminated string that
+       contains the name of the device.
+@member wOutputOffset (In/Out) Specifies the offset in bytes from the
+       beginning of this structure to the null-terminated string that
+       contains the device name for the physical output medium (output
+       port).
+@member wDefault (In/Out) Specifies whether the strings contained in the
+       DEVNAMES structure identify the default printer. This string is
+       used to verify that the default printer has not changed since the
+       last print operation. If any of the strings do not match, a
+       warning message is displayed informing the user that the document
+       may need to be reformatted. On output, the wDefault member is
+       changed only if the Print Setup dialog box was displayed and the
+       user chose the OK button. The DN_DEFAULTPRN flag is used if the
+       default printer was selected. If a specific printer is selected,
+       the flag is not used. All other flags in this member are reserved
+       for internal use by the dialog box procedure for the Print
+       property sheet or Print dialog box.
+
+## PageSetupDlg(lppsd)
+This function creates a Page Setup dialog box that enables the user to
+specify the attributes of a printed page. These attributes include the
+paper size and source, the page orientation-portrait or landscape-and
+the width of the page margins.
+
+To create your own print dialog, you must use the dialog template. Items
+on this template cannot be deleted however, items can be hidden,
+modified, and added.
+
+The PageSetupDlg function fills the DEVNAMES structure with byte offsets
+rather than the expected character offsets.
+
+@param lppsd Long pointer to a PAGESETUPDLG structure that contains
+       information used to initialize the dialog box. The structure
+       receives information about the user's selections when the
+       function returns.
+@return If the user clicks the OK button, the return value is nonzero.
+       The members of the PAGESETUPDLG structure pointed to by the lppsd
+       parameter indicate the user's selections. If the user cancels or
+       closes the Page Setup dialog box or an error occurs, the return
+       value is zero. To get extended error information, use the
+       CommDlgExtendedError function. One of the values shown in the
+       following table is returned. Value Value CDERR_DIALOGFAILURE
+       CDERR_NOTEMPLATE CDERR_FINDRESFAILURE CDERR_REGISTRYFAILURE
+       CDERR_INITIALIZATION CDERR_STRUCTSIZE CDERR_LOADRESFAILURE
+       PDERR_CREATEDCFAILURE CDERR_LOADSTRFAILURE PDERR_NOPORTS
+       CDERR_LOCKRESFAILURE PDERR_NOPRINTERS CDERR_MEMALLOCFAILURE
+       PDERR_PRINTERNOTFOUND CDERR_NOHINSTANCE PDERR_RETDEFFAILURE
+       CDERR_NOHOOK For more information about these error values, see
+       CommDlgExtendedError.
+
+## PrintDlg(lppd)
+This function displays a Print or Print Setup dialog box. The Print
+dialog box enables the user to specify the properties of a particular
+print job.
+
+The PRINTDLG structure contains different members in Windows CE than it
+does in Windows-based desktop platforms.
+
+If the hook procedure (pointed to by the lpfnPrintHook member of the
+PRINTDLG structure) processes the WM_CTLCOLORDLG message, the hook
+procedure must return a handle for the brush that should be used to
+paint the control background.
+
+Calling PrintDlg with dwFlags equal to PD_RETURNDEFAULTDC causes the
+function to use the last-saved settings or the default settings. This
+can cause PrintDlg to fail if the settings are not valid. You should use
+the manual PrintDlg-that is, without the PD_RETURNDEFAULTDC-to choose a
+valid printer, port, or other destination to ensure that you can print
+to it.
+
+When you are done with the device context (DC) returned by PrintDlg,
+call the DeleteDC function to delete it.
+
+@param lppd Long pointer to a PRINTDLG structure that contains
+       information used to initialize the dialog box. When PrintDlg
+       returns, this structure contains information about the user's
+       selections.
+@return If the user clicks the OK button, the return value is nonzero.
+       The members of the PRINTDLG structure pointed to by the lppd
+       parameter indicate the user's selections. If the user canceled or
+       closed the Print or Printer Setup dialog box or an error
+       occurred, the return value is zero. To get extended error
+       information, use the CommDlgExtendedError function. If the user
+       canceled or closed the dialog box, CommDlgExtendedError returns
+       zero; otherwise, it returns one of the following values:
+       CDERR_FINDRESFAILURE PDERR_CREATEICFAILURE CDERR_INITIALIZATION
+       PDERR_DEFAULTDIFFERENT CDERR_LOADRESFAILURE PDERR_DNDMMISMATCH
+       CDERR_LOADSTRFAILURE PDERR_GETDEVMODEFAIL CDERR_LOCKRESFAILURE
+       PDERR_INITFAILURE CDERR_MEMALLOCFAILURE PDERR_LOADDRVFAILURE
+       CDERR_MEMLOCKFAILURE PDERR_NODEFAULTPRN CDERR_NOHINSTANCE
+       PDERR_NODEVICES CDERR_NOHOOK PDERR_PARSEFAILURE CDERR_NOTEMPLATE
+       PDERR_PRINTERNOTFOUND CDERR_STRUCTSIZE PDERR_RETDEFFAILURE

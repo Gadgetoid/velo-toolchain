@@ -8,43 +8,530 @@
 extern "C" {
 #endif
 #define WM_CONVERTREQUESTEX 0x108
+/**
+ * This message is sent immediately before the IME generates composition
+ * string as a result of a key stroke. The message is a notification to an
+ * IME window to open its composition window. An application should process
+ * this message if it displays composition characters itself.
+ *
+ * Windows CE applications cannot create IME windows.
+ *
+ * @return None
+ */
 #define WM_IME_STARTCOMPOSITION 0x10D
+/**
+ * This message is sent to an application when the IME ends composition. An
+ * application should process this message if it displays composition
+ * characters itself.
+ *
+ * Windows CE applications cannot create IME windows.
+ *
+ * The wParam and lParam parameters are not used.
+ *
+ * If an application has created an IME window, it should pass this message
+ * to that window. The DefWindowProc function processes this message by
+ * passing it to default IME window.
+ *
+ * @return None
+ */
 #define WM_IME_ENDCOMPOSITION 0x10E
+/**
+ * This message is sent to an application when the IME changes composition
+ * status as a result of a key stroke. An application should process this
+ * message if it displays composition characters itself. Otherwise, it
+ * should send the message to the IME window.
+ *
+ * Windows CE applications cannot create IME windows.
+ *
+ * For more information about these values, see the "IME Composition String
+ * Values" table in Input Method Editor Constants.Windows CE applications
+ * cannot create IME windows.
+ *
+ * The fFlags parameter can also be a combination of the following values:
+ *
+ * CS_INSERTCHAR: Specifies that the given composition character should be
+ * inserted at the current insertion point. An application should display
+ * the composition character if it processes this message.
+ *
+ * CS_NOMOVECARET: Specifies that the application must not move the caret
+ * position as a result of processing the message. For example, if an IME
+ * specifies a combination of CS_INSERTCHAR and CS_NOMOVECARET, the
+ * application should insert the given character at the current caret
+ * position but should not move caret to the next position. A subsequent
+ * WM_IME_COMPOSITION message with GCS_RESULTSTR will replace this
+ * character.
+ *
+ * If the application has created an IME window, it should pass this
+ * message to that window. The DefWindowProc function processes this
+ * message by passing it to the default IME window. The IME window
+ * processes this message by updating its appearance based on the change
+ * flag given. An application can call ImmGetCompositionString to retrieve
+ * the new composition status.
+ *
+ * If none of the GCS_* values are set, the message indicates that the
+ * current composition has been canceled and applications that draw the
+ * composition string should delete the string.
+ *
+ * @param chDBCS DBCS character that represents the latest change to the
+ *        composition string.
+ * @param fFlags Change flag that indicates how the composition string or
+ *        character changed. It can be one or more of the following values:
+ *        GCS_COMPSTR GCS_SETCURSORPOS GCS_COMPATTR GCS_RESULTSTR
+ *        GCS_COMPCLAUSE GCS_RESULTCLAUSE GCS_COMPREADSTR GCS_RESULTREADSTR
+ *        GCS_COMPREADATTR GCS_RESULTREADCLAUSE GCS_COMPREADCLAUSE
+ *        GCR_ERRORSTR GCS_TYPINGINFO GCR_INFOSTR
+ * @return None
+ */
 #define WM_IME_COMPOSITION 0x10F
 #define WM_IME_KEYLAST 0x10F
+/**
+ * This message is sent to an application when a window of the application
+ * is activated.
+ *
+ * Windows CE applications should pass this message to the DefWindowProc
+ * function.
+ *
+ * @param fSet Boolean that is set to TRUE if the input context is active,
+ *        or to a FALSE, the context is inactive.
+ * @param iShow Show flags. It can be a combination of the following
+ *        values: Value Description ISC_SHOWUICOMPOSITIONWINDOW Shows the
+ *        composition window by UI window. ISC_SHOWUIGUIDWINDOW Shows the
+ *        guide window by UI window ISC_SHOWUISOFTKBD Shows the soft
+ *        keyboard by UI window ISC_SHOWUICANDIDATEWINDOW Shows the
+ *        candidate window of Index 0 by UI window.
+ *        ISC_SHOWUICANDIDATEWINDOW << 1 Shows the candidate window of
+ *        Index 1 by UI window. ISC_SHOWUICANDIDATEWINDOW << 2 Shows the
+ *        candidate window of Index 2 by UI window.
+ *        ISC_SHOWUICANDIDATEWINDOW << 3 Shows the candidate window of
+ *        Index 3 by UI window.
+ * @return Returns the value returned by DefWindowProc or ImmIsUIMessage.
+ */
 #define WM_IME_SETCONTEXT 0x281
+/**
+ * This message is sent to an application to notify it of changes to the
+ * IME window. An application processes this message if it is responsible
+ * for managing the IME window.
+ *
+ * Windows CE supports the following values for the dwCommand parameter:
+ *
+ * IMN_CHANGECANDIDATE IMN_SETCANDIDATEPOS IMN_CLOSECANDIDATE
+ * IMN_SETCOMPOSITIONWINDOW IMN_OPENCANDIDATE IMN_SETCONVERSIONMODE
+ * IMN_PRIVATE IMN_SETOPENSTATUS IMN_SETSENTENCEMODE
+ *
+ * @param dwCommand Specifies one of the following command values:
+ *        IMN_CHANGECANDIDATE IMN_SETCANDIDATEPOS IMN_CLOSECANDIDATE
+ *        IMN_SETCOMPOSITIONFONT IMN_CLOSESTATUSWINDOW
+ *        IMN_SETCOMPOSITIONWINDOW IMN_GUIDELINE IMN_SETCONVERSIONMODE
+ *        IMN_OPENCANDIDATE IMN_SETOPENSTATUS IMN_OPENSTATUSWINDOW
+ *        IMN_SETSENTENCEMODE IMN_PRIVATE IMN_SETSTATUSWINDOWPOS For more
+ *        information about these commands, see the corresponding
+ *        descriptions.
+ * @param dwData Specifies a command-specific value.
+ * @return Returns a command-specific value. IMN_CHANGECANDIDATE,
+ *        IMN_OPENCANDIDATE, IMN_OPENSTATUSWINDOW, IMN_SETCANDIDATEPOS,
+ *        IMN_SETCOMPOSITIONFONT, IMN_SETCOMPOSITIONWINDOW,
+ *        IMN_SETCONVERSIONMODE, IMN_SETOPENSTATUS, IMN_SETSENTENCEMODE,
+ *        IMN_SETSTATUSWINDOWPOS
+ */
 #define WM_IME_NOTIFY 0x282
+/**
+ * This message directs the IME window to carry out the requested command.
+ * An application uses this message to control the IME window created by
+ * the application.
+ *
+ * @param dwCommand Specifies a command value. It is of the following
+ *        values: IMC_GETCANDIDATEPOS IMC_OPENSTATUSWINDOW
+ *        IMC_GETCOMPOSITIONFONT IMC_SETCANDIDATEPOS
+ *        IMC_GETCOMPOSITIONWINDOW IMC_SETCOMPOSITIONFONT
+ *        IMC_GETCONVERSIONMODE IMC_SETCOMPOSITIONWINDOW IMC_GETOPENSTATUS
+ *        IMC_SETCONVERSIONMODE IMC_GETSENTENCEMODE IMC_SETOPENSTATUS
+ *        IMC_GETSTATUSWINDOWPOS IMC_SETSENTENCEMODE IMC_CLOSESTATUSWINDOW
+ *        IMC_SETSTATUSWINDOWPOS For more information about these commands,
+ *        see the individual descriptions.
+ * @param dwData Specifies a command-specific value.
+ * @return Returns a command-specific value
+ */
 #define WM_IME_CONTROL 0x283
+/**
+ * This message is sent to an application when the IME window finds no
+ * space to extend the area for the composition window. The application
+ * should use the IMC_SETCOMPOSITIONWINDOW message to specify how to
+ * display the window.
+ *
+ * The wParam and lParam Parameters are not used. The IME window, not the
+ * IME, sends this notification message by using the SendMessage message.
+ *
+ * @return None
+ */
 #define WM_IME_COMPOSITIONFULL 0x284
+/**
+ * This message is sent to an application when the system is about to
+ * change the current IME. An application that has created an IME window
+ * should pass this message to that window so that it can retrieve the
+ * keyboard layout handle for the newly selected IME.
+ *
+ * The DefWindowProc function processes this message by passing the
+ * information to the default IME window.
+ *
+ * @param fSelect Boolean that is set to TRUE if the specified IME is
+ *        selected, or to FALSE if the specified IME is no longer selected.
+ * @param hKL Handle to the keyboard layout associated with the IME.
+ * @return None
+ */
 #define WM_IME_SELECT 0x285
+/**
+ * This message is sent to an application when the IME gets a character of
+ * the conversion result. Unlike the WM_CHAR message, this message can
+ * include double-byte as well as single-byte character values.
+ *
+ * If the WM_IME_CHAR message includes a double-byte character and the
+ * application passes this message to DefWindowProc, the IME converts this
+ * message into two WM_CHAR messages, each containing one byte of the
+ * double-byte character.
+ *
+ * @param chCharCode1 and chCharCode2 (For double-byte character sets)
+ *        Single- or double-byte character value. For a double-byte
+ *        character, chCharCode1 contains the lead byte.
+ * @param chCharCode1 (For Unicode) Unicode character value.
+ * @param lKeyData Repeat count, scan code, extended-key flag, context
+ *        code, previous key-state flag, and transition-state flag, as
+ *        shown following: Value Description 0-15 Repeat count: Since the
+ *        first byte and second byte is continuous, this is always 1. 16-23
+ *        Scan Code: Scan code for a complete FE character. 24-28 Not used.
+ *        29 Context code. 31 Conversion state.
+ */
 #define WM_IME_CHAR 0x286
+/**
+ * This message is sent to an application by the IME to notify the
+ * application of a key press. The Parameters and return value for this
+ * message are identical to the WM_KEYDOWN message. An application can
+ * process this message or pass it to the DefWindowProc function to
+ * generate a matching WM_KEYDOWN message. This message is usually
+ * generated by the IME to keep message order.
+ *
+ * @param nVirtKey Virtual-key code.
+ * @param lKeyData Key data.
+ */
 #define WM_IME_KEYDOWN 0x290
+/**
+ * This message is sent to an application by the IME to notify the
+ * application of a key release. The Parameters and return value for this
+ * message are identical to the WM_KEYUP message. An application can
+ * process this message or pass it to the DefWindowProc function to
+ * generate a matching WM_KEYUP message. This message is usually generated
+ * by the IME to keep message order.
+ *
+ * @param nVirtKey Virtual-key code.
+ * @param lKeyData Key data.
+ */
 #define WM_IME_KEYUP 0x291
 #if (_WIN32_WINNT >= 0x0500)
+/**
+ * This message requests information about the state of the IME.
+ *
+ * @param dwRequest Specifies a request value. It is of the following
+ *        values: IMR_CANDIDATEFORM IMR_DOCUMENTFEED IMR_COMPOSITIONFONT
+ *        IMR_QUERYCHARPOSITION IMR_COMPOSITIONFORM IMR_RECONVERTSTRING
+ *        IMR_CONFIRMRECONVERTSTRING
+ * @param dwData Specifies request-specific data. For more information
+ *        about this data, see the description for each request value.
+ * @return Returns a request-specific value. For more information about
+ *        this data, see the description for each request value.
+ */
 #define WM_IME_REQUEST 0x0288
 #endif
+/**
+ * This message is sent by an application to an IME window to get the
+ * position of the candidate window. Because the IME may adjust the
+ * candidate window position, an application uses this message to get the
+ * actual position to decide whether to reposition the window.
+ *
+ * The returned position is in window coordinates relative to the window
+ * having the current input focus.
+ *
+ * @param &CandForm Pointer to the CANDIDATEFORM structure that receives
+ *        the position of the candidate window
+ * @return Zero indicates success. Nonzero indicates failure.
+ */
 #define IMC_GETCANDIDATEPOS 7
+/**
+ * This message is sent by an application to an IME window to set the
+ * position of the candidate window. This message is intended for
+ * applications that display composition characters on their own but use
+ * the IME window to display candidates.
+ *
+ * @param &CandForm Pointer to the CANDIDATEFORM structure that contains
+ *        the x- and y-coordinates for the candidate window. The
+ *        application should set the dwIndex member in the structure.
+ * @return Zero indicates success. Nonzero indicates failure.
+ */
 #define IMC_SETCANDIDATEPOS 8
+/**
+ * An application sends the IMC_GETCOMPOSITIONFONT message to an IME window
+ * to retrieve the logical font used for displaying intermediate characters
+ * in the composition window.
+ *
+ * @param &LogFont Pointer to the LOGFONT structure that receives data
+ *        about the logical font
+ * @return Zero indicates success. Nonzero indicates failure.
+ */
 #define IMC_GETCOMPOSITIONFONT 9
+/**
+ * This message is sent by an application to an IME window to specify the
+ * logical font to use for displaying intermediate characters in the
+ * composition window.
+ *
+ * When processing this message, the IME window changes the current
+ * selected font in the input context.
+ *
+ * @param &LogFont Pointer to the LOGFONT structure that contains data
+ *        about the logical font
+ * @return Zero indicates success. Nonzero indicates failure.
+ */
 #define IMC_SETCOMPOSITIONFONT 10
+/**
+ * This message is sent by an application to an input method editor (IME)
+ * window to get the position of the composition window. Because the IME
+ * may adjust the composition window position, an application uses this
+ * message to get the actual position to decide whether to reposition the
+ * window.
+ *
+ * The returned position is in window coordinates relative to the window
+ * having the current input focus.
+ *
+ * @param &CompForm Pointer to the COMPOSITIONFORM structure that receives
+ *        the position of the composition window
+ * @return Zero indicates success. Nonzero indicates failure.
+ */
 #define IMC_GETCOMPOSITIONWINDOW 11
+/**
+ * This message is sent by an application to an input method editor (IME)
+ * window to set the style of the composition window. The message set this
+ * style in the current input context and the style is subsequently applied
+ * to each IME window that receives that input context.
+ *
+ * By default, the IME window has the CFS_POINT style. This means the IME
+ * window uses the current caret position and window client area when it
+ * opens a composition window.
+ *
+ * @param &CompForm Pointer to the COMPOSITIONFORM structure that contains
+ *        the style data
+ * @return Zero indicates success. Nonzero indicates failure.
+ */
 #define IMC_SETCOMPOSITIONWINDOW 12
+/**
+ * This message is sent by an application to an IME window to get the
+ * position of the status window.
+ *
+ * @return A POINTS structure that contains the x- and y-coordinates of the
+ *        status window position indicates success.
+ */
 #define IMC_GETSTATUSWINDOWPOS 15
+/**
+ * This message is sent by an application to an IME window to set the
+ * position of the status window.
+ *
+ * @param &pts Pointer to a POINTS structure that contains the x- and
+ *        y-coordinates of the status window position.
+ * @return Zero indicates success. Nonzero indicates failure.
+ */
 #define IMC_SETSTATUSWINDOWPOS 16
+/**
+ * This message is sent by an application to the input method editor (IME)
+ * window to hide the status window.
+ *
+ * When the status window of IME is hidden, this message does nothing.
+ * Although an application may send this message to the IME window, the
+ * application does not receive the corresponding IMN_CLOSESTATUSWINDOW
+ * message.
+ *
+ * @return Zero indicates success. Nonzero indicates failure.
+ */
 #define IMC_CLOSESTATUSWINDOW 0x21
+/**
+ * This message is sent by an application to the IME window to show the
+ * status window. This message is ignored if the system is not in the show
+ * IME status mode. The user can set or clear the show IME status mode from
+ * the taskbar.
+ *
+ * If the status window is already shown, this message does nothing.
+ * Although the application may send this message to the IME window, the
+ * application does not receive the corresponding IMN_OPENSTATUSWINDOW
+ * message.
+ *
+ * @return Zero indicates success. Nonzero indicates failure.
+ */
 #define IMC_OPENSTATUSWINDOW 0x22
+/**
+ * This message is sent to the application when an input method editor
+ * (IME) is about to close the status window. An application should process
+ * this notification message if it displays the status window for the IME.
+ * The application receives this notification message through the
+ * WM_IME_NOTIFY message.
+ *
+ * The IME window closes the status window when it processes this message.
+ *
+ * @return None
+ */
 #define IMN_CLOSESTATUSWINDOW 1
+/**
+ * This message is sent when an IME is about to create the status window.
+ * An application processes this message to display the status window for
+ * the IME by itself. The application receives this notification message
+ * through the WM_IME_NOTIFY message.
+ *
+ * The IME window creates a status window when it processes this message
+ * and sets the strings to display in the window into the input context.
+ * Applications can get data about the status window by using the
+ * ImmGetConversionStatus function.
+ *
+ * @return None
+ */
 #define IMN_OPENSTATUSWINDOW 2
+/**
+ * This message is sent to the application when an IME is about to change
+ * the content of the candidate window. An application should process this
+ * notification message if it displays candidates itself. The application
+ * receives this notification message through the WM_IME_NOTIFY message.
+ *
+ * The IME window changes the appearance of the candidate window when it
+ * processes this message. An application can get data about the system
+ * window with the ImmGetCandidateListCount and ImmGetCandidateList
+ * functions.
+ *
+ * @param fCandidates Candidate lists flag. Each bit corresponds to a
+ *        candidate list: bit 0 to the first list, bit 1 to the second, and
+ *        so on. If a specified bit is 1, the corresponding candidate
+ *        window is about to be changed.
+ * @return None
+ */
 #define IMN_CHANGECANDIDATE 3
+/**
+ * This message is sent to the application when an IME is about to close
+ * the candidate window. An application should process this message if it
+ * displays candidates. The application receives this notification message
+ * through the WM_IME_NOTIFY message.
+ *
+ * By default, the IME window destroys a candidate window when it processes
+ * this message.
+ *
+ * @param fCandidates Candidate lists flag. Each bit corresponds to a
+ *        candidate list: bit 0 to the first list, bit 1 to the second, and
+ *        so on. If a specified bit is 1, the corresponding candidate
+ *        window is about to be closed.
+ * @return None
+ */
 #define IMN_CLOSECANDIDATE 4
+/**
+ * This message is sent to the application when an IME is about to open the
+ * candidate window. An application should process this message if it
+ * displays candidates. The application can retrieve a list of candidates
+ * to display by using the ImmGetCandidateList function. The application
+ * receives this notification message through the WM_IME_NOTIFY message.
+ *
+ * By default, the IME window creates a candidate window when it processes
+ * this message.
+ *
+ * @param fCandidates Candidate lists flag. Each bit corresponds to a
+ *        candidate list: bit 0 to the first list, bit 1 to the second, and
+ *        so on. If a specified bit is 1, the corresponding candidate
+ *        window is about to be opened.
+ * @return None
+ */
 #define IMN_OPENCANDIDATE 5
+/**
+ * This message is sent when the conversion mode of the input context is
+ * updated. The application receives this notification message through the
+ * WM_IME_NOTIFY message.
+ *
+ * The application can get conversion mode data by using the
+ * ImmGetConversionStatus function.
+ *
+ * @return None
+ */
 #define IMN_SETCONVERSIONMODE 6
+/**
+ * This message is sent when the sentence mode of the input context is
+ * updated. The application receives this notification message through the
+ * WM_IME_NOTIFY message.
+ *
+ * The application can get data about the sentence mode by using the
+ * ImmGetConversionStatus function.
+ *
+ * @return None
+ */
 #define IMN_SETSENTENCEMODE 7
+/**
+ * This message is sent when the open status of the input context is
+ * updated. The application receives this notification message through the
+ * WM_IME_NOTIFY message.
+ *
+ * The application can get data about the open status by using the
+ * ImmGetOpenStatus function.
+ *
+ * @return None
+ */
 #define IMN_SETOPENSTATUS 8
+/**
+ * This message is sent when the IME is about to move the candidate window.
+ * An application should process this message if it displays the candidate
+ * window itself. The application receives this notification message
+ * through the WM_IME_NOTIFY message.
+ *
+ * The IME window moves the candidate window when it processes this
+ * message.
+ *
+ * @param fCandidates Candidate lists flag. Each bit corresponds to a
+ *        candidate list: bit 0 to the first list, bit 1 to the second, and
+ *        so on. If a specified bit is 1, the corresponding candidate
+ *        window is about to be moved.
+ * @return None
+ */
 #define IMN_SETCANDIDATEPOS 9
+/**
+ * This message is sent when the font of the input context is updated. The
+ * application receives this notification message through the WM_IME_NOTIFY
+ * message.
+ *
+ * The application can get font data by using the ImmGetCompositionFont
+ * function. The IME window subsequently uses the font to draw the
+ * composition string.
+ *
+ * @return None
+ */
 #define IMN_SETCOMPOSITIONFONT 10
+/**
+ * This message is sent when the style or position of the composition
+ * window is updated. The application receives this notification message
+ * through the WM_IME_NOTIFY message.
+ *
+ * The application can get data about the composition form by using the
+ * IMC_GETCOMPOSITIONWINDOW message.
+ *
+ * @return None
+ */
 #define IMN_SETCOMPOSITIONWINDOW 11
+/**
+ * This message is sent when the status window position in the input
+ * context is updated. The application receives this notification message
+ * through the WM_IME_NOTIFY message.
+ *
+ * The application can get data about the status window position by using
+ * the IMC_GETSTATUSWINDOWPOS message.
+ *
+ * @return None
+ */
 #define IMN_SETSTATUSWINDOWPOS 12
+/**
+ * This message is sent when an IME is about to show an error message or
+ * other data. The application receives this notification message through
+ * the WM_IME_NOTIFY message.
+ *
+ * The IME window displays the error message or data string in an
+ * information window.
+ *
+ * @return None
+ */
 #define IMN_GUIDELINE 13
 #define IMN_PRIVATE 14
 #define NI_OPENCANDIDATE 16
@@ -207,6 +694,17 @@ extern "C" {
 #define IME_REGWORD_STYLE_EUDC 1
 #define IME_REGWORD_STYLE_USER_FIRST 0x80000000
 #define IME_REGWORD_STYLE_USER_LAST 0xFFFFFFFF
+/**
+ * This message is sent to the application through the WM_IME_REQUEST
+ * message when a selected IME needs a string for reconversion.
+ *
+ * @param lpRECONVERTSTRING Long pointer to a buffer that contains the
+ *        RECONVERTSTRING structure and strings
+ * @return Returns the required size of the RECONVERTSTRING if the
+ *        application filled the RECONVERTSTRING structure in lParam.
+ *        Otherwise, returns zero. However, if lParam is NULL, the
+ *        application must return the required size of the RECONVERTSTRING.
+ */
 #define IMR_RECONVERTSTRING 4
 #define IMR_QUERYCHARPOSITION 6
 #define SOFTKEYBOARD_TYPE_T1 1
@@ -249,24 +747,127 @@ extern "C" {
 typedef DWORD HIMC;
 typedef DWORD HIMCC;
 typedef HKL *LPHKL;
+/**
+ * This structure contains position information for a composition window.
+ */
 typedef struct tagCOMPOSITIONFORM {
+	/**
+	 * Specifies the position style. It must be the following
+	 * values: Value Description CFS_DEFAULT Moves the composition
+	 * window to the default position. The input method editor (IME)
+	 * window can display the composition window outside the client
+	 * area, such as in a floating window.
+	 */
 	DWORD dwStyle;
+	/**
+	 * Coordinates of the upper-left corner of the
+	 * composition window.
+	 */
 	POINT ptCurrentPos;
+	/**
+	 * Coordinates of the upper-left and lower-right corners of
+	 * the composition window.
+	 */
 	RECT rcArea;
 } COMPOSITIONFORM,*PCOMPOSITIONFORM,*LPCOMPOSITIONFORM;
+/**
+ * This structure contains position information for the candidate window.
+ *
+ * In Japanese versions 1.0 and later, the ImmSetCandidateWindow function
+ * allows an index range from 0 through 4 for the dwIndex member of the
+ * CANDIDATEFORM structure. In Windows CE versions 2.10 and later, an index
+ * range from 0 through 3 is allowed.
+ */
 typedef struct tagCANDIDATEFORM {
+	/**
+	 * Specifies the candidate list identifier. Can be 0 for
+	 * the first list, 1 for the second, and so on. The maximum index is
+	 * 31.
+	 */
 	DWORD dwIndex;
+	/**
+	 * Specifies the position style. It is one of the following
+	 * values: Value Description CFS_CANDIDATEPOS Displays the
+	 * upper-left corner of the candidate list window at the position
+	 * given by ptCurrentPos. The coordinates are relative to the
+	 * upper-left corner of the window that contains the list window,
+	 * and are subject to adjustment by the system. CFS_EXCLUDE Excludes
+	 * the candidate window from the area specified by rcArea. The
+	 * ptCurrentPos member specifies the coordinates of the current
+	 * point of interest, typically the caret position.
+	 */
 	DWORD dwStyle;
+	/**
+	 * Coordinates of the upper-left corner of the
+	 * candidate window or the caret position, depending on the value of
+	 * dwStyle.
+	 */
 	POINT ptCurrentPos;
+	/**
+	 * Coordinates of the upper-left and lower-right corners of
+	 * the exclusion area.
+	 */
 	RECT rcArea;
 } CANDIDATEFORM,*PCANDIDATEFORM,*LPCANDIDATEFORM;
+/**
+ * This structure contains information about a candidate list.
+ *
+ * The candidate strings immediately follow the last offset in the dwOffset
+ * array.
+ */
 typedef struct tagCANDIDATELIST {
+	/**
+	 * Specifies the size, in bytes, of the structure, the
+	 * offset array, and all candidate strings
+	 */
 	DWORD dwSize;
+	/**
+	 * Specifies candidate style values. It can be one or more
+	 * of the following values: Value Description IME_CAND_UNKNOWN
+	 * Candidates are in a style other than listed here. IME_CAND_READ
+	 * Candidates are in same reading. IME_CAND_CODE Candidates are in a
+	 * code range. IME_CAND_MEANING Candidates are in same meaning.
+	 * IME_CAND_RADICAL Candidates use the same radical character.
+	 * IME_CAND_STROKES Candidates are in same number of strokes. For
+	 * the IME_CAND_CODE style, the candidate list has a special
+	 * structure depending on the value of the dwCount member. If
+	 * dwCount is 1, the dwOffset member contains a single DBCS
+	 * character rather than an offset, and no candidate string is
+	 * provided. If the dwCount member is greater than 1, the dwOffset
+	 * member contains valid offsets, and the candidate strings are text
+	 * representations of individual DBCS character values in
+	 * hexadecimal notation.
+	 */
 	DWORD dwStyle;
+	/**
+	 * Specifies the number of candidate strings.
+	 */
 	DWORD dwCount;
+	/**
+	 * Specifies the index of the selected candidate
+	 * string.
+	 */
 	DWORD dwSelection;
+	/**
+	 * Specifies the index of the first candidate string in
+	 * the candidate window. This varies as the user presses the PAGE UP
+	 * and PAGE DOWN keys.
+	 */
 	DWORD dwPageStart;
+	/**
+	 * Specifies the number of candidate strings to be shown
+	 * in one page in the candidate window. The user can move to the
+	 * next page by pressing IME-defined keys, such as the PAGE UP or
+	 * PAGE DOWN key. If this number is zero, an application can define
+	 * a proper value by itself.
+	 */
 	DWORD dwPageSize;
+	/**
+	 * Specifies the offset to the start of the first
+	 * candidate string, relative to the start of this structure. The
+	 * offsets for subsequent strings immediately follow this member,
+	 * forming an array of 32-bit offsets.
+	 */
 	DWORD dwOffset[1];
 } CANDIDATELIST,*PCANDIDATELIST,*LPCANDIDATELIST;
 typedef struct tagIMECHARPOSITION {
@@ -276,14 +877,48 @@ typedef struct tagIMECHARPOSITION {
   UINT   cLineHeight;
   RECT   rcDocument;
 } IMECHARPOSITION, *PIMECHARPOSITION;
+/**
+ * This structure defines the strings for IME reconversion. It is the first
+ * item in a memory block that contains the strings for reconversion.
+ */
 typedef struct tagRECONVERTSTRING {
+  /**
+   * Specifies the size of this structure and the memory block
+   * it heads.
+   */
   DWORD dwSize;
+  /**
+   * Specifies the version number. Must be zero.
+   */
   DWORD dwVersion;
+  /**
+   * Specifies the length of the string that contains the
+   * composition string.
+   */
   DWORD dwStrLen;
+  /**
+   * Specifies the offset from the start position of this
+   * structure.
+   */
   DWORD dwStrOffset;
+  /**
+   * Specifies the length of the string that will be the
+   * composition string.
+   */
   DWORD dwCompStrLen;
+  /**
+   * Specifies the offset of the string that will be
+   * the composition string.
+   */
   DWORD dwCompStrOffset;
+  /**
+   * Specifies the length of the string that is
+   * related to the target clause in the composition string.
+   */
   DWORD dwTargetStrLen;
+  /**
+   * Specifies the offset of the target string.
+   */
   DWORD dwTargetStrOffset;
 } RECONVERTSTRING, *PRECONVERTSTRING;
 typedef struct tagREGISTERWORDA {
@@ -377,7 +1012,13 @@ UINT WINAPI ImmGetIMEFileNameW(HKL,LPWSTR,UINT);
  * @note Windows CE 2.0 only.
  */
 DWORD WINAPI ImmGetProperty(HKL hKL,DWORD fdwIndex);
-BOOL WINAPI ImmIsIME(HKL);
+/**
+ * This function checks whether the specified handle identifies an IME.
+ *
+ * @param hKL [in] Handle to the keyboard layout to check.
+ * @return Nonzero indicates success. Zero indicates failure.
+ */
+BOOL WINAPI ImmIsIME(HKL hKL);
 /**
  * Acts as if the user pressed an IME hot key in a window.
  *
@@ -391,8 +1032,27 @@ BOOL WINAPI ImmIsIME(HKL);
  * @note Windows CE 2.0 only.
  */
 BOOL WINAPI ImmSimulateHotKey(HWND hWnd,DWORD dwHotKeyID);
+/**
+ * This function creates a new input context, allocating memory for the
+ * context and initializing it. An application calls this function to
+ * prepare its own input context.
+ *
+ * @return The handle to the new input context indicates success. NULL
+ *        indicates failure.
+ */
 HIMC WINAPI ImmCreateContext(void);
-BOOL WINAPI ImmDestroyContext(HIMC);
+/**
+ * This function releases the input context and frees any memory associated
+ * with it.
+ *
+ * Any application that creates an input context by using the
+ * ImmCreateContext function must call this function to free the context
+ * before it terminates.
+ *
+ * @param hIMC [in] Handle to the input context to free.
+ * @return Nonzero indicates success. Zero indicates failure.
+ */
+BOOL WINAPI ImmDestroyContext(HIMC hIMC);
 /**
  * Returns the input context associated with a window.
  *
@@ -634,7 +1294,16 @@ DWORD WINAPI ImmGetConversionListW(HKL hKL,HIMC hIMC,LPCWSTR lpSrc,PCANDIDATELIS
  * @note Windows CE 2.0 only.
  */
 BOOL WINAPI ImmNotifyIME(HIMC hIMC,DWORD dwAction,DWORD dwIndex,DWORD dwValue);
-BOOL WINAPI ImmGetStatusWindowPos(HIMC,LPPOINT);
+/**
+ * This function gets the position of the status window.
+ *
+ * @param hIMC [in] Handle to the input context.
+ * @param lpptPos [out] Long pointer to the POINT structure that receives
+ *        the position coordinates. These are screen coordinates, relative
+ *        to the upper-left corner of the screen.
+ * @return Nonzero indicates success. Zero indicates failure.
+ */
+BOOL WINAPI ImmGetStatusWindowPos(HIMC hIMC,LPPOINT lpptPos);
 /**
  * Moves the IME status window.
  *
@@ -702,7 +1371,19 @@ BOOL WINAPI ImmIsUIMessageA(HWND,UINT,WPARAM,LPARAM);
  * @note Windows CE 2.0 only.
  */
 BOOL WINAPI ImmIsUIMessageW(HWND hWndIME,UINT msg,WPARAM wParam,LPARAM lParam);
-UINT WINAPI ImmGetVirtualKey(HWND);
+/**
+ * This function recovers the original virtual-key value associated with a
+ * key input message that has already been processed by the IME.
+ *
+ * Although the IME sets the virtual-key value to VK_PROCESSKEY after
+ * processing a key input message, an application can recover the original
+ * virtual-key value with the ImmGetVirtualKey function. This function can
+ * be used only for key input messages containing the VK_PROCESSKEY value.
+ *
+ * @param hWnd [in] Handle to the window that receives the key message.
+ * @return The original virtual-key value indicates success.
+ */
+UINT WINAPI ImmGetVirtualKey(HWND hWnd);
 BOOL WINAPI ImmRegisterWordA(HKL,LPCSTR,DWORD,LPCSTR);
 /**
  * Adds a word to an IME's dictionary.
@@ -759,8 +1440,39 @@ UINT WINAPI ImmEnumRegisterWordA(HKL,REGISTERWORDENUMPROCA,LPCSTR,DWORD,LPCSTR,P
  * @note Windows CE 2.0 only.
  */
 UINT WINAPI ImmEnumRegisterWordW(HKL hKL,REGISTERWORDENUMPROCW lpfnEnumProc,LPCWSTR lpszReading,DWORD dwStyle,LPCWSTR lpszRegister,PVOID lpData);
-BOOL WINAPI EnableEUDC(BOOL);
-BOOL WINAPI ImmDisableIME(DWORD);
+/**
+ * This function enables or disables end-user-defined characters (EUDC).
+ *
+ * Enabling EUDC allows text output functions to retrieve information about
+ * end-user-defined characters from EUDC fonts. Disabling EUDC prevents
+ * output functions from accessing these fonts. By default, Windows CE
+ * enables EUDC fonts during GWES initialization.
+ *
+ * For Windows CE versions 2.01 and later, this function is supported in
+ * TrueType font and no longer supported in raster font.
+ *
+ * @param fEnableEUDC [in] Boolean that is set to TRUE to enable EUDC, and
+ *        to FALSE to disable EUDC.
+ * @return TRUE indicates success. FALSE indicates failure.
+ */
+BOOL WINAPI EnableEUDC(BOOL fEnableEUDC);
+/**
+ * This function disables the input method editor (IME) for a thread or all
+ * threads in a process.
+ *
+ * The application must call this function before the first top-level
+ * window in the thread receives the WM_CREATE message. This means the
+ * application must call this function before calling CreateWindow to
+ * create the first top-level window.
+ *
+ * @param idThread [in] Identifier of the thread for which the IME is
+ *        disabled. If idThread is zero, the IME for the current thread is
+ *        disabled. If idThread is -1, the IME is disabled for all threads
+ *        in the current process. For Windows CE versions 2.10 and later,
+ *        passing a -1 value for the idThread parameter is not supported.
+ * @return TRUE indicates success. FALSE indicates failure.
+ */
+BOOL WINAPI ImmDisableIME(DWORD idThread);
 DWORD WINAPI ImmGetImeMenuItemsA(HIMC,DWORD,DWORD,LPIMEMENUITEMINFOA,LPIMEMENUITEMINFOA,DWORD);
 DWORD WINAPI ImmGetImeMenuItemsW(HIMC,DWORD,DWORD,LPIMEMENUITEMINFOW,LPIMEMENUITEMINFOW,DWORD);
 
@@ -978,7 +1690,63 @@ DWORD WINAPI ImmGetImeMenuItemsW(HIMC,DWORD,DWORD,LPIMEMENUITEMINFOW,LPIMEMENUIT
  * @note Windows CE 2.0 only.
  */
 #define ImmGetDescription ImmGetDescriptionW
+/**
+ * This function gets the file name of the IME associated with the
+ * specified keyboard layout.
+ *
+ * In the registry, the system stores the file name as the IME name value
+ * in HKEY_LOCAL_MACHINE root under the
+ * \System\CurrentControlSet\Control\Layout\hKL key.
+ *
+ * @param hKL [in] Handle to the keyboard layout. Windows CE does not
+ *        support keyboard layouts; however, hKL is used in this instance
+ *        to distinguish between locale-specific IMEs.
+ * @param lpszFileName [out] Long pointer to the buffer that receives the
+ *        file name.
+ * @param uBufLen [in] Specifies the size, in bytes, of the buffer. If
+ *        zero, the function returns the buffer size in bytes needed to
+ *        receive the file name, not including the terminating null
+ *        character.
+ * @return The number of bytes in the file name copied to the buffer, or,
+ *        if uBufLen is zero, the buffer size needed for the file name
+ *        indicates success. In either case, the terminating null character
+ *        is not included.
+ */
 #define ImmGetIMEFileName ImmGetIMEFileNameW
+/**
+ * This function retrieves the menu items that are registered in the IME
+ * menu.
+ *
+ * @param hIMC [in] Handle to the input context.
+ * @param dwFlags [in] Specifies a menu information flag. The following
+ *        value is defined: Value Description IGIMIF_RIGHTMENU If set, the
+ *        function returns the menu items for the context menu (obtained by
+ *        a right mouse click).
+ * @param dwType [in] Specifies the type of menu returned by this function.
+ *        This parameter can be a combination of the following values.
+ *        Value Description IGIMII_CMODE Returns the menu items that
+ *        control the conversion mode. IGIMII_SMODE Returns the menu items
+ *        that control sentence mode. IGIMII_CONFIGURE Returns the menu
+ *        items that are related to configuration. IGIMII_TOOLS Returns the
+ *        menu items that are related to tools. IGIMII_HELP Returns the
+ *        menu items that control help. IGIMII_OTHER Returns the menu items
+ *        that control other IME functions. IGIMII_INPUTTOOLS Returns the
+ *        menu items that control input tools.
+ * @param lpImeParentMenu [in] Long pointer to the parent menu. It points
+ *        to a IMEMENUITEMINFO structure with the fType member set to
+ *        MFT_SUBMENU in order to return information about the submenu
+ *        items of this parent menu. If this parameter is NULL, however,
+ *        the function returns only top-level menu items.
+ * @param lpImeMenu [out] Long pointer to a buffer to receive the contents
+ *        of the menu items. The buffer is an array of IMEMENUINFO
+ *        structures. If this parameter is NULL, the function returns the
+ *        number of registered menu items.
+ * @param dwSize [in] Specifies the size of the buffer to receive the
+ *        IMEMENUITEMINFO structure.
+ * @return The number of menu items that were copied into lpImeMenu
+ *        indicates success. If lpImeMenu is NULL, the function returns the
+ *        number of registered menu items.
+ */
 #define ImmGetImeMenuItems ImmGetImeMenuItemsW
 #else
 #define ImmEnumRegisterWord ImmEnumRegisterWordA
