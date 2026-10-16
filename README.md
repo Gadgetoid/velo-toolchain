@@ -246,7 +246,7 @@ With it set, the `.gdb` scripts load `nk.elf` and add the folder to the shared-l
 
 To debug on a self-built CE 2.x image, set `VELO_CE2_ROM` to it and `VELO_CE2_STATE` to a desktop state saved with it, and run `make debug-state`.
 
-`vscode/rc-language` is a VS Code extension that highlights resource scripts (`.rc`). Its README says how to install it.
+`vscode/rc-language` is a VS Code extension for resource scripts (`.rc`): highlighting, and `llvm-rc` errors, hovers, go-to-definition, links and completion using the CMake build's include folders. Its README says how to install it.
 
 ## SH3
 
