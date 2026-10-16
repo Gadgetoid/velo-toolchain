@@ -99,13 +99,17 @@ function(_velo_resources target out_options)
     foreach(define IN LISTS VELO_ARCH_DEFINES)
         list(APPEND VELO_RC_ARCH_DEFINES -D "${define}")
     endforeach()
+    set(rc_includes "")
+    foreach(directory IN LISTS VELO_RC_INCLUDES)
+        list(APPEND rc_includes -I "${directory}")
+    endforeach()
     foreach(script IN LISTS scripts)
         get_filename_component(name "${script}" NAME_WE)
         get_filename_component(directory "${script}" DIRECTORY)
         set(compiled "${CMAKE_CURRENT_BINARY_DIR}/${target}_${name}.res")
         add_custom_command(
             OUTPUT "${compiled}"
-            COMMAND "${VELO_RC}" -D "_WIN32_WCE=${VELO_WIN32_WCE}" ${VELO_RC_ARCH_DEFINES} -I "${VELO_TOOLCHAIN_ROOT}/include" -I "${VELO_TOOLCHAIN_ROOT}/include/w32api" -I "${directory}" -FO "${compiled}" -- "${script}"
+            COMMAND "${VELO_RC}" -D "_WIN32_WCE=${VELO_WIN32_WCE}" ${VELO_RC_ARCH_DEFINES} -I "${VELO_TOOLCHAIN_ROOT}/include" -I "${VELO_TOOLCHAIN_ROOT}/include/w32api" -I "${directory}" ${rc_includes} -FO "${compiled}" -- "${script}"
             DEPENDS "${script}" ${dependencies}
             VERBATIM)
         target_sources(${target} PRIVATE "${compiled}")
