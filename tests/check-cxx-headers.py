@@ -10,7 +10,9 @@ COMMON_FLAGS = ["-fshort-wchar", "-ffreestanding", "-std=c++20", "-fno-exception
 ARCHITECTURES = {
     "mips": {"target": ["--target=mipsel-unknown-none-elf", "-march=mips1", "-msoft-float", "-Wno-unknown-warning-option", "-Wno-experimental-option"], "defines": []},
     "sh3": {"target": ["--target=sh3el-unknown-none-wince"], "defines": ["-DSHx", "-DSH3", "-D_SH3_"]},
+    "x86": {"target": ["--target=i486-unknown-none-elf", "-malign-double", "-nostdinc++"], "defines": ["-D_X86_", "-Dx86"]},
 }
+VERSIONS = {"sh3": [1, 101, 2], "x86": [2]}
 WIN32_WCE = {1: 100, 101: 101, 2: 200}
 VERSION_NAMES = {1: "1.0", 101: "1.01", 2: "2.0"}
 
@@ -76,7 +78,7 @@ if __name__ == "__main__":
     arguments = parser.parse_args()
     failed = False
     label = "" if arguments.arch == "mips" else " " + arguments.arch.upper()
-    for version in ([1, 101, 2] if arguments.arch == "sh3" else [1, 2]):
+    for version in VERSIONS.get(arguments.arch, [1, 2]):
         problems = check(arguments.clang, version, arguments.arch, arguments.target_arch or arguments.arch)
         for problem in problems:
             print("CE %s%s: %s" % (VERSION_NAMES[version], label, problem), file=sys.stderr)

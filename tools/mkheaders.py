@@ -14,9 +14,13 @@ OWN_HEADERS = ["wchar.h", "stdlib.h", "string.h", "windbase.h", "tchar.h"]
 MACRO_HEADERS = {"windowsx.h"}
 VERSIONS = {1: "1.0", 101: "1.01", 2: "2.0"}
 WIN32_WCE = {1: 100, 101: 101, 2: 200}
-ARCHITECTURES = {"mips": {"label": "", "defines": [], "versions": {1: "VELO_CE == 1 && !VELO_SH3", 2: "VELO_CE == 2 && !VELO_SH3"}},
-                 "sh3": {"label": " SH3", "defines": ["-DSH3"],
-                         "versions": {1: "VELO_WCE == 100 && VELO_SH3", 101: "VELO_WCE == 101 && VELO_SH3", 2: "VELO_CE == 2 && VELO_SH3"}}}
+MIPS_TARGET = ["--target=mipsel-unknown-none-elf", "-march=mips1", "-msoft-float"]
+ARCHITECTURES = {"mips": {"label": "", "target": MIPS_TARGET, "defines": [],
+                          "versions": {1: "VELO_CE == 1 && !VELO_SH3 && !VELO_X86", 2: "VELO_CE == 2 && !VELO_SH3 && !VELO_X86"}},
+                 "sh3": {"label": " SH3", "target": MIPS_TARGET, "defines": ["-DSH3"],
+                         "versions": {1: "VELO_WCE == 100 && VELO_SH3", 101: "VELO_WCE == 101 && VELO_SH3", 2: "VELO_CE == 2 && VELO_SH3"}},
+                 "x86": {"label": " x86", "target": ["--target=i486-unknown-none-elf", "-malign-double"], "defines": [],
+                         "versions": {2: "VELO_CE == 2 && VELO_X86"}}}
 ENTRY_POINTS = {"WinMain", "wWinMain", "DllMain", "DllEntryPoint"}
 
 
@@ -45,7 +49,7 @@ def write_wrappers():
 
 def declarations(clang, version, arch="mips"):
     source = "#include <windows.h>\n#include <winsock.h>\n#include <tchar.h>\n" + "".join("#include <%s>\n" % header for header in vendored())
-    command = [clang, "--target=mipsel-unknown-none-elf", "-march=mips1", "-msoft-float", "-fshort-wchar", "-ffreestanding",
+    command = [clang] + ARCHITECTURES[arch]["target"] + ["-fshort-wchar", "-ffreestanding",
                "-Wno-unknown-warning-option", "-Wno-experimental-option", "-fsyntax-only", "-Xclang", "-ast-dump=json", "-D_WIN32_WCE=%d" % WIN32_WCE[version],
                "-DVELO_ALL_DECLARATIONS"] + ARCHITECTURES[arch]["defines"] + ["-I", os.path.join(ROOT, "include"), "-I", os.path.join(ROOT, "include", "w32api"), "-x", "c", "-"]
     tree = json.loads(subprocess.run(command, input=source, capture_output=True, text=True, check=True).stdout)

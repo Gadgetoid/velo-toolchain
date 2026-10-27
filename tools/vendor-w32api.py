@@ -87,6 +87,18 @@ CE_SH3_CONTEXT_TAIL = """	ULONG Fir;
 	};
 } CONTEXT;"""
 
+X86_DISPATCHER_CONTEXT = """typedef struct _DISPATCHER_CONTEXT {
+    unsigned long ControlPc;
+    struct _RUNTIME_FUNCTION *FunctionEntry;
+    unsigned long EstablisherFrame;
+    CONTEXT* ContextRecord;
+} DISPATCHER_CONTEXT, *PDISPATCHER_CONTEXT;"""
+CE_X86_DISPATCHER_CONTEXT = """typedef struct _DISPATCHER_CONTEXT {
+    struct _EXCEPTION_REGISTRATION_RECORD *RegistrationPointer;
+    unsigned long ControlPc;
+} DISPATCHER_CONTEXT, *PDISPATCHER_CONTEXT;"""
+
+
 class Vendor:
     def __init__(self):
         self.notes = []
@@ -178,6 +190,11 @@ def patch(vendor):
     vendor.ce("tlhelp32.h", "Heap32Next takes the snapshot handle on CE", "BOOL WINAPI Heap32Next(LPHEAPENTRY32);",
               "BOOL WINAPI Heap32Next(HANDLE,LPHEAPENTRY32);")
     vendor.ce("winnt.h", "SH3 CONTEXT has CE's exception fields and the CE 1.0, 1.01 or 2.0 union after Psr", SH3_CONTEXT_TAIL, CE_SH3_CONTEXT_TAIL)
+    vendor.edit("winnt.h", "x86 CONTEXT has no ExtendedRegisters on CE", "\tBYTE\tExtendedRegisters[MAXIMUM_SUPPORTED_EXTENSION];\n",
+                "#ifndef _WIN32_WCE\n\tBYTE\tExtendedRegisters[MAXIMUM_SUPPORTED_EXTENSION];\n#endif\n")
+    vendor.edit("winnt.h", "x86 FLOATING_SAVE_AREA has a pointer type, PFLOATING_SAVE_AREA", "} FLOATING_SAVE_AREA;", "} FLOATING_SAVE_AREA,*PFLOATING_SAVE_AREA;")
+    vendor.edit("excpt.h", "x86 DISPATCHER_CONTEXT is CE's registration pointer and ControlPc", X86_DISPATCHER_CONTEXT,
+                "#if defined(_WIN32_WCE) && defined(_X86_)\n%s\n#else\n%s\n#endif" % (CE_X86_DISPATCHER_CONTEXT, X86_DISPATCHER_CONTEXT))
     vendor.edit("wingdi.h", "DEVMODEW has no dmDisplayOrientation on CE 1.0 and 2.0", "  DWORD  dmDisplayFrequency; \n  DWORD  dmDisplayOrientation;\n} DEVMODEW",
                 "  DWORD  dmDisplayFrequency; \n#ifndef _WIN32_WCE\n  DWORD  dmDisplayOrientation;\n#endif\n} DEVMODEW")
     vendor.ce("commctrl.h", "TB_SETTOOLTIPS is WM_USER+81 on CE", "#define TB_SETTOOLTIPS\t(WM_USER+36)", "#define TB_SETTOOLTIPS\t(WM_USER+81)")

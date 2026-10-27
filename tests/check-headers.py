@@ -17,7 +17,12 @@ ARCHITECTURES = {
              "sdk_defines": ["-DMIPS", "-D_MIPS_=1", "-D_M_MRX000=4000"], "defines": [], "exports": "ce%d"},
     "sh3": {"target": ["--target=sh3el-unknown-none-wince"],
             "sdk_defines": ["-DSHx", "-DSH3", "-D_SH3_", "-D_M_SH=3"], "defines": ["-DSHx", "-DSH3", "-D_SH3_"], "exports": "ce%d-sh3"},
+    "x86": {"target": ["--target=i486-unknown-none-elf", "-malign-double"],
+            "sdk_defines": ["-D_X86_", "-Dx86", "-D_M_IX86=400", "-D_INTEGRAL_MAX_BITS=64", "-U__asm", "-fasm-blocks"], "defines": ["-D_X86_", "-Dx86"],
+            "exports": "ce%d-x86"},
 }
+DEFAULT_VERSIONS = {"sh3": ["1", "101", "2"], "x86": ["2"]}
+UNDECLARED_EXPORTS = {"x86": re.compile(r"^(_?[a-z]\w*|GetErrorInfo|GetHGlobalFromStream)$")}
 KNOWN_DIFFERENCES = re.compile(r"^(size|offset)_(struct_)?_?(WIN32_FIND_DATAA|tagREBARBANDINFOA|REBARBANDINFOA)(_|$)")
 KNOWN_SIGNATURES = re.compile(r"^(ImageList_EndDrag|waveOutGetVolume|waveOutSetVolume|Random|DebugBreak)$")
 EXCLUDED_FUNCTIONS = re.compile(r"^(Co[A-Z]\w*|Ole\w+|Stg\w+|Var[A-Z]\w*|Variant\w+|SafeArray\w+|Sys[A-Z]\w*|Disp\w+|CLSIDFromString|"
@@ -244,10 +249,16 @@ def check(clang, reference, version, work, arch, target_arch):
     excluded = sorted(name for name in sdk_signatures if EXCLUDED_FUNCTIONS.match(name))
     our_signatures, unusable = ours.signatures(name for name in sdk_signatures if name not in excluded)
     different = sorted(name for name in our_signatures if name in sdk_signatures and our_signatures[name] != sdk_signatures[name] and not KNOWN_SIGNATURES.match(name))
+    undeclared = UNDECLARED_EXPORTS.get(arch)
+    known = sorted(name for name in unusable if undeclared and undeclared.match(name))
+    unusable = [name for name in unusable if name not in known]
     report.append("functions: %d compared, %d excluded, %d missing or unavailable, %d different" %
                   (len(sdk_signatures) - len(excluded), len(excluded), len(unusable), len(different)))
     for name in different:
         report.append("  different %s: SDK %s, ours %s" % (name, sdk_signatures[name], our_signatures[name]))
+    if known:
+        report.append("functions exported but not declared by velo (C runtime, OLE): %d" % len(known))
+        report.extend("  undeclared %s" % name for name in known)
     for name in sorted(unusable):
         report.append("  missing %s" % name)
     problems += len(different) + len(unusable)
@@ -278,7 +289,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Compare velo-toolchain's headers with the Windows CE 1.0 and 2.0 SDK headers")
     parser.add_argument("--reference", default=os.environ.get("VELO_REFERENCE"), help="tools/fetch-reference folder, default $VELO_REFERENCE")
     parser.add_argument("--clang", default=os.environ.get("CLANG", "clang"))
-    parser.add_argument("--ce", choices=["1", "101", "2"], action="append", help="CE versions to check, default 1 and 2 (and 101 for sh3)")
+    parser.add_argument("--ce", choices=["1", "101", "2"], action="append", help="CE versions to check, default 1 and 2 (and 101 for sh3, only 2 for x86)")
     parser.add_argument("--arch", choices=sorted(ARCHITECTURES), default="mips", help="SDK defines and export lists to check against")
     parser.add_argument("--target-arch", choices=sorted(ARCHITECTURES), help="compile for this architecture's clang target instead, "
                         "to check the headers with a clang that lacks --arch's backend")
@@ -289,7 +300,7 @@ if __name__ == "__main__":
     total = 0
     lines = []
     with tempfile.TemporaryDirectory() as work:
-        default_versions = ["1", "101", "2"] if arguments.arch == "sh3" else ["1", "2"]
+        default_versions = DEFAULT_VERSIONS.get(arguments.arch, ["1", "2"])
         for version in sorted((int(ce) for ce in (arguments.ce or default_versions)), key=WIN32_WCE.get):
             problems, report = check(arguments.clang, os.path.expanduser(arguments.reference), version, work, arguments.arch,
                                      arguments.target_arch or arguments.arch)

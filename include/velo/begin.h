@@ -8,7 +8,21 @@
 #define VELO_SH3 0
 #endif
 #endif
-#if VELO_SH3
+#ifndef VELO_X86
+#if defined(__i386__) || defined(_X86_)
+#define VELO_X86 1
+#else
+#define VELO_X86 0
+#endif
+#endif
+#if VELO_X86
+#ifndef _X86_
+#define _X86_
+#endif
+#ifndef x86
+#define x86
+#endif
+#elif VELO_SH3
 #ifndef SHx
 #define SHx
 #endif

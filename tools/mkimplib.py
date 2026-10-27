@@ -46,9 +46,20 @@ def sh3_stub(function, dll):
 """ + import_slot(function, dll, ".long")
 
 
+def x86_stub(function, dll):
+    return f"""    .section .text.{function},"ax",@progbits
+    .weak {function}
+    .type {function},@function
+{function}:
+    jmp *__imp_{function}
+
+""" + import_slot(function, dll, ".long")
+
+
 ARCHITECTURES = {
     "mips": (["    .set noreorder", "    .set noat", ""], mips_stub),
     "sh3": ([], sh3_stub),
+    "x86": ([], x86_stub),
 }
 
 

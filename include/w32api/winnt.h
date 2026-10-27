@@ -2099,7 +2099,7 @@ typedef struct _FLOATING_SAVE_AREA {
 	DWORD	DataSelector;
 	BYTE	RegisterArea[80];
 	DWORD	Cr0NpxState;
-} FLOATING_SAVE_AREA;
+} FLOATING_SAVE_AREA,*PFLOATING_SAVE_AREA;
 typedef struct _CONTEXT {
 	DWORD	ContextFlags;
 	DWORD	Dr0;
@@ -2125,7 +2125,9 @@ typedef struct _CONTEXT {
 	DWORD	EFlags;
 	DWORD	Esp;
 	DWORD	SegSs;
+#ifndef _WIN32_WCE
 	BYTE	ExtendedRegisters[MAXIMUM_SUPPORTED_EXTENSION];
+#endif
 } CONTEXT;
 #elif defined(_PPC_)
 #define CONTEXT_CONTROL	1L

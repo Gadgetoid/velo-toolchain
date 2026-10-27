@@ -48,6 +48,9 @@ CE 1.0 and 2.0 have no ANSI functions, and their declarations are marked unavail
 - `tlhelp32.h`: Heap32First takes the snapshot handle on CE
 - `tlhelp32.h`: Heap32Next takes the snapshot handle on CE
 - `winnt.h`: SH3 CONTEXT has CE's exception fields and the CE 1.0, 1.01 or 2.0 union after Psr
+- `winnt.h`: x86 CONTEXT has no ExtendedRegisters on CE
+- `winnt.h`: x86 FLOATING_SAVE_AREA has a pointer type, PFLOATING_SAVE_AREA
+- `excpt.h`: x86 DISPATCHER_CONTEXT is CE's registration pointer and ControlPc
 - `wingdi.h`: DEVMODEW has no dmDisplayOrientation on CE 1.0 and 2.0
 - `commctrl.h`: TB_SETTOOLTIPS is WM_USER+81 on CE
 - `commctrl.h`: RB_GETBANDINFO is RB_GETBANDINFOW (WM_USER+28) on CE

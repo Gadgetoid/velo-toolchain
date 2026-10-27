@@ -1,7 +1,7 @@
 """
-Linked MIPS or SH3 ELF (--emit-relocs) to Windows CE 1.0/2.0 PE32.
+Linked MIPS, SH3 or x86 ELF (--emit-relocs) to Windows CE 1.0/2.0 PE32.
 
-- Machine 0x166 (MIPS little endian) or 0x1A2 (SH3), from the ELF's machine. Subsystem 9 (Windows CE
+- Machine 0x166 (MIPS little endian), 0x1A2 (SH3) or 0x14C (x86), from the ELF's machine. Subsystem 9 (Windows CE
   GUI), version from --ce-version (1.0 or 2.0), as the CE 2.0 toolkit's linker writes for
   /subsystem:windowsce,<version>.
 - Image base 0x10000, headers 0x400, file alignment 0x200.
@@ -12,7 +12,7 @@ Linked MIPS or SH3 ELF (--emit-relocs) to Windows CE 1.0/2.0 PE32.
 - EXE: IAT at the start of .data. DLL: IAT in .idata, after descriptors and lookup tables.
 - ELF relocations become base relocations: R_MIPS_32 HIGHLOW, R_MIPS_26 JMPADDR,
   R_MIPS_HI16 HIGHADJ, R_MIPS_LO16 LOW; R_SH_DIR32 HIGHLOW, and SH PC-relative and
-  relaxation relocations none.
+  relaxation relocations none; R_386_32 HIGHLOW, and R_386_PC32 and R_386_PLT32 none.
 """
 import argparse
 import struct
@@ -33,8 +33,11 @@ SHT_RELA = 4
 SHT_REL = 9
 EM_MIPS = 8
 EM_SH = 42
-PE_MACHINES = {EM_MIPS: 0x166, EM_SH: 0x1A2}
+EM_386 = 3
+PE_MACHINES = {EM_MIPS: 0x166, EM_SH: 0x1A2, EM_386: 0x14C}
 R_SH_DIR32 = 1
+R_386_32 = 1
+X86_POSITION_INDEPENDENT = {2, 4}
 SH_POSITION_INDEPENDENT = set(range(2, 10)) | set(range(25, 33))
 RT_ICON = 3
 RT_GROUP_ICON = 14
@@ -75,7 +78,7 @@ def read_elf(path):
 def elf_machine(data):
     machine = struct.unpack_from("<H", data, 0x12)[0]
     if machine not in PE_MACHINES:
-        raise ValueError("ELF machine %d is not MIPS or SH" % machine)
+        raise ValueError("ELF machine %d is not MIPS, SH or x86" % machine)
     return machine
 
 
@@ -95,9 +98,27 @@ def read_sh_relocations(data, sections):
     return found
 
 
+def read_x86_relocations(data, sections):
+    found = []
+    for name, header in sections.items():
+        target = sections.get(name[len(".rel"):])
+        if header[1] != SHT_REL or not target or not target[2] & SHF_ALLOC:
+            continue
+        for position in range(0, header[5], 8):
+            offset, info = struct.unpack_from("<II", data, header[4] + position)
+            kind = info & 0xFF
+            if kind == R_386_32:
+                found.append((3, offset, None))
+            elif kind and kind not in X86_POSITION_INDEPENDENT:
+                raise ValueError("relocation type %d at %x" % (kind, offset))
+    return found
+
+
 def read_relocations(data, sections):
     if elf_machine(data) == EM_SH:
         return read_sh_relocations(data, sections)
+    if elf_machine(data) == EM_386:
+        return read_x86_relocations(data, sections)
     found = []
     for name, header in sections.items():
         target = sections.get(name[len(".rel"):])

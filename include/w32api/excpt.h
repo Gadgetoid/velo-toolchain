@@ -25,12 +25,19 @@ typedef PEXCEPTION_RECORD LPEXCEPTION_RECORD;
 typedef PEXCEPTION_POINTERS LPEXCEPTION_POINTERS;
 struct _RUNTIME_FUNCTION;
 
+#if defined(_WIN32_WCE) && defined(_X86_)
+typedef struct _DISPATCHER_CONTEXT {
+    struct _EXCEPTION_REGISTRATION_RECORD *RegistrationPointer;
+    unsigned long ControlPc;
+} DISPATCHER_CONTEXT, *PDISPATCHER_CONTEXT;
+#else
 typedef struct _DISPATCHER_CONTEXT {
     unsigned long ControlPc;
     struct _RUNTIME_FUNCTION *FunctionEntry;
     unsigned long EstablisherFrame;
     CONTEXT* ContextRecord;
 } DISPATCHER_CONTEXT, *PDISPATCHER_CONTEXT;
+#endif
 
 #define EXCEPTION_EXECUTE_HANDLER        1
 #define EXCEPTION_CONTINUE_SEARCH        0

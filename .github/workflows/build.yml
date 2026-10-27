@@ -28,6 +28,14 @@ jobs:
           make examples debugmgr 2>&1 | tee build.log
           ! grep -i "warning" build.log
 
+      - name: Check the headers work from C++ on x86
+        run: make check-cxx-headers-x86 CLANG=clang
+
+      - name: Build the examples for x86, with no warnings
+        run: |
+          make examples-x86 2>&1 | tee build-x86.log
+          ! grep -i "warning" build-x86.log
+
       - uses: actions/upload-artifact@v7
         with:
           name: examples

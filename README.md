@@ -2,7 +2,7 @@
 
 A CMake toolchain for Windows CE 1.0 and 2.0 MIPS programs and DLLs, aimed at the Philips Velo 1 (Toshiba TX3912, R3910 core). It uses clang and lld, then `tools/mkpe.py` turns the linked ELF into a CE PE.
 
-It can also build the same projects for SH3 Windows CE devices, with an LLVM that has a SuperH backend. See [SH3](#sh3).
+It can also build the same projects for SH3 Windows CE devices, with an LLVM that has a SuperH backend, and for x86 Windows CE 2.x. See [SH3](#sh3) and [x86](#x86).
 
 ## Requirements
 
@@ -48,7 +48,7 @@ This gives `build/myapp.exe` and `build/mylib.dll`, with the linked `.elf` besid
 - `llvm-rc` differs from Microsoft's rc in two ways that matter for SDK samples. It needs the comma after a control's text or name: `LTEXT "Text", -1, 5, 5, 50, 12` and `ICON IDI_APP, IDC_ICON, 5, 5, 32, 32`, where Microsoft's also takes them without. And in a string continued onto the next line with `\`, it keeps the next line's leading spaces, which Microsoft's drops.
 - `VELO_CE_VERSION`: `1` (default) or `2`. Sets `_WIN32_WCE` to `100` or `200` and picks the import libraries. SH3 also has `1.01`, see [SH3](#sh3).
 - The PE says subsystem 9 (Windows CE GUI) with the CE version, 1.0 or 2.0, as Microsoft's CE 2.0 toolkit writes. CE 2.0 treats a program marked 1.0 as a CE 1.0 program, with another system font for client-area text and other font enumeration results. CE 1.0 runs both the same.
-- `VELO_ARCH`: `mips` (default) or `sh3`.
+- `VELO_ARCH`: `mips` (default), `sh3` or `x86`.
 - `CMAKE_BUILD_TYPE` defaults to `MinSizeRel` (`-Os`). `Debug` gives `-O0 -g`.
 
 ## Import libraries
@@ -317,6 +317,20 @@ On SH3, debugmgr is `velo-debugmgr.exe`, and the emulator's image has a build of
 With `--net`, the image dials PPP over COM1 to the emulator's network, and Winsock programs work. As on the Velo, there's no `WSAStartup` or `WSACleanup` for CE 1.0 and 2.0 (their SDKs make them macros that do nothing): just call `socket`. Later Winsocks, such as this image's, export them.
 
 With `CMAKE_BUILD_TYPE=Debug`, GDB has source lines, arguments, locals and backtraces on SH3, and VS Code stops at source breakpoints. GDB's SH3 calling convention isn't CE's, so `finish` shows the wrong value for functions returning 64-bit values or structures, which CE returns through a hidden pointer. `velo-symbolize` works on SH3 builds.
+
+## x86
+
+`-DVELO_ARCH=x86 -DVELO_CE_VERSION=2` builds for x86 Windows CE 2.x devices, such as the Clarion Joyride (Auto PC 2.0, CE 2.12). Any LLVM with the X86 backend works, including Homebrew's and Ubuntu's.
+
+- clang targets `i486-unknown-none-elf` with `-malign-double` (8-byte aligned `long long` and `double` in structures, as Microsoft's compiler) and `-freg-struct-return` (small structures returned in registers). `_X86_`, `x86` and `_M_IX86=400` are defined, for C and `.rc` files, and the headers define `_X86_` and `x86` if the compiler is x86. C++ adds `-nostdinc++`, so the host's C++ library headers aren't picked up.
+- `WINAPI` and `CALLBACK` are the compiler's default, cdecl, which is CE's calling convention on x86 as on the other processors: the caller removes the arguments.
+- `CONTEXT` is CE's x86 layout, without `ExtendedRegisters`, and `DISPATCHER_CONTEXT` is CE's (`RegistrationPointer`, `ControlPc`).
+- Import stubs are `jmp *__imp_<name>`.
+- `mkpe.py` writes machine 0x14C when the ELF is x86, and `R_386_32` relocations become HIGHLOW base relocations. PC-relative ones need none. The subsystem is 9 with version 2.0, which CE 2.12 runs.
+
+The import libraries come from `exports/ce2-x86`, read with `tools/mkexports.py` from the DLLs in a Clarion Joyride ROM (Auto PC 2.02 build 9386.328, large screen): coredll, msgstore, ndis, ole32, oleaut32, pcmcia, toolhelp and winsock. That coredll exports the narrow C runtime (`malloc`, `strlen`, `atoi` and so on), which the headers don't declare; `make check-headers-x86` lists them.
+
+`make examples-x86` builds the examples into `build/ce2-x86`. `make check-headers-x86` compares the headers with the CE 2.0 SDK headers using its x86 defines, and `make check-cxx-headers-x86` checks them in C++.
 
 ## Reference material
 

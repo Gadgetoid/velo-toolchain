@@ -3,7 +3,7 @@ CLANG ?= $(firstword $(wildcard $(shell brew --prefix llvm 2>/dev/null)/bin/clan
 SH3_LLVM = $(if $(VELO_SH3_LLVM),-DVELO_LLVM_ROOT=$(VELO_SH3_LLVM))
 SH3_CHECK = $(if $(VELO_SH3_LLVM),--clang $(VELO_SH3_LLVM)/bin/clang,--clang $(CLANG) --target-arch mips)
 
-.PHONY: examples examples-sh3 test test-sh3 screenshots-sh3 screenshots primer primer-screenshots debugmgr debugmgr-sh3 debug-state debug-state-sh3 headers docstrings check-headers check-headers-sh3 check-cxx-headers check-cxx-headers-sh3 clean
+.PHONY: examples examples-sh3 examples-x86 test test-sh3 screenshots-sh3 screenshots primer primer-screenshots debugmgr debugmgr-sh3 debug-state debug-state-sh3 headers docstrings check-headers check-headers-sh3 check-cxx-headers check-cxx-headers-sh3 check-headers-x86 check-cxx-headers-x86 clean
 
 examples:
 	cmake -S examples -B build/ce1 -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) -DVELO_CE_VERSION=1
@@ -18,6 +18,10 @@ examples-sh3:
 	cmake --build build/ce101-sh3
 	cmake -S examples -B build/ce2-sh3 -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) -DVELO_CE_VERSION=2 -DVELO_ARCH=sh3 $(SH3_LLVM)
 	cmake --build build/ce2-sh3
+
+examples-x86:
+	cmake -S examples -B build/ce2-x86 -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN) -DVELO_CE_VERSION=2 -DVELO_ARCH=x86
+	cmake --build build/ce2-x86
 
 test: examples
 	python3 tests/emulator.py build/ce1 --ce 1
@@ -88,6 +92,12 @@ check-headers-sh3:
 
 check-cxx-headers-sh3:
 	python3 tests/check-cxx-headers.py --arch sh3 $(SH3_CHECK)
+
+check-headers-x86:
+	python3 tests/check-headers.py --arch x86 --clang $(CLANG)
+
+check-cxx-headers-x86:
+	python3 tests/check-cxx-headers.py --arch x86 --clang $(CLANG)
 
 clean:
 	rm -rf build
